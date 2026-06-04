@@ -1,0 +1,6 @@
+{
+  "name": "Bütçe Takip",
+  "description": "Bütçe Takip Uygulaması",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
