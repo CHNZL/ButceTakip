@@ -55,7 +55,16 @@ android {
     compose = true
     buildConfig = true
   }
-  testOptions { unitTests { isIncludeAndroidResources = true } }
+  testOptions { 
+    unitTests { 
+      isIncludeAndroidResources = true
+      all {
+        it.testLogging {
+          showStandardStreams = true
+        }
+      }
+    } 
+  }
 }
 
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
@@ -88,6 +97,7 @@ dependencies {
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.lifecycle.viewmodel.compose)
   implementation(libs.androidx.navigation.compose)
+  implementation("androidx.work:work-runtime-ktx:2.9.0")
   implementation(libs.androidx.room.ktx)
   implementation(libs.androidx.room.runtime)
   implementation(libs.coil.compose)
@@ -105,6 +115,8 @@ dependencies {
   implementation(libs.okhttp)
   // implementation(libs.play.services.location)
   implementation(libs.retrofit)
+  implementation("net.sourceforge.jexcelapi:jxl:2.6.12")
+  implementation(libs.jsoup)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)

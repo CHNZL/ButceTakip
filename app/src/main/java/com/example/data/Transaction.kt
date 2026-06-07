@@ -18,5 +18,6 @@ data class Transaction(
     val timestamp: Long = System.currentTimeMillis(),
     val quantity: Double? = null,
     val unitPrice: Double? = null,
-    val installments: Int? = null
+    val installments: Int? = null,
+    val isPaid: Boolean = false
 )

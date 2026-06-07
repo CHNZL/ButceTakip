@@ -20,12 +20,41 @@ import com.example.ui.LoginScreen
 import androidx.activity.viewModels
 import com.example.viewmodel.AuthViewModel
 
+import androidx.activity.result.contract.ActivityResultContracts
+import android.os.Build
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import java.util.concurrent.TimeUnit
+import com.example.worker.PaymentReminderWorker
+
 class MainActivity : ComponentActivity() {
     private val authViewModel: AuthViewModel by viewModels()
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            setupWorkManager()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+                setupWorkManager()
+            } else {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        } else {
+            setupWorkManager()
+        }
 
         val database = AppDatabase.getDatabase(applicationContext)
         val repository = TransactionRepository(
@@ -38,11 +67,13 @@ class MainActivity : ComponentActivity() {
         val viewModelFactory = BudgetViewModelFactory(application, repository, prefManager)
         val viewModel = ViewModelProvider(this, viewModelFactory)[BudgetViewModel::class.java]
 
+        val startDest = if (prefManager.userId.isNotBlank()) "dashboard" else "login"
+
         setContent {
             MyApplicationTheme {
                 val navController = rememberNavController()
 
-                NavHost(navController = navController, startDestination = "login") {
+                NavHost(navController = navController, startDestination = startDest) {
                     composable("login") {
                         LoginScreen(
                             onLoginSuccess = {
@@ -51,6 +82,8 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             onBypassLogin = {
+                                prefManager.userId = "offline_user"
+                                viewModel.login("offline_user")
                                 navController.navigate("dashboard") {
                                     popUpTo("login") { inclusive = true }
                                 }
@@ -74,5 +107,15 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun setupWorkManager() {
+        val workRequest = PeriodicWorkRequestBuilder<PaymentReminderWorker>(1, TimeUnit.HOURS)
+            .build()
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            "PaymentReminderWork",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            workRequest
+        )
     }
 }

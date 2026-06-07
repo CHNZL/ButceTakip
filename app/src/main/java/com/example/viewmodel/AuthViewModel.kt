@@ -63,7 +63,22 @@ class AuthViewModel : ViewModel() {
                     val name = googleIdTokenCredential.displayName ?: "Gizli Kullanıcı"
                     val email = googleIdTokenCredential.id ?: "bilinmeyen_email"
                     val profilePic = googleIdTokenCredential.profilePictureUri?.toString()
-                    _authState.value = AuthState.Authenticated(name, email, googleIdTokenCredential.idToken, profilePic)
+                    var finalPic = profilePic
+                    if (finalPic.isNullOrBlank()) {
+                        try {
+                            val parts = googleIdTokenCredential.idToken.split(".")
+                            if (parts.size == 3) {
+                                val payload = String(android.util.Base64.decode(parts[1], android.util.Base64.URL_SAFE))
+                                val json = org.json.JSONObject(payload)
+                                if (json.has("picture")) {
+                                    finalPic = json.getString("picture")
+                                }
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                    _authState.value = AuthState.Authenticated(name, email, googleIdTokenCredential.idToken, finalPic)
                     
                     // You could inject this token into Firebase Auth here if Firebase was setup.
                 } else {
