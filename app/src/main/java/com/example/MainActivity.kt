@@ -28,6 +28,8 @@ import androidx.core.content.ContextCompat
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.ExistingWorkPolicy
 import java.util.concurrent.TimeUnit
 import com.example.worker.PaymentReminderWorker
 
@@ -46,6 +48,7 @@ import com.example.updater.UpdateInfo
 
 class MainActivity : ComponentActivity() {
     private val authViewModel: AuthViewModel by viewModels()
+    private val checkUpdateTrigger = kotlinx.coroutines.flow.MutableStateFlow(0)
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -53,6 +56,11 @@ class MainActivity : ComponentActivity() {
         if (isGranted) {
             setupWorkManager()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        checkUpdateTrigger.value += 1
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -86,9 +94,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             val isDarkTheme by viewModel.darkThemeEnabled.collectAsState()
             var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+            val trigger by checkUpdateTrigger.collectAsState()
 
-            LaunchedEffect(Unit) {
-                updateInfo = appUpdater.checkForUpdate()
+            LaunchedEffect(trigger) {
+                if (trigger > 0) {
+                    val info = appUpdater.checkForUpdate()
+                    if (info != null) {
+                        updateInfo = info
+                    }
+                }
             }
 
             MyApplicationTheme(darkTheme = isDarkTheme) {
@@ -167,8 +181,16 @@ class MainActivity : ComponentActivity() {
             .build()
         WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
             "AppUpdateWork",
-            ExistingPeriodicWorkPolicy.UPDATE, // Update policy to keep running it
+            ExistingPeriodicWorkPolicy.KEEP,
             updateWorkRequest
+        )
+
+        // Uygulama açılışında anında bir kez kontrol etmesi için
+        val oneTimeUpdateRequest = OneTimeWorkRequestBuilder<com.example.worker.AppUpdateWorker>().build()
+        WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+            "AppUpdateOneTime",
+            ExistingWorkPolicy.REPLACE,
+            oneTimeUpdateRequest
         )
     }
 }
