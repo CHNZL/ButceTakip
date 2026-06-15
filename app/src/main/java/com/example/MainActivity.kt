@@ -31,6 +31,19 @@ import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 import com.example.worker.PaymentReminderWorker
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import com.example.updater.AppUpdater
+import com.example.updater.UpdateInfo
+
 class MainActivity : ComponentActivity() {
     private val authViewModel: AuthViewModel by viewModels()
 
@@ -66,12 +79,41 @@ class MainActivity : ComponentActivity() {
         val prefManager = com.example.data.PreferenceManager(applicationContext)
         val viewModelFactory = BudgetViewModelFactory(application, repository, prefManager)
         val viewModel = ViewModelProvider(this, viewModelFactory)[BudgetViewModel::class.java]
+        val appUpdater = AppUpdater(this)
 
         val startDest = if (prefManager.userId.isNotBlank()) "dashboard" else "login"
 
         setContent {
-            MyApplicationTheme {
+            val isDarkTheme by viewModel.darkThemeEnabled.collectAsState()
+            var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+
+            LaunchedEffect(Unit) {
+                updateInfo = appUpdater.checkForUpdate()
+            }
+
+            MyApplicationTheme(darkTheme = isDarkTheme) {
                 val navController = rememberNavController()
+
+                updateInfo?.let { info ->
+                    AlertDialog(
+                        onDismissRequest = { updateInfo = null },
+                        title = { Text("Yeni Güncelleme Mevcut!") },
+                        text = { Text("Sürüm ${info.versionName} hazır.\n\n${info.releaseNotes}") },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                appUpdater.downloadAndInstallUpdate(info)
+                                updateInfo = null
+                            }) {
+                                Text("Şimdi Yükle")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { updateInfo = null }) {
+                                Text("Daha Sonra")
+                            }
+                        }
+                    )
+                }
 
                 NavHost(navController = navController, startDestination = startDest) {
                     composable("login") {
@@ -110,7 +152,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun setupWorkManager() {
-        val workRequest = PeriodicWorkRequestBuilder<PaymentReminderWorker>(1, TimeUnit.HOURS)
+        val prefManager = com.example.data.PreferenceManager(applicationContext)
+        val interval = prefManager.updateIntervalHours.toLong()
+        val workRequest = PeriodicWorkRequestBuilder<PaymentReminderWorker>(interval, TimeUnit.HOURS)
             .build()
         WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
             "PaymentReminderWork",

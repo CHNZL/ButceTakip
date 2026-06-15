@@ -30,6 +30,14 @@ class PreferenceManager(context: Context) {
         get() = prefs.getInt("remind_upcoming_days", 3)
         set(value) = prefs.edit().putInt("remind_upcoming_days", value).apply()
 
+    var updateIntervalHours: Int
+        get() = prefs.getInt("update_interval_hours", 3)
+        set(value) = prefs.edit().putInt("update_interval_hours", value).apply()
+
+    var darkThemeEnabled: Boolean
+        get() = prefs.getBoolean("dark_theme", false)
+        set(value) = prefs.edit().putBoolean("dark_theme", value).apply()
+
     var silentHoursEnabled: Boolean
         get() = prefs.getBoolean("silent_hours_enabled", true)
         set(value) = prefs.edit().putBoolean("silent_hours_enabled", value).apply()

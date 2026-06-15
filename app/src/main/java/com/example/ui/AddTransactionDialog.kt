@@ -43,7 +43,7 @@ fun AddTransactionDialog(
     fixedType: TransactionType? = null,
     editingTransaction: com.example.data.Transaction? = null,
     onDismiss: () -> Unit,
-    onSave: (Int, Double, String, TransactionType, String, String?, Long, Double?, Double?, Int?, Boolean) -> Unit
+    onSave: (Int, Double, String, TransactionType, String, String?, Long, Double?, Double?, Int?, Boolean, Boolean) -> Unit
 ) {
     var amountText by remember { mutableStateOf(editingTransaction?.amount?.let { if (it > 0) it.toString() else "" } ?: "") }
     var type by remember { mutableStateOf(editingTransaction?.type ?: (fixedType ?: TransactionType.EXPENSE)) }
@@ -65,6 +65,7 @@ fun AddTransactionDialog(
     var installmentsText by remember { mutableStateOf(editingTransaction?.installments?.toString() ?: "") }
     
     var isPaid by remember { mutableStateOf(editingTransaction?.isPaid ?: false) }
+    var repeatUntilYearEnd by remember { mutableStateOf(false) }
 
     LaunchedEffect(type) {
         if (editingTransaction == null) {
@@ -332,13 +333,23 @@ fun AddTransactionDialog(
                     }
                     
                     if (type == TransactionType.EXPENSE) {
-                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(
-                                checked = isPaid,
-                                onCheckedChange = { isPaid = it },
-                                colors = CheckboxDefaults.colors(checkedColor = Color.White, uncheckedColor = Color.White.copy(alpha=0.7f), checkmarkColor = activeColor)
-                            )
-                            Text("Bu ödeme yapıldı", color = Color.White, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = isPaid,
+                                    onCheckedChange = { isPaid = it },
+                                    colors = CheckboxDefaults.colors(checkedColor = Color.White, uncheckedColor = Color.White.copy(alpha=0.7f), checkmarkColor = activeColor)
+                                )
+                                Text("Bu ödeme yapıldı", color = Color.White, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = repeatUntilYearEnd,
+                                    onCheckedChange = { repeatUntilYearEnd = it },
+                                    colors = CheckboxDefaults.colors(checkedColor = Color.White, uncheckedColor = Color.White.copy(alpha=0.7f), checkmarkColor = activeColor)
+                                )
+                                Text("Yıl boyunca tekrarla", color = Color.White, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            }
                         }
                     } 
 
@@ -380,7 +391,7 @@ fun AddTransactionDialog(
 
                                 if (category != null) {
                                     val finalPaid = if (type == TransactionType.EXPENSE) isPaid else true
-                                    onSave(editingTransaction?.id ?: 0, finalAmount, category!!.name, type, category!!.name, person?.name, timestamp, q, up, inst, finalPaid)
+                                    onSave(editingTransaction?.id ?: 0, finalAmount, category!!.name, type, category!!.name, person?.name, timestamp, q, up, inst, finalPaid, repeatUntilYearEnd)
                                 }
                             },
                             enabled = isEnabled,

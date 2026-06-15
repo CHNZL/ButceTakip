@@ -70,6 +70,14 @@ class BudgetViewModel(
     private val _lastGoldUpdate = MutableStateFlow<String?>(null)
     val lastGoldUpdate = _lastGoldUpdate.asStateFlow()
 
+    private val _darkThemeEnabled = MutableStateFlow(preferenceManager.darkThemeEnabled)
+    val darkThemeEnabled = _darkThemeEnabled.asStateFlow()
+
+    fun toggleDarkTheme(enabled: Boolean) {
+        preferenceManager.darkThemeEnabled = enabled
+        _darkThemeEnabled.value = enabled
+    }
+
     init {
         fetchGoldPrices()
         fetchBankRates()
@@ -327,10 +335,25 @@ class BudgetViewModel(
         }
     }
 
-    fun addTransactionWithInstallments(baseTransaction: Transaction) {
+    fun addTransactionWithInstallments(baseTransaction: Transaction, repeatUntilYearEnd: Boolean = false) {
         executeAndBackup {
             val inst = baseTransaction.installments ?: 1
-            if (baseTransaction.id == 0 && inst > 1 && baseTransaction.type == TransactionType.EXPENSE) {
+            if (baseTransaction.id == 0 && repeatUntilYearEnd && baseTransaction.type == TransactionType.EXPENSE) {
+                val calendar = Calendar.getInstance().apply { timeInMillis = baseTransaction.timestamp }
+                val startYear = calendar.get(Calendar.YEAR)
+                var i = 0
+                while (calendar.get(Calendar.YEAR) == startYear) {
+                    val finalTx = baseTransaction.copy(
+                        id = 0,
+                        timestamp = calendar.timeInMillis,
+                        isPaid = if (i == 0) baseTransaction.isPaid else false,
+                        installments = 1
+                    )
+                    repository.insert(finalTx)
+                    calendar.add(Calendar.MONTH, 1)
+                    i++
+                }
+            } else if (baseTransaction.id == 0 && inst > 1 && baseTransaction.type == TransactionType.EXPENSE) {
                 val splitAmount = baseTransaction.amount / inst
                 val calendar = Calendar.getInstance().apply { timeInMillis = baseTransaction.timestamp }
                 

@@ -166,12 +166,36 @@ fun PaymentsScreen(transactions: List<Transaction>, onTogglePaid: (Transaction, 
             }
 
             if (futureUnpaidTx.isNotEmpty()) {
+                val groupSdf = SimpleDateFormat("MMMM yyyy", Locale("tr", "TR"))
+                val groupedFuture = futureUnpaidTx.groupBy {
+                    val c = Calendar.getInstance()
+                    c.timeInMillis = it.timestamp
+                    c.set(Calendar.DAY_OF_MONTH, 1)
+                    c.set(Calendar.HOUR_OF_DAY, 0)
+                    c.set(Calendar.MINUTE, 0)
+                    c.set(Calendar.SECOND, 0)
+                    c.set(Calendar.MILLISECOND, 0)
+                    c.timeInMillis
+                }.toSortedMap()
+
                 item {
                     Text("Gelecek Aylar", fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                 }
-                items(futureUnpaidTx) { tx ->
-                    PaymentItem(tx, isPaid = false, sdf, isPastDue = false, onToggle = { onTogglePaid(tx, !tx.isPaid) })
+
+                groupedFuture.forEach { (monthMs, txs) ->
+                    val monthName = groupSdf.format(Date(monthMs))
+                    val monthTotal = txs.sumOf { it.amount }
+                    item {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text(monthName.uppercase(), fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                            Text(format.format(monthTotal), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                        }
+                    }
+                    items(txs) { tx ->
+                        PaymentItem(tx, isPaid = false, sdf, isPastDue = false, onToggle = { onTogglePaid(tx, !tx.isPaid) })
+                    }
                 }
             }
 

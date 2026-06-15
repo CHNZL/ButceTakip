@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Calculate
 import coil.compose.AsyncImage
 import com.example.viewmodel.AuthViewModel
 
@@ -71,10 +72,11 @@ fun DashboardScreen(
         }
     }
 
-    val mainBgColor = Color(0xFFFDFBFF)
-    val primaryBtnColor = Color(0xFF0061A4)
-    val secondaryContainerColor = Color(0xFFD1E4FF)
-    val onSecondaryContainerColor = Color(0xFF001D36)
+    val isDark = viewModel.darkThemeEnabled.collectAsStateWithLifecycle().value
+    val mainBgColor = if (isDark) MaterialTheme.colorScheme.background else Color(0xFFFDFBFF)
+    val primaryBtnColor = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF0061A4)
+    val secondaryContainerColor = if (isDark) MaterialTheme.colorScheme.secondaryContainer else Color(0xFFD1E4FF)
+    val onSecondaryContainerColor = if (isDark) MaterialTheme.colorScheme.onSecondaryContainer else Color(0xFF001D36)
 
     val savedPicUrl = viewModel.preferenceManager.profilePicUrl
     val savedName = viewModel.preferenceManager.userName.takeIf { it.isNotBlank() } ?: "Gizli Kullanici"
@@ -138,6 +140,22 @@ fun DashboardScreen(
                                     )
                                     HorizontalDivider()
                                     DropdownMenuItem(
+                                        text = { Text("Tasarruf Finansmanı") },
+                                        onClick = {
+                                            selectedTab = 7
+                                            showProfileMenu = false
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Konut Kredisi Hesaplama") },
+                                        onClick = {
+                                            selectedTab = 8
+                                            showProfileMenu = false
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
+                                    )
+                                    DropdownMenuItem(
                                         text = { Text("Ayarlar") },
                                         onClick = {
                                             selectedTab = 6
@@ -165,6 +183,22 @@ fun DashboardScreen(
                                     )
                                     HorizontalDivider()
                                     DropdownMenuItem(
+                                        text = { Text("Tasarruf Finansmanı") },
+                                        onClick = {
+                                            selectedTab = 7
+                                            showProfileMenu = false
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Konut Kredisi Hesaplama") },
+                                        onClick = {
+                                            selectedTab = 8
+                                            showProfileMenu = false
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
+                                    )
+                                    DropdownMenuItem(
                                         text = { Text("Ayarlar") },
                                         onClick = {
                                             selectedTab = 6
@@ -181,6 +215,22 @@ fun DashboardScreen(
                                         leadingIcon = { Icon(Icons.Default.Logout, contentDescription = null) }
                                     )
                                 } else {
+                                    DropdownMenuItem(
+                                        text = { Text("Tasarruf Finansmanı") },
+                                        onClick = {
+                                            selectedTab = 7
+                                            showProfileMenu = false
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Konut Kredisi Hesaplama") },
+                                        onClick = {
+                                            selectedTab = 8
+                                            showProfileMenu = false
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
+                                    )
                                     DropdownMenuItem(
                                         text = { Text("Ayarlar") },
                                         onClick = {
@@ -201,7 +251,17 @@ fun DashboardScreen(
                             }
                         }
                         Spacer(modifier = Modifier.width(16.dp))
-                        Text(when(selectedTab) { 0 -> "Bütçem"; 1 -> "Gelirler"; 2 -> "Ödeme Takibi"; 3 -> "Birikimlerim"; 4 -> "Geçmiş"; 5 -> "Analiz"; else -> "Ayarlar" }, fontWeight = FontWeight.Medium, color = onSecondaryContainerColor)
+                        Text(when(selectedTab) { 0 -> "Bütçem"; 1 -> "Gelirler"; 2 -> "Ödeme Takibi"; 3 -> "Birikimlerim"; 4 -> "Geçmiş"; 5 -> "Analiz"; 7 -> "Tasarruf Finansmanı"; 8 -> "Konut Kredisi"; else -> "Ayarlar" }, fontWeight = FontWeight.Medium, color = onSecondaryContainerColor)
+                    }
+                },
+                actions = {
+                    val isDark by viewModel.darkThemeEnabled.collectAsStateWithLifecycle()
+                    IconButton(onClick = { viewModel.toggleDarkTheme(!isDark) }) {
+                        Icon(
+                            imageVector = if (isDark) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
+                            contentDescription = "Tema Değiştir",
+                            tint = onSecondaryContainerColor
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -211,8 +271,8 @@ fun DashboardScreen(
         },
         bottomBar = {
             NavigationBar(
-                containerColor = Color(0xFFF3F4F9),
-                contentColor = Color(0xFF475569)
+                containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF3F4F9),
+                contentColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF475569)
             ) {
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Home, contentDescription = "Anasayfa") },
@@ -315,7 +375,14 @@ fun DashboardScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
-                    val upcoming = uiState.transactions.filter { it.type == TransactionType.EXPENSE && !it.isPaid }.sortedBy { it.timestamp }.take(5)
+                    val upcoming = uiState.transactions.filter { it.type == TransactionType.EXPENSE && !it.isPaid && it.timestamp <= Calendar.getInstance().apply {
+                        set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
+                        set(Calendar.HOUR_OF_DAY, 23)
+                        set(Calendar.MINUTE, 59)
+                        set(Calendar.SECOND, 59)
+                        set(Calendar.MILLISECOND, 999)
+                    }.timeInMillis }.sortedBy { it.timestamp }.take(5)
+                    
                     val currentMonthStart = Calendar.getInstance().apply {
                         set(Calendar.DAY_OF_MONTH, 1)
                         set(Calendar.HOUR_OF_DAY, 0)
@@ -323,14 +390,25 @@ fun DashboardScreen(
                         set(Calendar.SECOND, 0)
                         set(Calendar.MILLISECOND, 0)
                     }.timeInMillis
-                    val currentMonthTxs = uiState.transactions.filter { it.timestamp >= currentMonthStart }
-                    val cmIncome = currentMonthTxs.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-                    val cmExpense = currentMonthTxs.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
-                    val cmSaving = currentMonthTxs.filter { it.type == TransactionType.SAVING }.sumOf { it.amount }
+                    
+                    val currentMonthEnd = Calendar.getInstance().apply {
+                        set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
+                        set(Calendar.HOUR_OF_DAY, 23)
+                        set(Calendar.MINUTE, 59)
+                        set(Calendar.SECOND, 59)
+                        set(Calendar.MILLISECOND, 999)
+                    }.timeInMillis
+
+                    val thisMonthTxs = uiState.transactions.filter { it.timestamp in currentMonthStart..currentMonthEnd }
+                    val pastUnpaidTxs = uiState.transactions.filter { it.timestamp < currentMonthStart && it.type == TransactionType.EXPENSE && !it.isPaid }
+
+                    val cmIncome = thisMonthTxs.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+                    val cmExpense = thisMonthTxs.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount } + pastUnpaidTxs.sumOf { it.amount }
+                    val cmSaving = thisMonthTxs.filter { it.type == TransactionType.SAVING }.sumOf { it.amount }
                     val cmBalance = cmIncome - cmExpense - cmSaving
                     
                     item {
-                        BudgetSummaryCards(cmBalance, cmIncome, cmExpense, cmSaving)
+                        BudgetSummaryCards(cmBalance, cmIncome, cmExpense, cmSaving, isDark)
                         
                         // ALtin fiyatlari
                         GoldPricesSection(
@@ -359,7 +437,8 @@ fun DashboardScreen(
                     items(upcoming) { transaction ->
                         TransactionItem(
                             transaction = transaction,
-                            onDelete = { viewModel.deleteTransaction(transaction.id) }
+                            onDelete = { viewModel.deleteTransaction(transaction.id) },
+                            isDark = isDark
                         )
                     }
                     if (upcoming.isEmpty()) {
@@ -441,7 +520,12 @@ fun DashboardScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                AnalyticsScreen(transactions = uiState.transactions)
+                AnalyticsScreen(
+                    transactions = uiState.transactions,
+                    goldPrices = goldPrices,
+                    bankRates = bankRates,
+                    preferenceManager = viewModel.preferenceManager
+                )
             }
         } else if (selectedTab == 6) {
             Box(
@@ -450,6 +534,22 @@ fun DashboardScreen(
                     .padding(innerPadding)
             ) {
                 SettingsScreen(viewModel)
+            }
+        } else if (selectedTab == 7) {
+            Box(
+                 modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                SavingsCalculatorScreen()
+            }
+        } else if (selectedTab == 8) {
+            Box(
+                 modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                MortgageCalculatorScreen()
             }
         }
     }
@@ -470,7 +570,7 @@ fun DashboardScreen(
             fixedType = fixedType,
             editingTransaction = editingTransaction,
             onDismiss = { showAddDialog = false },
-            onSave = { id, amount, title, type, category, person, timestamp, q, up, inst, isPaid ->
+            onSave = { id, amount, title, type, category, person, timestamp, q, up, inst, isPaid, repeatUntilYearEnd ->
                 val newTx = Transaction(
                     id = id,
                     amount = amount,
@@ -484,7 +584,7 @@ fun DashboardScreen(
                     installments = inst,
                     isPaid = isPaid
                 )
-                viewModel.addTransactionWithInstallments(newTx)
+                viewModel.addTransactionWithInstallments(newTx, repeatUntilYearEnd)
                 showAddDialog = false
             }
         )
@@ -508,16 +608,16 @@ fun DashboardScreen(
 }
 
 @Composable
-fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving: Double) {
+fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving: Double, isDark: Boolean = false) {
     val format = NumberFormat.getCurrencyInstance(Locale("tr", "TR"))
     
-    val cardBg = Color(0xFFD1E4FF)
-    val cardText = Color(0xFF001D36)
-    val innerCardBg = Color.White.copy(alpha = 0.4f)
-    val incomeText = Color(0xFF15803D)
-    val incomeIconBg = Color(0xFF22C55E).copy(alpha = 0.2f)
-    val expenseText = Color(0xFFB91C1C)
-    val expenseIconBg = Color(0xFFEF4444).copy(alpha = 0.2f)
+    val cardBg = if (isDark) MaterialTheme.colorScheme.secondaryContainer else Color(0xFFD1E4FF)
+    val cardText = if (isDark) MaterialTheme.colorScheme.onSecondaryContainer else Color(0xFF001D36)
+    val innerCardBg = if (isDark) Color.Black.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.4f)
+    val incomeText = if (isDark) Color(0xFF4ADE80) else Color(0xFF15803D)
+    val expenseText = if (isDark) Color(0xFFF87171) else Color(0xFFB91C1C)
+    val labelText = if (isDark) Color.White.copy(alpha=0.7f) else Color(0xFF475569)
+    val savingText = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
 
     Column(
         modifier = Modifier
@@ -567,7 +667,7 @@ fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving:
                         Column {
                             Text(
                                 "GELİR",
-                                style = LocalTextStyle.current.copy(fontSize=8.sp, fontWeight=FontWeight.Bold, color=Color(0xFF475569))
+                                style = LocalTextStyle.current.copy(fontSize=8.sp, fontWeight=FontWeight.Bold, color=labelText)
                             )
                             Text(
                                 text = balanceFormat.format(income),
@@ -587,7 +687,7 @@ fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving:
                         Column {
                             Text(
                                 "GİDER",
-                                style = LocalTextStyle.current.copy(fontSize=8.sp, fontWeight=FontWeight.Bold, color=Color(0xFF475569))
+                                style = LocalTextStyle.current.copy(fontSize=8.sp, fontWeight=FontWeight.Bold, color=labelText)
                             )
                             Text(
                                 text = balanceFormat.format(expense),
@@ -607,11 +707,11 @@ fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving:
                         Column {
                             Text(
                                 "BİRİKİM",
-                                style = LocalTextStyle.current.copy(fontSize=8.sp, fontWeight=FontWeight.Bold, color=Color(0xFF475569))
+                                style = LocalTextStyle.current.copy(fontSize=8.sp, fontWeight=FontWeight.Bold, color=labelText)
                             )
                             Text(
                                 text = balanceFormat.format(saving),
-                                style = LocalTextStyle.current.copy(fontSize=14.sp, fontWeight=FontWeight.Bold, color=Color(0xFF0284C7))
+                                style = LocalTextStyle.current.copy(fontSize=14.sp, fontWeight=FontWeight.Bold, color=savingText)
                             )
                         }
                     }
@@ -622,14 +722,14 @@ fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving:
 }
 
 @Composable
-fun TransactionItem(transaction: Transaction, onDelete: () -> Unit) {
+fun TransactionItem(transaction: Transaction, onDelete: () -> Unit, isDark: Boolean = false) {
     val format = NumberFormat.getCurrencyInstance(Locale("tr", "TR"))
     val sdf = SimpleDateFormat("dd MMM yyyy", Locale("tr", "TR"))
     
     val amountColor = when (transaction.type) {
-        TransactionType.INCOME -> Color(0xFF16A34A)
-        TransactionType.EXPENSE -> Color(0xFFDC2626)
-        TransactionType.SAVING -> Color(0xFFF97316)
+        TransactionType.INCOME -> if (isDark) Color(0xFF4ADE80) else Color(0xFF16A34A)
+        TransactionType.EXPENSE -> if (isDark) Color(0xFFF87171) else Color(0xFFDC2626)
+        TransactionType.SAVING -> if (isDark) Color(0xFFFB923C) else Color(0xFFF97316)
     }
     
     val prefix = when (transaction.type) {
@@ -639,25 +739,25 @@ fun TransactionItem(transaction: Transaction, onDelete: () -> Unit) {
     }
 
     val iconColor = when (transaction.type) {
-        TransactionType.INCOME -> Color(0xFF2563EB)
-        TransactionType.EXPENSE -> Color(0xFFEA580C)
-        TransactionType.SAVING -> Color(0xFF9333EA)
+        TransactionType.INCOME -> if (isDark) Color(0xFF60A5FA) else Color(0xFF2563EB)
+        TransactionType.EXPENSE -> if (isDark) Color(0xFFFB923C) else Color(0xFFEA580C)
+        TransactionType.SAVING -> if (isDark) Color(0xFFC084FC) else Color(0xFF9333EA)
     }
     
     val iconBg = when (transaction.type) {
-        TransactionType.INCOME -> Color(0xFFDBEAFE)
-        TransactionType.EXPENSE -> Color(0xFFFFEDD5)
-        TransactionType.SAVING -> Color(0xFFF3E8FF)
+        TransactionType.INCOME -> if (isDark) Color(0xFF1E3A8A) else Color(0xFFDBEAFE)
+        TransactionType.EXPENSE -> if (isDark) Color(0xFF7C2D12) else Color(0xFFFFEDD5)
+        TransactionType.SAVING -> if (isDark) Color(0xFF581C87) else Color(0xFFF3E8FF)
     }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.6f)),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9)) // border-slate-100
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFF1F5F9)) // border-slate-700 or slate-100
     ) {
         Row(
             modifier = Modifier
@@ -686,7 +786,7 @@ fun TransactionItem(transaction: Transaction, onDelete: () -> Unit) {
                 Text(
                     text = sdf.format(Date(transaction.timestamp)),
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFF64748B),
+                    color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
                     fontWeight = FontWeight.SemiBold
                 )
                 
@@ -709,7 +809,7 @@ fun TransactionItem(transaction: Transaction, onDelete: () -> Unit) {
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0F172A),
+                    color = if (isDark) Color(0xFFF8FAFC) else Color(0xFF0F172A),
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )

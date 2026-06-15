@@ -40,6 +40,11 @@ import com.example.viewmodel.BudgetViewModel
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import java.util.concurrent.TimeUnit
+import com.example.worker.PaymentReminderWorker
 import android.widget.Toast
 
 @Composable
@@ -394,6 +399,9 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                             var remindUpcomingDays by remember { mutableStateOf(viewModel.preferenceManager.remindUpcomingDays) }
                             var upcomingExpanded by remember { mutableStateOf(false) }
                             
+                            var updateIntervalHours by remember { mutableStateOf(viewModel.preferenceManager.updateIntervalHours) }
+                            var updateIntervalExpanded by remember { mutableStateOf(false) }
+                            
                             var silentHoursEnabled by remember { mutableStateOf(viewModel.preferenceManager.silentHoursEnabled) }
                             var silentHoursStart by remember { mutableStateOf(viewModel.preferenceManager.silentHoursStart) }
                             var silentHoursEnd by remember { mutableStateOf(viewModel.preferenceManager.silentHoursEnd) }
@@ -428,6 +436,34 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                                                     remindUpcomingDays = d
                                                     viewModel.preferenceManager.remindUpcomingDays = d
                                                     upcomingExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Güncelleme Sıklığı")
+                                Box {
+                                    TextButton(onClick = { updateIntervalExpanded = true }) {
+                                        Text("$updateIntervalHours Saatte Bir")
+                                    }
+                                    DropdownMenu(expanded = updateIntervalExpanded, onDismissRequest = { updateIntervalExpanded = false }) {
+                                        listOf(1, 3, 6).forEach { h ->
+                                            DropdownMenuItem(
+                                                text = { Text("$h Saatte Bir") },
+                                                onClick = { 
+                                                    updateIntervalHours = h
+                                                    viewModel.preferenceManager.updateIntervalHours = h
+                                                    updateIntervalExpanded = false
+                                                    
+                                                    val workRequest = PeriodicWorkRequestBuilder<PaymentReminderWorker>(h.toLong(), TimeUnit.HOURS).build()
+                                                    WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                                                        "PaymentReminderWork",
+                                                        ExistingPeriodicWorkPolicy.UPDATE,
+                                                        workRequest
+                                                    )
                                                 }
                                             )
                                         }
