@@ -36,11 +36,11 @@ jobs:
         run: |
           echo "${{ secrets.DEBUG_KEYSTORE_B64 }}" | base64 --decode > debug.keystore
 
-      - name: Gradle Çalıstırılabilir İzni Ver
-        run: chmod +x ./gradlew
+      - name: Gradle'ı Ayarla
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Debug APK Derle
-        run: ./gradlew assembleDebug
+        run: gradle assembleDebug
 
       - name: Version Bilgisini Çıkar ve version.json Olustur
         run: |
