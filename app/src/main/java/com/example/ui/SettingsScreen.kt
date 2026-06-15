@@ -46,6 +46,9 @@ import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 import com.example.worker.PaymentReminderWorker
 import android.widget.Toast
+import com.example.BuildConfig
+import com.example.updater.AppUpdater
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(viewModel: BudgetViewModel) {
@@ -84,6 +87,10 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
             }
         }
     }
+
+    val coroutineScope = rememberCoroutineScope()
+    val appUpdater = remember { AppUpdater(context) }
+    var isCheckingUpdate by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -773,6 +780,54 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                             modifier = Modifier.weight(1f)
                         ) {
                             Text("İçe Aktar")
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Uygulama Bilgisi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("Sürüm: ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        
+                        Button(
+                            onClick = {
+                                coroutineScope.launch {
+                                    isCheckingUpdate = true
+                                    val updateInfo = appUpdater.checkForUpdate()
+                                    isCheckingUpdate = false
+                                    
+                                    if (updateInfo != null) {
+                                        Toast.makeText(context, "Yeni sürüm (${updateInfo.versionName}) bulunuyor, indiriliyor...", Toast.LENGTH_LONG).show()
+                                        appUpdater.downloadAndInstallUpdate(updateInfo)
+                                    } else {
+                                        Toast.makeText(context, "Uygulamanız güncel.", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            },
+                            enabled = !isCheckingUpdate
+                        ) {
+                            if (isCheckingUpdate) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("Güncelle")
+                            }
                         }
                     }
                 }
