@@ -103,7 +103,7 @@ class PaymentReminderWorker(
         }
 
         val builder = NotificationCompat.Builder(applicationContext, channelId)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Ödeme Hatırlatması!")
             .setContentText("Bekleyen $count ödemeniz var. (Toplam: $amountStr)")
             .setStyle(inboxStyle)

@@ -161,5 +161,14 @@ class MainActivity : ComponentActivity() {
             ExistingPeriodicWorkPolicy.UPDATE,
             workRequest
         )
+
+        // Güncelleme kontrolü için günlük Worker
+        val updateWorkRequest = PeriodicWorkRequestBuilder<com.example.worker.AppUpdateWorker>(24, TimeUnit.HOURS)
+            .build()
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            "AppUpdateWork",
+            ExistingPeriodicWorkPolicy.UPDATE, // Update policy to keep running it
+            updateWorkRequest
+        )
     }
 }
