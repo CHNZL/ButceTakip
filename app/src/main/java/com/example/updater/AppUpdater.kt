@@ -28,18 +28,32 @@ data class UpdateInfo(
 
 class AppUpdater(private val context: Context) {
 
-    // You can host a JSON file like this on GitHub Gist, Firebase Storage, or your own server.
-    // Ensure the JSON response format matches:
-    // {"versionCode": 2, "versionName": "1.1", "downloadUrl": "https://...", "releaseNotes": "..."}
-    private val UPDATE_JSON_URL = "https://raw.githubusercontent.com/cihanozel10/BudgeTrackerApp/main/version.json" // Placeholder URL, user should replace
+    // Otomatik olarak GitHub Action tarafından güncellenen version.json adresi
+    private val UPDATE_JSON_URL = "https://github.com/CHNZL/ButceTakip/releases/download/latest/version.json"
 
     suspend fun checkForUpdate(): UpdateInfo? = withContext(Dispatchers.IO) {
         try {
-            val url = URL(UPDATE_JSON_URL)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "GET"
-            connection.connectTimeout = 5000
-            connection.readTimeout = 5000
+            var url = URL(UPDATE_JSON_URL)
+            var connection: HttpURLConnection
+            var redirectCount = 0
+            
+            while (true) {
+                connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+                connection.instanceFollowRedirects = false // Biz manuel yöneteceğiz
+                
+                val status = connection.responseCode
+                if (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == HttpURLConnection.HTTP_SEE_OTHER || status == 307 || status == 308) {
+                    val newUrl = connection.getHeaderField("Location")
+                    url = URL(newUrl)
+                    redirectCount++
+                    if (redirectCount > 5) break
+                } else {
+                    break
+                }
+            }
 
             if (connection.responseCode == HttpURLConnection.HTTP_OK) {
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
