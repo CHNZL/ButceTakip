@@ -303,9 +303,16 @@ class BudgetViewModel(
     )
 
     init {
-        // Auto-restore on startup if logged in
+        // Auto-restore on startup if logged in and DB is empty
         if (preferenceManager.userId.isNotBlank()) {
-            restoreFromCloudSilently()
+            viewModelScope.launch {
+                val hasData = repository.allTransactions.first().isNotEmpty() || 
+                              repository.allSavings.first().isNotEmpty() ||
+                              repository.getCategoriesByType("EXPENSE").first().isNotEmpty()
+                if (!hasData) {
+                    restoreFromCloudSilently()
+                }
+            }
         }
     }
 
@@ -511,13 +518,12 @@ class BudgetViewModel(
         if (!initCloud()) return
 
         viewModelScope.launch {
-            val txs = uiState.value.transactions
-            val incCats = incomeCategories.value
-            val expCats = expenseCategories.value
-            val savCats = savingCategories.value
-            val ppl = persons.value
-            val savings = uiState.value.savings
-            val allCats = incCats + expCats + savCats
+            val txs = repository.allTransactions.first()
+            val savings = repository.allSavings.first()
+            val allCats = repository.getCategoriesByType("INCOME").first() + 
+                          repository.getCategoriesByType("EXPENSE").first() + 
+                          repository.getCategoriesByType("SAVING").first()
+            val ppl = repository.allPersons.first()
 
             val data = mapOf(
                 "transactions" to txs,

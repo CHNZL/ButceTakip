@@ -192,5 +192,14 @@ class MainActivity : ComponentActivity() {
             ExistingWorkPolicy.REPLACE,
             oneTimeUpdateRequest
         )
+
+        // Günlük bulut yedeklemesi için Worker
+        val backupWorkRequest = PeriodicWorkRequestBuilder<com.example.worker.CloudBackupWorker>(24, TimeUnit.HOURS)
+            .build()
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            "CloudBackupWork",
+            ExistingPeriodicWorkPolicy.KEEP,
+            backupWorkRequest
+        )
     }
 }
