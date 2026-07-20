@@ -36,7 +36,7 @@ fun AddSavingDialog(
 
                 OutlinedTextField(
                     value = target,
-                    onValueChange = { target = it },
+                    onValueChange = { target = com.example.util.formatInputAmount(it) },
                     label = { Text("Hedef Tutar (₺)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
@@ -45,7 +45,7 @@ fun AddSavingDialog(
 
                 OutlinedTextField(
                     value = saved,
-                    onValueChange = { saved = it },
+                    onValueChange = { saved = com.example.util.formatInputAmount(it) },
                     label = { Text("Mevcut Birikim (₺)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
@@ -56,8 +56,8 @@ fun AddSavingDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val targetVal = target.toDoubleOrNull() ?: 0.0
-                    val savedVal = saved.toDoubleOrNull() ?: 0.0
+                    val targetVal = com.example.util.parseFormattedAmount(target) ?: 0.0
+                    val savedVal = com.example.util.parseFormattedAmount(saved) ?: 0.0
                     if (title.isNotBlank() && targetVal > 0) {
                         onSave(title, targetVal, savedVal)
                     }

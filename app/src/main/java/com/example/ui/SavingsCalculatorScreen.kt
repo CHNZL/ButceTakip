@@ -26,9 +26,9 @@ fun SavingsCalculatorScreen() {
     var organizationFeeRateText by remember { mutableStateOf("7") }
     val bddkMinRatio = 0.40
 
-    val targetAmount = targetAmountText.toDoubleOrNull() ?: 0.0
-    val downPayment = downPaymentText.toDoubleOrNull() ?: 0.0
-    val monthlyPayment = monthlyPaymentText.toDoubleOrNull() ?: 0.0
+    val targetAmount = com.example.util.parseFormattedAmount(targetAmountText) ?: 0.0
+    val downPayment = com.example.util.parseFormattedAmount(downPaymentText) ?: 0.0
+    val monthlyPayment = com.example.util.parseFormattedAmount(monthlyPaymentText) ?: 0.0
     val organizationFeeRate = (organizationFeeRateText.toDoubleOrNull() ?: 0.0) / 100.0
 
     val remainingAmount = (targetAmount - downPayment).coerceAtLeast(0.0)
@@ -42,9 +42,9 @@ fun SavingsCalculatorScreen() {
             Text("Tasarruf Finansmanı Hesaplayıcı", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
             
-            OutlinedTextField(value = targetAmountText, onValueChange = { if (it.all { char -> char.isDigit() }) targetAmountText = it }, label = { Text("Hedeflenen Finansman (TL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = downPaymentText, onValueChange = { if (it.all { char -> char.isDigit() }) downPaymentText = it }, label = { Text("Peşinat Tutarı (TL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = monthlyPaymentText, onValueChange = { if (it.all { char -> char.isDigit() }) monthlyPaymentText = it }, label = { Text("Aylık Ödeme Gücü (TL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = targetAmountText, onValueChange = { targetAmountText = com.example.util.formatInputAmount(it) }, label = { Text("Hedeflenen Finansman (TL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = downPaymentText, onValueChange = { downPaymentText = com.example.util.formatInputAmount(it) }, label = { Text("Peşinat Tutarı (TL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = monthlyPaymentText, onValueChange = { monthlyPaymentText = com.example.util.formatInputAmount(it) }, label = { Text("Aylık Ödeme Gücü (TL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
             OutlinedTextField(value = organizationFeeRateText, onValueChange = { if (it.all { char -> char.isDigit() || char == '.' }) organizationFeeRateText = it }, label = { Text("Organizasyon Ücreti (%)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
             
             Spacer(modifier = Modifier.height(16.dp))

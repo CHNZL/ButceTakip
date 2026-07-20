@@ -75,7 +75,7 @@ fun MortgageCalculatorScreen() {
             Text("Konut Kredisi Hesaplayıcı", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
             
-            OutlinedTextField(value = amountText, onValueChange = { amountText = formatInput(it) }, label = { Text("Kredi Tutarı (TL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = amountText, onValueChange = { amountText = com.example.util.formatInputAmount(it) }, label = { Text("Kredi Tutarı (TL)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
             OutlinedTextField(value = rateText, onValueChange = { rateText = it.filter { c -> c.isDigit() || c == ',' } }, label = { Text("Aylık Faiz Oranı (%)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
             OutlinedTextField(value = termMonthsText, onValueChange = { termMonthsText = it.filter { c -> c.isDigit() } }, label = { Text("Vade (Ay)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
             

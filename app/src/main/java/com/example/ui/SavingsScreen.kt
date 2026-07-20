@@ -370,7 +370,7 @@ fun SavingsScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        val parsed = newPriceText.replace(",", ".").toDoubleOrNull()
+                        val parsed = com.example.util.parseFormattedAmount(newPriceText)
                         if (parsed != null && parsed >= 0.0) {
                             onUpdateCustomPrice?.invoke(catName, parsed)
                         }
@@ -402,7 +402,7 @@ fun SavingsScreen(
                     )
                     OutlinedTextField(
                         value = newPriceText,
-                        onValueChange = { newPriceText = it },
+                        onValueChange = { newPriceText = com.example.util.formatInputAmount(it) },
                         placeholder = { Text("Örn: 2450.5") },
                         singleLine = true,
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
