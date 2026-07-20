@@ -45,7 +45,8 @@ fun AnalyticsScreen(
     transactions: List<Transaction>,
     goldPrices: List<com.example.data.GoldPrice> = emptyList(),
     bankRates: List<com.example.data.BankRate> = emptyList(),
-    preferenceManager: com.example.data.PreferenceManager? = null
+    preferenceManager: com.example.data.PreferenceManager? = null,
+    ziraatRates: List<com.example.data.BankRate> = emptyList()
 ) {
     var selectedTab by remember { mutableStateOf(0) } // 0: Genel Analiz, 1: Kişi Analizi
 
@@ -87,7 +88,7 @@ fun AnalyticsScreen(
         }
 
         if (selectedTab == 0) {
-            GeneralAnalysisScreen(validTransactions, goldPrices, bankRates, preferenceManager)
+            GeneralAnalysisScreen(validTransactions, goldPrices, bankRates, preferenceManager, ziraatRates)
         } else {
             PersonAnalysisScreen(validTransactions)
         }
@@ -99,7 +100,8 @@ fun GeneralAnalysisScreen(
     transactions: List<Transaction>,
     goldPrices: List<com.example.data.GoldPrice>,
     bankRates: List<com.example.data.BankRate>,
-    preferenceManager: com.example.data.PreferenceManager?
+    preferenceManager: com.example.data.PreferenceManager?,
+    ziraatRates: List<com.example.data.BankRate> = emptyList()
 ) {
     var selectedTime by remember { mutableStateOf("Bu Ay") }
     val timeFilters = listOf("Bu Ay", "Önceki Ay", "Son 3 Ay", "Son 6 Ay", "Bu Yıl")
@@ -185,9 +187,9 @@ fun GeneralAnalysisScreen(
         item {
             val allSavingTxs = transactions.filter { it.type == TransactionType.SAVING }
             if (allSavingTxs.isNotEmpty()) {
-                SavingsDistributionCard("Birikim Dağılımı", "GÜNCEL DEĞERLERE GÖRE BİRİKİM ANALİZİ (TÜM ZAMANLAR)", allSavingTxs, goldPrices, bankRates, preferenceManager)
+                SavingsDistributionCard("Birikim Dağılımı", "GÜNCEL DEĞERLERE GÖRE BİRİKİM ANALİZİ (TÜM ZAMANLAR)", allSavingTxs, goldPrices, bankRates, preferenceManager, ziraatRates)
                 Spacer(modifier = Modifier.height(16.dp))
-                SavingsTrendCard(allSavingTxs, transactions, goldPrices, bankRates, preferenceManager)
+                SavingsTrendCard(allSavingTxs, transactions, goldPrices, bankRates, preferenceManager, ziraatRates)
             }
         }
     }
@@ -625,7 +627,8 @@ fun SavingsDistributionCard(
     transactions: List<Transaction>,
     goldPrices: List<com.example.data.GoldPrice>,
     bankRates: List<com.example.data.BankRate>,
-    preferenceManager: com.example.data.PreferenceManager?
+    preferenceManager: com.example.data.PreferenceManager?,
+    ziraatRates: List<com.example.data.BankRate> = emptyList()
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -639,10 +642,10 @@ fun SavingsDistributionCard(
             }
             Spacer(modifier = Modifier.height(24.dp))
             
-            val distByCategory = remember(transactions, goldPrices, bankRates) {
+            val distByCategory = remember(transactions, goldPrices, bankRates, ziraatRates) {
                 transactions.groupBy { it.category ?: "Diğer" }.mapValues { (cat, txList) ->
                     val totalQuantity = txList.sumOf { it.quantity ?: 0.0 }
-                    val livePrice = resolveCurrentUnitPrice(cat, goldPrices, bankRates, preferenceManager)
+                    val livePrice = resolveCurrentUnitPrice(cat, goldPrices, bankRates, preferenceManager, ziraatRates)
                     val latestPurchasePrice = txList.maxByOrNull { it.timestamp }?.unitPrice ?: 0.0
                     val currentUnitPrice = livePrice ?: latestPurchasePrice
                     totalQuantity * currentUnitPrice
@@ -663,7 +666,8 @@ fun SavingsTrendCard(
     allTransactions: List<Transaction>,
     goldPrices: List<com.example.data.GoldPrice>,
     bankRates: List<com.example.data.BankRate>,
-    preferenceManager: com.example.data.PreferenceManager?
+    preferenceManager: com.example.data.PreferenceManager?,
+    ziraatRates: List<com.example.data.BankRate> = emptyList()
 ) {
     var selectedTime by remember { mutableStateOf("Tüm Zamanlar") }
     var selectedCategory by remember { mutableStateOf("Tüm Varlıklar") }
@@ -679,10 +683,10 @@ fun SavingsTrendCard(
         selectedCategory == "Tüm Varlıklar" || it.category == selectedCategory
     }
     
-    val currentValues = remember(filteredTx, goldPrices, bankRates) {
+    val currentValues = remember(filteredTx, goldPrices, bankRates, ziraatRates) {
         filteredTx.groupBy { it.category ?: "Diğer" }.map { (cat, txList) ->
             val totalQuantity = txList.sumOf { it.quantity ?: 0.0 }
-            val livePrice = resolveCurrentUnitPrice(cat, goldPrices, bankRates, preferenceManager)
+            val livePrice = resolveCurrentUnitPrice(cat, goldPrices, bankRates, preferenceManager, ziraatRates)
             val latestPurchasePrice = txList.maxByOrNull { it.timestamp }?.unitPrice ?: 0.0
             val currentUnitPrice = livePrice ?: latestPurchasePrice
             val totalPaid = txList.sumOf { it.amount }

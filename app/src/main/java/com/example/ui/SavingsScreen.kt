@@ -54,7 +54,8 @@ fun SavingsScreen(
     onDeleteSavingTransaction: (Int) -> Unit,
     preferenceManager: com.example.data.PreferenceManager? = null,
     customPricesTrigger: Long = 0L,
-    onUpdateCustomPrice: ((String, Double) -> Unit)? = null
+    onUpdateCustomPrice: ((String, Double) -> Unit)? = null,
+    ziraatRates: List<BankRate> = emptyList()
 ) {
     var editingCategoryPrice by remember { mutableStateOf<String?>(null) }
     var newPriceText by remember { mutableStateOf("") }
@@ -64,13 +65,13 @@ fun SavingsScreen(
             .sortedByDescending { it.timestamp }
     }
 
-    val assetSummaries = remember(savingTransactions, goldPrices, bankRates, customPricesTrigger) {
+    val assetSummaries = remember(savingTransactions, goldPrices, bankRates, ziraatRates, customPricesTrigger) {
         val groups = savingTransactions.groupBy { it.category }
         groups.map { (category, txList) ->
             val totalQuantity = txList.sumOf { it.quantity ?: 0.0 }
             val totalPaid = txList.sumOf { it.amount }
             
-            val livePrice = resolveCurrentUnitPrice(category, goldPrices, bankRates, preferenceManager)
+            val livePrice = resolveCurrentUnitPrice(category, goldPrices, bankRates, preferenceManager, ziraatRates)
             val latestPurchasePrice = txList.maxByOrNull { it.timestamp }?.unitPrice ?: 0.0
             val currentUnitPrice = livePrice ?: latestPurchasePrice
             
@@ -344,7 +345,7 @@ fun SavingsScreen(
             }
         } else {
             items(savingTransactions, key = { it.id }) { tx ->
-                val livePrice = resolveCurrentUnitPrice(tx.category, goldPrices, bankRates, preferenceManager)
+                val livePrice = resolveCurrentUnitPrice(tx.category, goldPrices, bankRates, preferenceManager, ziraatRates)
                 val rate = livePrice ?: tx.unitPrice ?: 0.0
                 val qty = tx.quantity ?: 0.0
                 val currentValue = qty * rate
@@ -759,7 +760,8 @@ fun resolveCurrentUnitPrice(
     category: String,
     goldPrices: List<GoldPrice>,
     bankRates: List<BankRate>,
-    preferenceManager: com.example.data.PreferenceManager? = null
+    preferenceManager: com.example.data.PreferenceManager? = null,
+    ziraatRates: List<BankRate> = emptyList()
 ): Double? {
     val cleanCatLower = category.trim().lowercase(java.util.Locale("tr", "TR"))
     val cleanCatRoot = category.trim().lowercase(java.util.Locale.ROOT)
@@ -779,6 +781,10 @@ fun resolveCurrentUnitPrice(
         if (marketMatch.startsWith("yk_")) {
             val code = marketMatch.removePrefix("yk_")
             val br = bankRates.find { it.code == code }
+            br?.let { parseVal(it.buy) ?: parseVal(it.sell) }?.let { return it }
+        } else if (marketMatch.startsWith("zr_")) {
+            val code = marketMatch.removePrefix("zr_")
+            val br = ziraatRates.find { it.code == code }
             br?.let { parseVal(it.buy) ?: parseVal(it.sell) }?.let { return it }
         } else if (marketMatch.startsWith("gp_")) {
             val name = marketMatch.removePrefix("gp_")

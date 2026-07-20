@@ -54,6 +54,7 @@ fun DashboardScreen(
     val currentUserId by viewModel.currentUserId.collectAsStateWithLifecycle()
     val goldPrices by viewModel.goldPrices.collectAsStateWithLifecycle()
     val bankRates by viewModel.bankRates.collectAsStateWithLifecycle()
+    val ziraatRates by viewModel.ziraatRates.collectAsStateWithLifecycle()
     val customPricesTrigger by viewModel.customPricesRefreshTrigger.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
@@ -502,7 +503,8 @@ fun DashboardScreen(
                     customPricesTrigger = customPricesTrigger,
                     onUpdateCustomPrice = { category, price ->
                         viewModel.updateCustomPrice(category, price)
-                    }
+                    },
+                    ziraatRates = ziraatRates
                 )
             }
         } else if (selectedTab == 4) {
@@ -532,7 +534,8 @@ fun DashboardScreen(
                     transactions = uiState.transactions,
                     goldPrices = goldPrices,
                     bankRates = bankRates,
-                    preferenceManager = viewModel.preferenceManager
+                    preferenceManager = viewModel.preferenceManager,
+                    ziraatRates = ziraatRates
                 )
             }
         } else if (selectedTab == 6) {

@@ -640,6 +640,10 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                                                 currentMatchCode == "yk_EUR" -> "Yapı Kredi - EUR (Euro)"
                                                 currentMatchCode == "yk_XAU" -> "Yapı Kredi - XAU (gr Altın)"
                                                 currentMatchCode == "yk_XAG" -> "Yapı Kredi - XAG (gr Gümüş)"
+                                                currentMatchCode == "zr_USD" -> "Ziraat Bankası - USD (Dolar)"
+                                                currentMatchCode == "zr_EUR" -> "Ziraat Bankası - EUR (Euro)"
+                                                currentMatchCode == "zr_XAU" -> "Ziraat Bankası - XAU (gr Altın)"
+                                                currentMatchCode == "zr_XAG" -> "Ziraat Bankası - XAG (gr Gümüş)"
                                                 currentMatchCode?.startsWith("gp_") == true -> {
                                                     val name = currentMatchCode?.removePrefix("gp_") ?: ""
                                                     "Sivas - $name"
@@ -713,6 +717,45 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                                                     text = { Text("   EUR - Euro") },
                                                     onClick = {
                                                         viewModel.preferenceManager.setMarketMatch(category, "yk_EUR"); currentMatchCode = "yk_EUR"
+                                                        viewModel.triggerCustomPricesRefresh()
+                                                        expandedDropdownCategory = null
+                                                    }
+                                                )
+                                                
+                                                HorizontalDivider()
+                                                DropdownMenuItem(
+                                                    text = { Text("Ziraat Bankası (Banka Gişesi)", color = Color(0xFFE10514), fontWeight = FontWeight.SemiBold) },
+                                                    onClick = {},
+                                                    enabled = false
+                                                )
+                                                DropdownMenuItem(
+                                                    text = { Text("   XAU - Altın (gram)") },
+                                                    onClick = {
+                                                        viewModel.preferenceManager.setMarketMatch(category, "zr_XAU"); currentMatchCode = "zr_XAU"
+                                                        viewModel.triggerCustomPricesRefresh()
+                                                        expandedDropdownCategory = null
+                                                    }
+                                                )
+                                                DropdownMenuItem(
+                                                    text = { Text("   XAG - Gümüş (gram)") },
+                                                    onClick = {
+                                                        viewModel.preferenceManager.setMarketMatch(category, "zr_XAG"); currentMatchCode = "zr_XAG"
+                                                        viewModel.triggerCustomPricesRefresh()
+                                                        expandedDropdownCategory = null
+                                                    }
+                                                )
+                                                DropdownMenuItem(
+                                                    text = { Text("   USD - Amerikan Doları") },
+                                                    onClick = {
+                                                        viewModel.preferenceManager.setMarketMatch(category, "zr_USD"); currentMatchCode = "zr_USD"
+                                                        viewModel.triggerCustomPricesRefresh()
+                                                        expandedDropdownCategory = null
+                                                    }
+                                                )
+                                                DropdownMenuItem(
+                                                    text = { Text("   EUR - Euro") },
+                                                    onClick = {
+                                                        viewModel.preferenceManager.setMarketMatch(category, "zr_EUR"); currentMatchCode = "zr_EUR"
                                                         viewModel.triggerCustomPricesRefresh()
                                                         expandedDropdownCategory = null
                                                     }
