@@ -6,18 +6,22 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.Transaction
 import com.example.data.TransactionType
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,7 +40,7 @@ fun TrendAnalysisScreen(transactions: List<Transaction>) {
     var expandedCategory by remember { mutableStateOf(false) }
 
     val format = remember { getCurrencyFormat() }
-    val monthFormat = remember { SimpleDateFormat("MMMM yyyy", Locale("tr", "TR")) }
+    val monthFormat = remember { SimpleDateFormat("MMM yyyy", Locale("tr", "TR")) }
 
     val filteredTransactions = remember(transactions, selectedPerson, selectedCategory) {
         transactions.filter {
@@ -55,13 +59,64 @@ fun TrendAnalysisScreen(transactions: List<Transaction>) {
             cal.set(Calendar.MILLISECOND, 0)
             cal.timeInMillis
         }
-        grouped.map { (time, txs) ->
+        
+        val sortedAsc = grouped.map { (time, txs) ->
             val income = txs.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
             val expense = txs.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
             val saving = txs.filter { it.type == TransactionType.SAVING }.sumOf { it.amount }
-            val savingQty = txs.filter { it.type == TransactionType.SAVING }.sumOf { it.quantity ?: 0.0 }
-            MonthlySummary(time, income, expense, saving, savingQty)
-        }.sortedByDescending { it.timestamp }
+
+            val displayAmount: Double
+            val displayColor: Color
+            val displayTypeStr: String
+
+            if (income > 0 && expense == 0.0 && saving == 0.0) {
+                displayAmount = income
+                displayColor = Color(0xFF16A34A) // Green
+                displayTypeStr = "GELİR"
+            } else if (expense > 0 && income == 0.0 && saving == 0.0) {
+                displayAmount = expense
+                displayColor = Color(0xFFDC2626) // Red
+                displayTypeStr = "GİDER"
+            } else if (saving > 0 && income == 0.0 && expense == 0.0) {
+                displayAmount = saving
+                displayColor = Color(0xFF2563EB) // Blue
+                displayTypeStr = "BİRİKİM"
+            } else {
+                // Mixed
+                val net = income - expense - saving
+                displayAmount = abs(net)
+                if (net >= 0) {
+                    displayColor = Color(0xFF16A34A)
+                    displayTypeStr = "NET GELİR"
+                } else {
+                    displayColor = Color(0xFFDC2626)
+                    displayTypeStr = "NET GİDER"
+                }
+            }
+
+            MonthlyTrendData(
+                timestamp = time,
+                displayAmount = displayAmount,
+                displayColor = displayColor,
+                displayTypeStr = displayTypeStr,
+                diffFromPrevious = null,
+                diffPercent = null
+            )
+        }.sortedBy { it.timestamp }
+
+        // Calculate differences
+        val withDiffs = sortedAsc.mapIndexed { index, data ->
+            if (index == 0) {
+                data
+            } else {
+                val prev = sortedAsc[index - 1]
+                val diff = data.displayAmount - prev.displayAmount
+                val percent = if (prev.displayAmount > 0) (diff / prev.displayAmount) * 100 else null
+                data.copy(diffFromPrevious = diff, diffPercent = percent)
+            }
+        }
+
+        withDiffs.sortedByDescending { it.timestamp }
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
@@ -75,10 +130,11 @@ fun TrendAnalysisScreen(transactions: List<Transaction>) {
                     value = selectedPerson,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Kişi Seçimi") },
+                    label = { Text("Kişi") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPerson) },
                     modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 13.sp)
                 )
                 ExposedDropdownMenu(
                     expanded = expandedPerson,
@@ -86,7 +142,7 @@ fun TrendAnalysisScreen(transactions: List<Transaction>) {
                 ) {
                     persons.forEach { p ->
                         DropdownMenuItem(
-                            text = { Text(p) },
+                            text = { Text(p, fontSize = 14.sp) },
                             onClick = {
                                 selectedPerson = p
                                 expandedPerson = false
@@ -105,10 +161,11 @@ fun TrendAnalysisScreen(transactions: List<Transaction>) {
                     value = selectedCategory,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Kategori Seçimi") },
+                    label = { Text("Kategori") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategory) },
                     modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 13.sp)
                 )
                 ExposedDropdownMenu(
                     expanded = expandedCategory,
@@ -116,7 +173,7 @@ fun TrendAnalysisScreen(transactions: List<Transaction>) {
                 ) {
                     categories.forEach { c ->
                         DropdownMenuItem(
-                            text = { Text(c) },
+                            text = { Text(c, fontSize = 14.sp) },
                             onClick = {
                                 selectedCategory = c
                                 expandedCategory = false
@@ -134,73 +191,112 @@ fun TrendAnalysisScreen(transactions: List<Transaction>) {
                 Text("Seçilen filtrelere uygun veri bulunamadı.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("TARİH", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                Text("DEĞER", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Text("DEĞİŞİM", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+            
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                contentPadding = PaddingValues(bottom = 80.dp)
             ) {
                 items(monthlyData) { data ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        // Date
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = monthFormat.format(Date(data.timestamp)).uppercase(),
-                                fontWeight = FontWeight.Black,
-                                fontSize = 16.sp,
-                                color = MaterialTheme.colorScheme.primary
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("GELİR", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF16A34A))
-                                    Text(format.format(data.income), fontWeight = FontWeight.Black, fontSize = 14.sp)
+                        }
+
+                        // Amount
+                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = format.format(data.displayAmount),
+                                fontWeight = FontWeight.Black,
+                                fontSize = 14.sp,
+                                color = data.displayColor
+                            )
+                            Text(
+                                text = data.displayTypeStr,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = data.displayColor.copy(alpha = 0.7f)
+                            )
+                        }
+
+                        // Trend
+                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                            if (data.diffFromPrevious != null) {
+                                val diffColor = when {
+                                    data.diffFromPrevious > 0 -> Color(0xFF16A34A)
+                                    data.diffFromPrevious < 0 -> Color(0xFFDC2626)
+                                    else -> Color.Gray
                                 }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("GİDER", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFDC2626))
-                                    Text(format.format(data.expense), fontWeight = FontWeight.Black, fontSize = 14.sp)
+                                val icon = when {
+                                    data.diffFromPrevious > 0 -> Icons.Default.ArrowUpward
+                                    data.diffFromPrevious < 0 -> Icons.Default.ArrowDownward
+                                    else -> Icons.Default.Remove
                                 }
-                                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                                    Text("BİRİKİM", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
-                                    Text(format.format(data.saving), fontWeight = FontWeight.Black, fontSize = 14.sp)
-                                    if (data.savingQty > 0) {
-                                        Text("${String.format(Locale("tr"), "%,.2f", data.savingQty)} Adet/Gr", fontSize = 10.sp, color = Color(0xFF2563EB))
-                                    }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = diffColor,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = format.format(abs(data.diffFromPrevious)),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = diffColor
+                                    )
                                 }
-                            }
-                            
-                            Spacer(modifier = Modifier.height(12.dp))
-                            
-                            val net = data.income - data.expense - data.saving
-                            val netColor = if (net >= 0) Color(0xFF16A34A) else Color(0xFFDC2626)
-                            Row(
-                                modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)).padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("NET DURUM", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                if (data.diffPercent != null) {
+                                    Text(
+                                        text = "%${String.format(Locale("tr"), "%.1f", abs(data.diffPercent))}",
+                                        fontSize = 10.sp,
+                                        color = diffColor.copy(alpha = 0.8f)
+                                    )
+                                }
+                            } else {
                                 Text(
-                                    text = (if (net > 0) "+" else "") + format.format(net),
-                                    fontWeight = FontWeight.Black,
+                                    text = "-",
+                                    fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp,
-                                    color = netColor
+                                    color = Color.Gray
                                 )
                             }
                         }
                     }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 0.5.dp)
                 }
             }
         }
     }
 }
 
-data class MonthlySummary(
+data class MonthlyTrendData(
     val timestamp: Long,
-    val income: Double,
-    val expense: Double,
-    val saving: Double,
-    val savingQty: Double
+    val displayAmount: Double,
+    val displayColor: Color,
+    val displayTypeStr: String,
+    val diffFromPrevious: Double?,
+    val diffPercent: Double?
 )
