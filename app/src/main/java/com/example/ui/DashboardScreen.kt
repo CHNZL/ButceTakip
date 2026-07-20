@@ -425,6 +425,14 @@ fun DashboardScreen(
                             lastUpdate = viewModel.lastBankRateUpdate.collectAsStateWithLifecycle().value,
                             onRefresh = { viewModel.fetchBankRates() }
                         )
+
+                        // Ziraat kurları
+                        ZiraatRatesSection(
+                            ziraatRates = viewModel.ziraatRates.collectAsStateWithLifecycle().value,
+                            isFetching = viewModel.isFetchingZiraatRates.collectAsStateWithLifecycle().value,
+                            lastUpdate = viewModel.lastZiraatRateUpdate.collectAsStateWithLifecycle().value,
+                            onRefresh = { viewModel.fetchZiraatRates() }
+                        )
                         
                         Text(
                             text = "Yaklaşan Ödemeler",
@@ -958,6 +966,95 @@ fun BankRatesSection(bankRates: List<com.example.data.BankRate>, isFetching: Boo
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     bankRates.chunked(2).forEach { rowRates ->
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            rowRates.forEach { rate ->
+                                Card(
+                                    modifier = Modifier.weight(1f),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f)),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(5.dp)) {
+                                        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                                            Text(rate.code, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                            Text(rate.name, fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                        }
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text("ALIŞ", fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                Text(rate.buy, fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color(0xFFEF4444))
+                                            }
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text("SATIŞ", fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                Text(rate.sell, fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color(0xFF10B981))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if (rowRates.size == 1) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ZiraatRatesSection(ziraatRates: List<com.example.data.BankRate>, isFetching: Boolean, lastUpdate: String?, onRefresh: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(8.dp).fillMaxWidth()) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEC)), // light red background
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            Icon(
+                                Icons.Default.AccountBalanceWallet,
+                                contentDescription = null, 
+                                tint = Color(0xFFE10514), // Ziraat Red
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Column {
+                        Text("Ziraat Bankası Altın ve Döviz", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("ZİRAAT GİŞE FİYATLARI", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (lastUpdate != null && !isFetching) {
+                        Text("SON GÜNCELLEME: $lastUpdate", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    IconButton(onClick = onRefresh, modifier = Modifier.size(28.dp)) {
+                        if (isFetching) {
+                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = Color(0xFFE10514))
+                        } else {
+                            Icon(Icons.Default.Refresh, contentDescription = "Yenile", modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            if (ziraatRates.isEmpty() && !isFetching) {
+                Text("Veriler şu an alınamıyor, lütfen Yenile butonuna basın.", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    ziraatRates.chunked(2).forEach { rowRates ->
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             rowRates.forEach { rate ->
                                 Card(

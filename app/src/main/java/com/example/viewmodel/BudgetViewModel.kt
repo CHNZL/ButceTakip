@@ -70,6 +70,15 @@ class BudgetViewModel(
     private val _lastGoldUpdate = MutableStateFlow<String?>(null)
     val lastGoldUpdate = _lastGoldUpdate.asStateFlow()
 
+    private val _ziraatRates = MutableStateFlow<List<BankRate>>(emptyList())
+    val ziraatRates = _ziraatRates.asStateFlow()
+    
+    private val _isFetchingZiraatRates = MutableStateFlow(false)
+    val isFetchingZiraatRates = _isFetchingZiraatRates.asStateFlow()
+    
+    private val _lastZiraatRateUpdate = MutableStateFlow<String?>(null)
+    val lastZiraatRateUpdate = _lastZiraatRateUpdate.asStateFlow()
+
     private val _darkThemeEnabled = MutableStateFlow(preferenceManager.darkThemeEnabled)
     val darkThemeEnabled = _darkThemeEnabled.asStateFlow()
 
@@ -81,6 +90,7 @@ class BudgetViewModel(
     init {
         fetchGoldPrices()
         fetchBankRates()
+        fetchZiraatRates()
         viewModelScope.launch(Dispatchers.IO) {
             preloadCategoriesAndPeople()
         }
@@ -215,6 +225,85 @@ class BudgetViewModel(
             } finally {
                 _isFetchingBankRates.value = false
             }
+        }
+    }
+
+    fun fetchZiraatRates() {
+        if (_isFetchingZiraatRates.value) return
+        _isFetchingZiraatRates.value = true
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val rates = mutableListOf<BankRate>()
+                var success = false
+                try {
+                    val responseJson = Jsoup.connect("https://www.ziraatbank.com.tr/tr/_layouts/15/Ziraat/HomePage/Ajax.aspx/GetZiraatVerileri")
+                        .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
+                        .header("X-Requested-With", "JQuery PageEvents")
+                        .header("Content-Type", "core/json")
+                        .ignoreContentType(true)
+                        .timeout(6000)
+                        .execute()
+                        .body()
+
+                    val obj = org.json.JSONObject(responseJson)
+                    val d = obj.getJSONObject("d")
+                    val dataObj = d.getJSONObject("Data")
+                    val html = dataObj.getString("Html")
+                    
+                    if (html.isNotEmpty()) {
+                        val listItems = Jsoup.parse(html).select("ul li")
+                        for (li in listItems) {
+                            val title = li.select("h2").text().trim()
+                            val spans = li.select("span")
+                            if (spans.size >= 2) {
+                                val buyVal = spans[0].text().trim()
+                                val sellVal = spans[1].text().trim()
+                                
+                                val (code, name) = when {
+                                    title.contains("DOLAR", ignoreCase = true) || title.contains("USD", ignoreCase = true) -> "USD" to "Amerikan Doları"
+                                    title.contains("EURO", ignoreCase = true) || title.contains("EUR", ignoreCase = true) -> "EUR" to "Euro"
+                                    title.contains("ALTIN", ignoreCase = true) || title.contains("XAU", ignoreCase = true) -> "XAU" to "Altın (1000)"
+                                    title.contains("GÜMÜŞ", ignoreCase = true) || title.contains("GUMUS", ignoreCase = true) || title.contains("XAG", ignoreCase = true) -> "XAG" to "Gümüş"
+                                    else -> title to title
+                                }
+                                val formattedBuy = formatToTwoDecimals(buyVal)
+                                val formattedSell = formatToTwoDecimals(sellVal)
+                                rates.add(BankRate(code, name, formattedBuy, formattedSell))
+                            }
+                        }
+                        if (rates.isNotEmpty()) {
+                            success = true
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                if (!success || rates.isEmpty()) {
+                    rates.add(BankRate("USD", "Amerikan Doları", "0,00", "0,00"))
+                    rates.add(BankRate("EUR", "Euro", "0,00", "0,00"))
+                    rates.add(BankRate("XAU", "Altın (1000)", "0,00", "0,00"))
+                    rates.add(BankRate("XAG", "Gümüş", "0,00", "0,00"))
+                }
+
+                _ziraatRates.value = rates
+                val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale("tr"))
+                _lastZiraatRateUpdate.value = sdf.format(java.util.Date())
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _isFetchingZiraatRates.value = false
+            }
+        }
+    }
+
+    private fun formatToTwoDecimals(value: String): String {
+        return try {
+            val cleanValue = value.replace(".", "").replace(",", ".").trim()
+            val dval = cleanValue.toDouble()
+            String.format(java.util.Locale("tr"), "%,.2f", dval)
+        } catch (e: Exception) {
+            value
         }
     }
     
