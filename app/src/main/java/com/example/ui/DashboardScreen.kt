@@ -858,12 +858,12 @@ fun GoldPricesSection(goldPrices: List<com.example.data.GoldPrice>, isFetching: 
     ) {
         Column(modifier = Modifier.padding(8.dp).fillMaxWidth()) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Rounded.TrendingUp, contentDescription = null, tint = Color(0xFFD4AF37))
                     Spacer(modifier = Modifier.width(6.dp))
                     Column {
-                        Text("Sivas Altın Fiyatları", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("CANLI PİYASA VERİLERİ", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text("Sivas Altın Fiyatları", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Text("CANLI PİYASA VERİLERİ", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -933,7 +933,7 @@ fun BankRatesSection(bankRates: List<com.example.data.BankRate>, isFetching: Boo
     ) {
         Column(modifier = Modifier.padding(8.dp).fillMaxWidth()) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                         modifier = Modifier.size(24.dp)
@@ -944,8 +944,8 @@ fun BankRatesSection(bankRates: List<com.example.data.BankRate>, isFetching: Boo
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                     Column {
-                        Text("Yapı Kredi Altın ve Döviz", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("BANKA GİŞE FİYATLARI", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text("Yapı Kredi Altın ve Döviz", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Text("BANKA GİŞE FİYATLARI", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1017,7 +1017,7 @@ fun ZiraatRatesSection(ziraatRates: List<com.example.data.BankRate>, isFetching:
     ) {
         Column(modifier = Modifier.padding(8.dp).fillMaxWidth()) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEC)), // light red background
                         modifier = Modifier.size(24.dp)
@@ -1033,8 +1033,8 @@ fun ZiraatRatesSection(ziraatRates: List<com.example.data.BankRate>, isFetching:
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                     Column {
-                        Text("Ziraat Bankası Altın ve Döviz", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("ZİRAAT GİŞE FİYATLARI", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        Text("Ziraat Bankası Altın ve Döviz", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Text("ZİRAAT GİŞE FİYATLARI", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
