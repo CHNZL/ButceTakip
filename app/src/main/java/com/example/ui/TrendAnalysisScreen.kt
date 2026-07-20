@@ -30,7 +30,7 @@ fun TrendAnalysisScreen(transactions: List<Transaction>) {
         listOf("Tüm Kişiler") + transactions.mapNotNull { it.person }.filter { it.isNotBlank() }.distinct().sorted()
     }
     val categories = remember(transactions) {
-        listOf("Tüm Kategoriler") + transactions.map { it.category }.filter { it.isNotBlank() }.distinct().sorted()
+        listOf("Tüm Kategoriler", "Tüm Gelirler", "Tüm Giderler", "Tüm Birikimler") + transactions.map { it.category }.filter { it.isNotBlank() }.distinct().sorted()
     }
 
     var selectedPerson by remember { mutableStateOf("Tüm Kişiler") }
@@ -44,8 +44,15 @@ fun TrendAnalysisScreen(transactions: List<Transaction>) {
 
     val filteredTransactions = remember(transactions, selectedPerson, selectedCategory) {
         transactions.filter {
-            (selectedPerson == "Tüm Kişiler" || it.person == selectedPerson) &&
-            (selectedCategory == "Tüm Kategoriler" || it.category == selectedCategory)
+            val personMatch = (selectedPerson == "Tüm Kişiler" || it.person == selectedPerson)
+            val categoryMatch = when (selectedCategory) {
+                "Tüm Kategoriler" -> true
+                "Tüm Gelirler" -> it.type == TransactionType.INCOME
+                "Tüm Giderler" -> it.type == TransactionType.EXPENSE
+                "Tüm Birikimler" -> it.type == TransactionType.SAVING
+                else -> it.category == selectedCategory
+            }
+            personMatch && categoryMatch
         }
     }
 
@@ -193,7 +200,7 @@ fun TrendAnalysisScreen(transactions: List<Transaction>) {
         } else {
             // Header
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -211,7 +218,7 @@ fun TrendAnalysisScreen(transactions: List<Transaction>) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 14.dp),
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
