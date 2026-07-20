@@ -48,7 +48,7 @@ fun AnalyticsScreen(
     preferenceManager: com.example.data.PreferenceManager? = null,
     ziraatRates: List<com.example.data.BankRate> = emptyList()
 ) {
-    var selectedTab by remember { mutableStateOf(0) } // 0: Genel Analiz, 1: Kişi Analizi
+    var selectedTab by remember { mutableStateOf(0) } // 0: Genel Analiz, 1: Kişi Analizi, 2: Trend Analizi
 
     val currentMonthEnd = remember {
         Calendar.getInstance().apply {
@@ -79,18 +79,23 @@ fun AnalyticsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(modifier = Modifier.weight(1f).clickable { selectedTab = 0 }.background(if (selectedTab == 0) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(24.dp)).padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
-                    Text("GENEL ANALİZ", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("GENEL", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Box(modifier = Modifier.weight(1f).clickable { selectedTab = 1 }.background(if (selectedTab == 1) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(24.dp)).padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
-                    Text("KİŞİ ANALİZİ", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("KİŞİ", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Box(modifier = Modifier.weight(1f).clickable { selectedTab = 2 }.background(if (selectedTab == 2) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(24.dp)).padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
+                    Text("TREND", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (selectedTab == 2) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
 
         if (selectedTab == 0) {
             GeneralAnalysisScreen(validTransactions, goldPrices, bankRates, preferenceManager, ziraatRates)
-        } else {
+        } else if (selectedTab == 1) {
             PersonAnalysisScreen(validTransactions)
+        } else {
+            TrendAnalysisScreen(validTransactions)
         }
     }
 }

@@ -185,14 +185,6 @@ class MainActivity : ComponentActivity() {
             updateWorkRequest
         )
 
-        // Uygulama açılışında anında bir kez kontrol etmesi için
-        val oneTimeUpdateRequest = OneTimeWorkRequestBuilder<com.example.worker.AppUpdateWorker>().build()
-        WorkManager.getInstance(applicationContext).enqueueUniqueWork(
-            "AppUpdateOneTime",
-            ExistingWorkPolicy.REPLACE,
-            oneTimeUpdateRequest
-        )
-
         // Günlük bulut yedeklemesi için Worker
         val backupWorkRequest = PeriodicWorkRequestBuilder<com.example.worker.CloudBackupWorker>(24, TimeUnit.HOURS)
             .build()
