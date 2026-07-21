@@ -308,7 +308,7 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { expandedMenu = true }
-                            .padding(horizontal = 8.dp, vertical = 12.dp),
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {

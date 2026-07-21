@@ -272,80 +272,65 @@ fun DashboardScreen(
         },
         bottomBar = {
             NavigationBar(
-                containerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF3F4F9),
-                contentColor = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF475569)
+                containerColor = Color(0xFF061226),
+                contentColor = Color(0xFF94A3B8),
+                tonalElevation = 8.dp
             ) {
+                val navColors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = Color(0xFF061226),
+                    selectedTextColor = Color(0xFFD4AF37),
+                    indicatorColor = Color(0xFFD4AF37),
+                    unselectedIconColor = Color(0xFF94A3B8),
+                    unselectedTextColor = Color(0xFF94A3B8)
+                )
+
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Home, contentDescription = "Anasayfa") },
-                    label = { Text("Anasayfa", maxLines=1, fontSize=10.sp) },
+                    label = { Text("Anasayfa", maxLines=1, fontSize=10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) },
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
                     alwaysShowLabel = true,
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = onSecondaryContainerColor,
-                        selectedTextColor = onSecondaryContainerColor,
-                        indicatorColor = secondaryContainerColor
-                    )
+                    colors = navColors
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Rounded.TrendingUp, contentDescription = "Gelirler") },
-                    label = { Text("Gelirler", maxLines=1, fontSize=10.sp) },
+                    label = { Text("Gelirler", maxLines=1, fontSize=10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) },
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
                     alwaysShowLabel = true,
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = onSecondaryContainerColor,
-                        selectedTextColor = onSecondaryContainerColor,
-                        indicatorColor = secondaryContainerColor
-                    )
+                    colors = navColors
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Rounded.CreditCard, contentDescription = "Ödemeler") },
-                    label = { Text("Ödemeler", maxLines=1, fontSize=10.sp) },
+                    label = { Text("Ödemeler", maxLines=1, fontSize=10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) },
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
                     alwaysShowLabel = true,
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = onSecondaryContainerColor,
-                        selectedTextColor = onSecondaryContainerColor,
-                        indicatorColor = secondaryContainerColor
-                    )
+                    colors = navColors
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = "Birikim") },
-                    label = { Text("Birikim", maxLines=1, fontSize=10.sp) },
+                    label = { Text("Birikim", maxLines=1, fontSize=10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) },
                     selected = selectedTab == 3,
                     onClick = { selectedTab = 3 },
                     alwaysShowLabel = true,
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = onSecondaryContainerColor,
-                        selectedTextColor = onSecondaryContainerColor,
-                        indicatorColor = secondaryContainerColor
-                    )
+                    colors = navColors
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Rounded.History, contentDescription = "Geçmiş") },
-                    label = { Text("Geçmiş", maxLines=1, fontSize=10.sp) },
+                    label = { Text("Geçmiş", maxLines=1, fontSize=10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) },
                     selected = selectedTab == 4,
                     onClick = { selectedTab = 4 },
                     alwaysShowLabel = true,
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = onSecondaryContainerColor,
-                        selectedTextColor = onSecondaryContainerColor,
-                        indicatorColor = secondaryContainerColor
-                    )
+                    colors = navColors
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.PieChart, contentDescription = "Analiz") },
-                    label = { Text("Analiz", maxLines=1, fontSize=10.sp) },
+                    label = { Text("Analiz", maxLines=1, fontSize=10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) },
                     selected = selectedTab == 5,
                     onClick = { selectedTab = 5 },
                     alwaysShowLabel = true,
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = onSecondaryContainerColor,
-                        selectedTextColor = onSecondaryContainerColor,
-                        indicatorColor = secondaryContainerColor
-                    )
+                    colors = navColors
                 )
             }
         },
@@ -440,7 +425,7 @@ fun DashboardScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Medium,
                             color = Color(0xFF001D36),
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                         )
                     }
                     items(upcoming) { transaction ->
@@ -661,7 +646,7 @@ fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving:
                     fontWeight = FontWeight.SemiBold,
                     color = cardText
                 )
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -672,7 +657,7 @@ fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving:
                         modifier = Modifier
                             .weight(1f)
                             .background(innerCardBg, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 6.dp, vertical = 8.dp),
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
@@ -692,7 +677,7 @@ fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving:
                         modifier = Modifier
                             .weight(1f)
                             .background(innerCardBg, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 6.dp, vertical = 8.dp),
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
@@ -712,7 +697,7 @@ fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving:
                         modifier = Modifier
                             .weight(1f)
                             .background(innerCardBg, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 6.dp, vertical = 8.dp),
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
@@ -856,7 +841,7 @@ fun GoldPricesSection(goldPrices: List<com.example.data.GoldPrice>, isFetching: 
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(8.dp).fillMaxWidth()) {
+        Column(modifier = Modifier.padding(6.dp).fillMaxWidth()) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Rounded.TrendingUp, contentDescription = null, tint = Color(0xFFD4AF37))
@@ -880,7 +865,7 @@ fun GoldPricesSection(goldPrices: List<com.example.data.GoldPrice>, isFetching: 
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             
             if (goldPrices.isEmpty() && !isFetching) {
                 Text("Veriler şu an alınamıyor, lütfen Yenile butonuna basın.", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
@@ -894,7 +879,7 @@ fun GoldPricesSection(goldPrices: List<com.example.data.GoldPrice>, isFetching: 
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f)),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                                 ) {
-                                    Column(modifier = Modifier.padding(5.dp)) {
+                                    Column(modifier = Modifier.padding(2.dp)) {
                                         Text(gp.name, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -931,7 +916,7 @@ fun BankRatesSection(bankRates: List<com.example.data.BankRate>, isFetching: Boo
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(8.dp).fillMaxWidth()) {
+        Column(modifier = Modifier.padding(6.dp).fillMaxWidth()) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     Card(
@@ -962,7 +947,7 @@ fun BankRatesSection(bankRates: List<com.example.data.BankRate>, isFetching: Boo
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             
             if (bankRates.isEmpty() && !isFetching) {
                 Text("Veriler şu an alınamıyor, lütfen Yenile butonuna basın.", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
@@ -976,7 +961,7 @@ fun BankRatesSection(bankRates: List<com.example.data.BankRate>, isFetching: Boo
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f)),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                                 ) {
-                                    Column(modifier = Modifier.padding(5.dp)) {
+                                    Column(modifier = Modifier.padding(2.dp)) {
                                         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
                                             Text(rate.code, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                             Text(rate.name, fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
@@ -1015,7 +1000,7 @@ fun ZiraatRatesSection(ziraatRates: List<com.example.data.BankRate>, isFetching:
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(8.dp).fillMaxWidth()) {
+        Column(modifier = Modifier.padding(6.dp).fillMaxWidth()) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     Card(
@@ -1051,7 +1036,7 @@ fun ZiraatRatesSection(ziraatRates: List<com.example.data.BankRate>, isFetching:
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             
             if (ziraatRates.isEmpty() && !isFetching) {
                 Text("Veriler şu an alınamıyor, lütfen Yenile butonuna basın.", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
@@ -1065,7 +1050,7 @@ fun ZiraatRatesSection(ziraatRates: List<com.example.data.BankRate>, isFetching:
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f)),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                                 ) {
-                                    Column(modifier = Modifier.padding(5.dp)) {
+                                    Column(modifier = Modifier.padding(2.dp)) {
                                         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
                                             Text(rate.code, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                             Text(rate.name, fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)

@@ -79,7 +79,7 @@ fun PaymentsScreen(transactions: List<Transaction>, onTogglePaid: (Transaction, 
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Text("Bu Ay Bekleyen", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(format.format(totalDebt), fontWeight = FontWeight.Black, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
@@ -91,7 +91,7 @@ fun PaymentsScreen(transactions: List<Transaction>, onTogglePaid: (Transaction, 
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Text("Bu Ay Ödenen", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(format.format(totalPaid), fontWeight = FontWeight.Black, fontSize = 18.sp, color = Color(0xFF10B981))
@@ -106,7 +106,7 @@ fun PaymentsScreen(transactions: List<Transaction>, onTogglePaid: (Transaction, 
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEDD5)),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(12.dp)) {
                         Text("Geciken Ödemeler (Geçmiş Aylardan)", color = Color(0xFF9A3412), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(format.format(pastDueRemaining), fontWeight = FontWeight.Black, fontSize = 20.sp, color = Color(0xFFC2410C))
@@ -122,7 +122,7 @@ fun PaymentsScreen(transactions: List<Transaction>, onTogglePaid: (Transaction, 
             colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBEB)),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Info, contentDescription = null, tint = Color(0xFFD97706))
                 Spacer(modifier = Modifier.width(12.dp))
                 Text("Akıllı Öneri: Bu ayki ödemelerinizin %$pct'ini tamamladınız.", color = Color(0xFF92400E), fontSize = 13.sp, fontWeight = FontWeight.Medium)

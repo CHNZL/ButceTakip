@@ -59,7 +59,7 @@ fun IncomesScreen(transactions: List<Transaction>) {
             colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FDF4)),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(12.dp)) {
                 Text("Bu Ay Toplam Gelir", color = Color(0xFF166534), fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(format.format(totalIncomeThisMonth), fontWeight = FontWeight.Black, fontSize = 24.sp, color = Color(0xFF15803D))
@@ -77,7 +77,7 @@ fun IncomesScreen(transactions: List<Transaction>) {
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                     ) {
-                        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFDCFCE7)),
                                 contentAlignment = Alignment.Center

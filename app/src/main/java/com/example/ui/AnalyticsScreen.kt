@@ -66,7 +66,7 @@ fun AnalyticsScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
                     Text("Analiz ve Raporlar", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
@@ -146,7 +146,7 @@ fun GeneralAnalysisScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Text("Özet Tablo ($selectedTime)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -248,7 +248,7 @@ fun FinancialHealthCard(inc: Double, exp: Double, sav: Double) {
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(48.dp).background(healthColor, CircleShape), contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = if (healthScore >= 60) Icons.Rounded.ThumbUp else Icons.Rounded.Warning,
@@ -352,7 +352,7 @@ fun PersonAnalysisScreen(transactions: List<Transaction>) {
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(modifier = Modifier.padding(12.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("TOPLAM HARCAMA", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(format.format(totalExpense), fontSize = 28.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
@@ -413,7 +413,7 @@ fun MonthlyProgressCard(transactions: List<Transaction>) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Text("Aylık Gelişim", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("GELİR, GİDER VE BİRİKİM YILLIK TRENDİ", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp)
@@ -494,7 +494,7 @@ fun DistributionCard(title: String, subtitle: String, transactions: List<Transac
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
                 Text(subtitle, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp)
@@ -519,7 +519,7 @@ fun PieChartAndLegend(distByCategory: List<Pair<String, Double>>, totalDist: Dou
     val colors = listOf(Color(0xFF3B82F6), Color(0xFFF59E0B), Color(0xFF10B981), Color(0xFFEF4444), Color(0xFF8B5CF6), Color(0xFFEC4899), Color(0xFF14B8A6))
 
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(modifier = Modifier.size(240.dp).padding(16.dp), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.size(240.dp).padding(12.dp), contentAlignment = Alignment.Center) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 var startAngle = -90f
                 val strokeWidth = 50.dp.toPx()
@@ -640,7 +640,7 @@ fun SavingsDistributionCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
                 Text(subtitle, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp)
@@ -709,7 +709,7 @@ fun SavingsTrendCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Text("Birikim Getiri Analizi", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
             Text("SEÇİLİ DÖNEME AİT GETİRİ PERFORMANSI", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp)
             Spacer(modifier = Modifier.height(16.dp))
