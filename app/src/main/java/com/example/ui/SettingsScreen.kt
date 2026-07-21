@@ -134,7 +134,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { isIncomeExpanded = !isIncomeExpanded }
-                            .padding(16.dp),
+                            .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -196,7 +196,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { isExpenseExpanded = !isExpenseExpanded }
-                            .padding(16.dp),
+                            .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -258,7 +258,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { isSavingExpanded = !isSavingExpanded }
-                            .padding(16.dp),
+                            .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -320,7 +320,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { isPersonExpanded = !isPersonExpanded }
-                            .padding(16.dp),
+                            .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -381,7 +381,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { isNotificationExpanded = !isNotificationExpanded }
-                            .padding(16.dp),
+                            .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -400,7 +400,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                     
                     if (isNotificationExpanded) {
                         HorizontalDivider()
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        Column(modifier = Modifier.padding(12.dp)) {
                             var remindDueDay by remember { mutableStateOf(viewModel.preferenceManager.remindDueDay) }
                             var remindOverdue by remember { mutableStateOf(viewModel.preferenceManager.remindOverdue) }
                             var remindUpcomingDays by remember { mutableStateOf(viewModel.preferenceManager.remindUpcomingDays) }
@@ -583,7 +583,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { isMarketMatchExpanded = !isMarketMatchExpanded }
-                            .padding(16.dp),
+                            .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -606,12 +606,12 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                         if (savingCategoriesFromTx.isEmpty()) {
                             Text(
                                 text = "Henüz birikim kalemi bulunamadı. Birikimlerinizin canlı piyasa fiyatlarına bağlanabilmesi için lütfen önce Birikimler ekranından birikim işlemi ekleyin.",
-                                modifier = Modifier.padding(16.dp),
+                                modifier = Modifier.padding(12.dp),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         } else {
-                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                                 Text(
                                     text = "Birikim yaptığınız kalemlerin güncel fiyatlarını hangi canlı piyasa verisinden çekeceğini dilediğiniz gibi seçin:",
                                     style = MaterialTheme.typography.bodySmall,
@@ -797,7 +797,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Default.Save,
@@ -834,7 +834,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -884,7 +884,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             Icons.Default.Warning,

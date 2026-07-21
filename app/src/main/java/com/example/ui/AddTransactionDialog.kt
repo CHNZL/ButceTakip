@@ -119,7 +119,7 @@ fun AddTransactionDialog(
             shadowElevation = 12.dp
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Header Area

@@ -70,7 +70,7 @@ fun MortgageCalculatorScreen() {
         return integerPart + decimalPart
     }
 
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    LazyColumn(modifier = Modifier.fillMaxSize().padding(12.dp)) {
         item {
             Text("Konut Kredisi Hesaplayıcı", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
@@ -94,7 +94,7 @@ fun MortgageCalculatorScreen() {
             val totalPayment = monthlyPayment * months
             
             Card(modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Text("$months Ay Vade", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     Text("Aylık Taksit: ${format.format(monthlyPayment.coerceAtLeast(0.0))}")
                     Text("Toplam Geri Ödeme: ${format.format(totalPayment.coerceAtLeast(0.0))}")

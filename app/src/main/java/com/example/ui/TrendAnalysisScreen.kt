@@ -25,7 +25,7 @@ import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TrendAnalysisScreen(transactions: List<Transaction>) {
+fun TrendAnalysisScreen(transactions: List<Transaction>, isDark: Boolean = false) {
     val persons = remember(transactions) {
         listOf("Tüm Kişiler") + transactions.mapNotNull { it.person }.filter { it.isNotBlank() }.distinct().sorted()
     }
@@ -78,25 +78,25 @@ fun TrendAnalysisScreen(transactions: List<Transaction>) {
 
             if (income > 0 && expense == 0.0 && saving == 0.0) {
                 displayAmount = income
-                displayColor = Color(0xFF16A34A) // Green
+                displayColor = if (isDark) Color(0xFF4ADE80) else Color(0xFF16A34A) // Green
                 displayTypeStr = "GELİR"
             } else if (expense > 0 && income == 0.0 && saving == 0.0) {
                 displayAmount = expense
-                displayColor = Color(0xFFDC2626) // Red
+                displayColor = if (isDark) Color(0xFFF87171) else Color(0xFFDC2626) // Red
                 displayTypeStr = "GİDER"
             } else if (saving > 0 && income == 0.0 && expense == 0.0) {
                 displayAmount = saving
-                displayColor = Color(0xFF2563EB) // Blue
+                displayColor = if (isDark) Color(0xFF60A5FA) else Color(0xFF2563EB) // Blue
                 displayTypeStr = "BİRİKİM"
             } else {
                 // Mixed
                 val net = income - expense - saving
                 displayAmount = abs(net)
                 if (net >= 0) {
-                    displayColor = Color(0xFF16A34A)
+                    displayColor = if (isDark) Color(0xFF4ADE80) else Color(0xFF16A34A)
                     displayTypeStr = "NET GELİR"
                 } else {
-                    displayColor = Color(0xFFDC2626)
+                    displayColor = if (isDark) Color(0xFFF87171) else Color(0xFFDC2626)
                     displayTypeStr = "NET GİDER"
                 }
             }
@@ -126,7 +126,7 @@ fun TrendAnalysisScreen(transactions: List<Transaction>) {
         withDiffs.sortedByDescending { it.timestamp }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ExposedDropdownMenuBox(
                 expanded = expandedPerson,
@@ -251,8 +251,8 @@ fun TrendAnalysisScreen(transactions: List<Transaction>) {
                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                             if (data.diffFromPrevious != null) {
                                 val diffColor = when {
-                                    data.diffFromPrevious > 0 -> Color(0xFF16A34A)
-                                    data.diffFromPrevious < 0 -> Color(0xFFDC2626)
+                                    data.diffFromPrevious > 0 -> if (isDark) Color(0xFF4ADE80) else Color(0xFF16A34A)
+                                    data.diffFromPrevious < 0 -> if (isDark) Color(0xFFF87171) else Color(0xFFDC2626)
                                     else -> Color.Gray
                                 }
                                 val icon = when {

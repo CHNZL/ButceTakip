@@ -425,7 +425,7 @@ fun DashboardScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Medium,
                             color = Color(0xFF001D36),
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                         )
                     }
                     items(upcoming) { transaction ->
@@ -498,7 +498,7 @@ fun DashboardScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                HistoryScreen(
+                HistoryScreen(isDark = isDark,
                     transactions = uiState.transactions,
                     onEdit = { tx ->
                         editingTransaction = tx
@@ -607,30 +607,39 @@ fun DashboardScreen(
 fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving: Double, isDark: Boolean = false) {
     val format = NumberFormat.getCurrencyInstance(Locale("tr", "TR"))
     
-    val cardBg = if (isDark) MaterialTheme.colorScheme.secondaryContainer else Color(0xFFD1E4FF)
-    val cardText = if (isDark) MaterialTheme.colorScheme.onSecondaryContainer else Color(0xFF001D36)
-    val innerCardBg = if (isDark) Color.Black.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.4f)
-    val incomeText = if (isDark) Color(0xFF4ADE80) else Color(0xFF15803D)
-    val expenseText = if (isDark) Color(0xFFF87171) else Color(0xFFB91C1C)
-    val labelText = if (isDark) Color.White.copy(alpha=0.7f) else Color(0xFF475569)
-    val savingText = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    val cardBg = Color.Transparent
+    val cardText = Color.White
+    val innerCardBg = Color.White.copy(alpha = 0.15f)
+    val incomeText = Color(0xFF4ADE80)
+    val expenseText = Color(0xFFF87171)
+    val labelText = Color.White.copy(alpha=0.8f)
+    val savingText = Color(0xFF38BDF8)
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(12.dp)
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = cardBg),
-            shape = RoundedCornerShape(32.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+            shape = RoundedCornerShape(24.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
-            Column(
+            androidx.compose.foundation.layout.Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp)
+                    .background(
+                        androidx.compose.ui.graphics.Brush.linearGradient(
+                            colors = listOf(Color(0xFF061226), Color(0xFF0F2B5B))
+                        )
+                    )
             ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp)
+                ) {
                 Text(
                     text = "MEVCUT AY BAKİYESİ",
                     style = MaterialTheme.typography.labelMedium,
@@ -713,6 +722,7 @@ fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving:
                     }
                 }
             }
+            }
         }
     }
 }
@@ -749,7 +759,7 @@ fun TransactionItem(transaction: Transaction, onDelete: () -> Unit, isDark: Bool
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 12.dp, vertical = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.6f)),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -758,7 +768,7 @@ fun TransactionItem(transaction: Transaction, onDelete: () -> Unit, isDark: Bool
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(

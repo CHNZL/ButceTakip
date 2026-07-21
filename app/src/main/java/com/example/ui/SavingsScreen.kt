@@ -231,7 +231,7 @@ fun SavingsScreen(
         // --- 2. ASSETS ROW/GRID SUMMARY CARDS ---
         if (assetSummaries.isNotEmpty()) {
             item {
-                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                     Text(
                         text = "Varlık Özetlerim",
                         style = MaterialTheme.typography.titleMedium,
@@ -602,7 +602,7 @@ fun LedgerRowItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, Color(0xFFF1F5F9))

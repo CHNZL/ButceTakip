@@ -27,7 +27,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Unit)? = null, onDelete: ((Transaction) -> Unit)? = null) {
+fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Unit)? = null, onDelete: ((Transaction) -> Unit)? = null, isDark: Boolean = false) {
     var searchQuery by remember { mutableStateOf("") }
     
     val timeFilters = listOf("Tüm Zamanlar", "Son 7 Gün", "Son 15 Gün", "Bu Ay", "Geçen Ay", "Son 3 Ay", "Son 6 Ay", "Bu Yıl")
@@ -159,7 +159,7 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Column {
@@ -169,9 +169,16 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
 
         // Summary row
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SummaryBox(title = "TOPLAM GELİR", amount = format.format(totalIncome), bg = Color(0xFFF0FDF4), fg = Color(0xFF16A34A), modifier = Modifier.weight(1f))
-            SummaryBox(title = "TOPLAM GİDER", amount = format.format(totalExpense), bg = Color(0xFFFFF1F2), fg = Color(0xFFE11D48), modifier = Modifier.weight(1f))
-            SummaryBox(title = "TOPLAM BİRİKİM", amount = format.format(totalSaving), bg = Color(0xFFF0F9FF), fg = Color(0xFF0284C7), modifier = Modifier.weight(1f))
+            val incomeBg = if (isDark) Color(0xFF064E3B) else Color(0xFFF0FDF4)
+            val incomeFg = if (isDark) Color(0xFF34D399) else Color(0xFF16A34A)
+            val expenseBg = if (isDark) Color(0xFF7F1D1D) else Color(0xFFFFF1F2)
+            val expenseFg = if (isDark) Color(0xFFF87171) else Color(0xFFE11D48)
+            val savingBg = if (isDark) Color(0xFF0C4A6E) else Color(0xFFF0F9FF)
+            val savingFg = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+
+            SummaryBox(title = "TOPLAM GELİR", amount = format.format(totalIncome), bg = incomeBg, fg = incomeFg, modifier = Modifier.weight(1f))
+            SummaryBox(title = "TOPLAM GİDER", amount = format.format(totalExpense), bg = expenseBg, fg = expenseFg, modifier = Modifier.weight(1f))
+            SummaryBox(title = "TOPLAM BİRİKİM", amount = format.format(totalSaving), bg = savingBg, fg = savingFg, modifier = Modifier.weight(1f))
         }
 
         // Filters
@@ -316,14 +323,14 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
                         
                         Box(modifier = Modifier.weight(0.8f)) {
                             val typeBg = when(tx.type) {
-                                TransactionType.INCOME -> Color(0xFFDCFCE7)
-                                TransactionType.EXPENSE -> Color(0xFFFFE4E6)
-                                TransactionType.SAVING -> Color(0xFFE0F2FE)
+                                TransactionType.INCOME -> if (isDark) Color(0xFF064E3B) else Color(0xFFDCFCE7)
+                                TransactionType.EXPENSE -> if (isDark) Color(0xFF7F1D1D) else Color(0xFFFFE4E6)
+                                TransactionType.SAVING -> if (isDark) Color(0xFF0C4A6E) else Color(0xFFE0F2FE)
                             }
                             val typeFg = when(tx.type) {
-                                TransactionType.INCOME -> Color(0xFF16A34A)
-                                TransactionType.EXPENSE -> Color(0xFFE11D48)
-                                TransactionType.SAVING -> Color(0xFF0284C7)
+                                TransactionType.INCOME -> if (isDark) Color(0xFF34D399) else Color(0xFF16A34A)
+                                TransactionType.EXPENSE -> if (isDark) Color(0xFFF87171) else Color(0xFFE11D48)
+                                TransactionType.SAVING -> if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
                             }
                             val typeText = when(tx.type) {
                                 TransactionType.INCOME -> "GELİR"

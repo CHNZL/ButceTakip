@@ -66,7 +66,7 @@ fun PaymentsScreen(transactions: List<Transaction>, onTogglePaid: (Transaction, 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("Ödemeler Özeti", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)

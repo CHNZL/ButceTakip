@@ -37,7 +37,7 @@ fun SavingsCalculatorScreen() {
     val orgFee = targetAmount * organizationFeeRate
     val format = NumberFormat.getCurrencyInstance(Locale("tr", "TR")).apply { maximumFractionDigits = 0 }
 
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    LazyColumn(modifier = Modifier.fillMaxSize().padding(12.dp)) {
         item {
             Text("Tasarruf Finansmanı Hesaplayıcı", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(16.dp))
@@ -49,7 +49,7 @@ fun SavingsCalculatorScreen() {
             
             Spacer(modifier = Modifier.height(16.dp))
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Text("Sonuçlar", style = MaterialTheme.typography.titleMedium)
                     Text("Kalan Finansman: ${format.format(remainingAmount)}")
                     Text("Toplam Vade: $totalInstallments ay")
@@ -66,7 +66,7 @@ fun SavingsCalculatorScreen() {
             val installment = if (month == totalInstallments) (remainingAmount - (monthlyPayment * (totalInstallments - 1))).coerceAtLeast(0.0) else monthlyPayment
             
             Card(modifier = Modifier.padding(vertical = 4.dp), colors = CardDefaults.cardColors(containerColor = if (month == deliveryMonth) Color(0xFFFEF08A) else MaterialTheme.colorScheme.surfaceVariant)) {
-                Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     val textColor = if (month == deliveryMonth) Color.Black else MaterialTheme.colorScheme.onSurface
                     Text("$month. Ay", color = textColor)
                     Text(format.format(installment), color = textColor)
