@@ -87,6 +87,14 @@ class PaymentReminderWorker(
             notificationManager.createNotificationChannel(channel)
         }
 
+        val intent = android.content.Intent(applicationContext, com.example.MainActivity::class.java).apply {
+            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = android.app.PendingIntent.getActivity(
+            applicationContext, 0, intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+
         val sdf = SimpleDateFormat("dd MMM yyyy", Locale("tr"))
         
         val inboxStyle = NotificationCompat.InboxStyle()
@@ -109,6 +117,7 @@ class PaymentReminderWorker(
             .setStyle(inboxStyle)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setContentIntent(pendingIntent)
             .setAutoCancel(true)
 
         if (androidx.core.content.ContextCompat.checkSelfPermission(
