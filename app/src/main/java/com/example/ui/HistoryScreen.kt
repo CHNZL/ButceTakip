@@ -1,5 +1,13 @@
 package com.example.ui
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import com.example.util.PdfExporter
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -40,6 +48,30 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
     val typeFilters = listOf("Tüm Türler", "Gelir", "Gider", "Birikim")
     var selectedTypeFilter by remember { mutableStateOf(typeFilters[0]) }
     var expandedTypeFilter by remember { mutableStateOf(false) }
+    var showPdfExportDialog by remember { mutableStateOf(false) }
+    var pdfTransactionsToExport by remember { mutableStateOf<List<Transaction>>(emptyList()) }
+    var pdfTitleToExport by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val pdfExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+        if (uri != null) {
+            coroutineScope.launch(Dispatchers.IO) {
+                try {
+                    context.contentResolver.openOutputStream(uri)?.use { out ->
+                        PdfExporter.exportToPdf(pdfTransactionsToExport, pdfTitleToExport, out)
+                    }
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "PDF başarıyla kaydedildi.", Toast.LENGTH_LONG).show()
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "PDF kaydedilirken hata oluştu.", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+    }
+
 
     val categoryFilters = listOf("Tüm Kategoriler") + transactions.mapNotNull { it.category }.distinct().sorted()
     var selectedCategoryFilter by remember { mutableStateOf("Tüm Kategoriler") }
@@ -162,10 +194,25 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
             .padding(horizontal = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Column {
-            Text("İşlem Geçmişi", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
-            Text("TÜM GELİR VE GİDER KAYITLARI", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text("İşlem Geçmişi", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
+                Text("TÜM GELİR VE GİDER KAYITLARI", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Button(
+                onClick = { showPdfExportDialog = true },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer),
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text("PDF", fontWeight = FontWeight.ExtraBold)
+            }
         }
+
 
         // Summary row
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -377,6 +424,29 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
             }
         }
     }
+    if (showPdfExportDialog) {
+        PdfExportDialog(
+            onDismiss = { showPdfExportDialog = false },
+            onExport = { year, month ->
+                showPdfExportDialog = false
+                val filtered = if (year == null || month == null) {
+                    pdfTitleToExport = "Tüm Zamanlar"
+                    transactions
+                } else {
+                    pdfTitleToExport = "${month + 1}.$year"
+                    transactions.filter { tx ->
+                        val cal = Calendar.getInstance()
+                        cal.timeInMillis = tx.timestamp
+                        cal.get(Calendar.YEAR) == year && cal.get(Calendar.MONTH) == month
+                    }
+                }
+                pdfTransactionsToExport = filtered.sortedByDescending { it.timestamp }
+                val fileName = if (year == null) "Islem_Gecmisi_TumZamanlar.pdf" else "Islem_Gecmisi_${month?.plus(1)}_$year.pdf"
+                pdfExportLauncher.launch(fileName)
+            }
+        )
+    }
+
 }
 
 @Composable

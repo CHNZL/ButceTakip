@@ -1,0 +1,1 @@
+sed -i 's/var displayTitle = transaction.title/var displayTitle = if (transaction.person != null) "${transaction.title} (${transaction.person})" else transaction.title/g' app/src/main/java/com/example/util/PdfExporter.kt
