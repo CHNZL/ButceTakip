@@ -1,5 +1,13 @@
 package com.example.ui
 
+import com.example.updater.AppUpdater
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.AccountCircle
+
+import android.widget.Toast
+import kotlinx.coroutines.launch
+import com.example.BuildConfig
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -73,6 +81,11 @@ fun DashboardScreen(
         }
     }
 
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val appUpdater = remember { AppUpdater(context) }
+    var isCheckingUpdate by remember { mutableStateOf(false) }
+
     val isDark = viewModel.darkThemeEnabled.collectAsStateWithLifecycle().value
     val mainBgColor = if (isDark) MaterialTheme.colorScheme.background else Color(0xFFFDFBFF)
     val primaryBtnColor = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF0061A4)
@@ -128,85 +141,84 @@ fun DashboardScreen(
                                 expanded = showProfileMenu,
                                 onDismissRequest = { showProfileMenu = false }
                             ) {
-                                if (authState is com.example.viewmodel.AuthState.Authenticated) {
-                                    val user = authState as com.example.viewmodel.AuthState.Authenticated
-                                    DropdownMenuItem(
-                                        text = { 
-                                            Column {
-                                                Text(user.userName, fontWeight = FontWeight.Bold)
-                                                Text(user.userEmail, style = MaterialTheme.typography.bodySmall)
+                                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth()) {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text("Uygulama Bilgisi", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                                Text("Sürüm: ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             }
-                                        },
-                                        onClick = { }
-                                    )
-                                    HorizontalDivider()
-                                    DropdownMenuItem(
-                                        text = { Text("Tasarruf Finansmanı") },
-                                        onClick = {
-                                            selectedTab = 7
-                                            showProfileMenu = false
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Konut Kredisi Hesaplama") },
-                                        onClick = {
-                                            selectedTab = 8
-                                            showProfileMenu = false
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Ayarlar") },
-                                        onClick = {
-                                            selectedTab = 6
-                                            showProfileMenu = false
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Çıkış Yap") },
-                                        onClick = {
-                                            showProfileMenu = false
-                                            onSignOut()
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Logout, contentDescription = null) }
-                                    )
-                                } else if (currentUserId.isNotBlank()) {
-                                    DropdownMenuItem(
-                                        text = { 
-                                            Column {
-                                                Text(savedName, fontWeight = FontWeight.Bold)
-                                                Text(currentUserId, style = MaterialTheme.typography.bodySmall)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Button(
+                                                onClick = {
+                                                    coroutineScope.launch {
+                                                        isCheckingUpdate = true
+                                                        val updateInfo = appUpdater.checkForUpdate()
+                                                        isCheckingUpdate = false
+                                                        if (updateInfo != null) {
+                                                            Toast.makeText(context, "Yeni sürüm (${updateInfo.versionName}) bulunuyor, indiriliyor...", Toast.LENGTH_LONG).show()
+                                                            appUpdater.downloadAndInstallUpdate(updateInfo)
+                                                        } else {
+                                                            Toast.makeText(context, "Uygulamanız güncel.", Toast.LENGTH_SHORT).show()
+                                                        }
+                                                    }
+                                                },
+                                                enabled = !isCheckingUpdate,
+                                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                                modifier = Modifier.height(32.dp)
+                                            ) {
+                                                if (isCheckingUpdate) {
+                                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                                                } else {
+                                                    Text("Güncelle", fontSize = 12.sp)
+                                                }
                                             }
-                                        },
-                                        onClick = { }
-                                    )
-                                    HorizontalDivider()
-                                    DropdownMenuItem(
-                                        text = { Text("Tasarruf Finansmanı") },
-                                        onClick = {
-                                            selectedTab = 7
-                                            showProfileMenu = false
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Konut Kredisi Hesaplama") },
-                                        onClick = {
-                                            selectedTab = 8
-                                            showProfileMenu = false
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Ayarlar") },
-                                        onClick = {
-                                            selectedTab = 6
-                                            showProfileMenu = false
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
-                                    )
+                                        }
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        HorizontalDivider()
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        if (authState is com.example.viewmodel.AuthState.Authenticated) {
+                                            val user = authState as com.example.viewmodel.AuthState.Authenticated
+                                            Text(user.userName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                                            Text(user.userEmail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        } else if (currentUserId.isNotBlank()) {
+                                            Text(savedName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                                            Text(currentUserId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        } else {
+                                            Text(savedName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                                        }
+                                    }
+                                }
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text("Tasarruf Finansmanı") },
+                                    onClick = {
+                                        selectedTab = 7
+                                        showProfileMenu = false
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Konut Kredisi Hesaplama") },
+                                    onClick = {
+                                        selectedTab = 8
+                                        showProfileMenu = false
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Ayarlar") },
+                                    onClick = {
+                                        selectedTab = 6
+                                        showProfileMenu = false
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
+                                )
+                                if (authState is com.example.viewmodel.AuthState.Authenticated || currentUserId.isNotBlank()) {
                                     DropdownMenuItem(
                                         text = { Text("Çıkış Yap") },
                                         onClick = {
@@ -217,36 +229,12 @@ fun DashboardScreen(
                                     )
                                 } else {
                                     DropdownMenuItem(
-                                        text = { Text("Tasarruf Finansmanı") },
-                                        onClick = {
-                                            selectedTab = 7
-                                            showProfileMenu = false
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Konut Kredisi Hesaplama") },
-                                        onClick = {
-                                            selectedTab = 8
-                                            showProfileMenu = false
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Ayarlar") },
-                                        onClick = {
-                                            selectedTab = 6
-                                            showProfileMenu = false
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Çıkış Yap") },
+                                        text = { Text("Giriş Yap") },
                                         onClick = {
                                             showProfileMenu = false
                                             onSignOut()
                                         },
-                                        leadingIcon = { Icon(Icons.Default.Logout, contentDescription = null) }
+                                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }
                                     )
                                 }
                             }
