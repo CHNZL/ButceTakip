@@ -1,0 +1,1 @@
+sed -i 's/testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"/testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"\n    setProperty("archivesBaseName", "ButceTakip")/g' app/build.gradle.kts
