@@ -8,9 +8,6 @@ plugins {
   alias(libs.plugins.secrets)
 }
 
-base {
-    archivesName.set("ButceTakip")
-}
 
 android {
   namespace = "com.example"

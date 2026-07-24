@@ -477,10 +477,10 @@ fun AssetSummaryCard(
                         text = "%,.1f %s".format(Locale("tr"), summary.currentUnitPrice, rateUnitStr),
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier
-                            .background(MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
                             .padding(horizontal = 4.dp, vertical = 2.dp)
                     )
 
@@ -678,7 +678,7 @@ fun LedgerRowItem(
                         ),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                         fontFamily = FontFamily.Monospace
                     )
                 }

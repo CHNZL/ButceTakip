@@ -67,7 +67,7 @@ jobs:
 
       - name: APK ve Version Dosyasını Kopyala
         run: |
-          cp app/build/outputs/apk/debug/ButceTakip-debug.apk ./ButceTakip.apk
+          cp app/build/outputs/apk/debug/app-debug.apk ./ButceTakip.apk
 
       - name: Latest Release Olarak Yayinla
         uses: softprops/action-gh-release@v1
