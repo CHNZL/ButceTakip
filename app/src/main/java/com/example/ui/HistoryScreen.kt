@@ -1,5 +1,16 @@
 package com.example.ui
 
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -52,6 +63,9 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
     var pdfTransactionsToExport by remember { mutableStateOf<List<Transaction>>(emptyList()) }
     var pdfTitleToExport by remember { mutableStateOf("") }
     val context = LocalContext.current
+    var pdfFileNameToExport by remember { mutableStateOf("") }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     val coroutineScope = rememberCoroutineScope()
     val pdfExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
         if (uri != null) {
@@ -62,6 +76,7 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
                     }
                     withContext(Dispatchers.Main) {
                         Toast.makeText(context, "PDF başarıyla kaydedildi.", Toast.LENGTH_LONG).show()
+                        showPdfNotification(context, uri, pdfFileNameToExport)
                     }
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) {
@@ -442,6 +457,10 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
                 }
                 pdfTransactionsToExport = filtered.sortedByDescending { it.timestamp }
                 val fileName = if (year == null) "Islem_Gecmisi_TumZamanlar.pdf" else "Islem_Gecmisi_${month?.plus(1)}_$year.pdf"
+                pdfFileNameToExport = fileName
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
                 pdfExportLauncher.launch(fileName)
             }
         )
@@ -462,5 +481,41 @@ fun SummaryBox(title: String, amount: String, bg: Color, fg: Color, modifier: Mo
             Spacer(modifier = Modifier.height(4.dp))
             Text(amount, fontSize = 13.sp, fontWeight = FontWeight.Black, color = fg, maxLines = 1)
         }
+    }
+}
+
+fun showPdfNotification(context: Context, uri: Uri, fileName: String) {
+    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val channelId = "pdf_exports"
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(channelId, "PDF Çıktıları", NotificationManager.IMPORTANCE_DEFAULT)
+        notificationManager.createNotificationChannel(channel)
+    }
+
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, "application/pdf")
+        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+    }
+
+    val pendingIntent = PendingIntent.getActivity(
+        context, 
+        0, 
+        intent, 
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+
+    val notification = NotificationCompat.Builder(context, channelId)
+        .setSmallIcon(android.R.drawable.ic_menu_save)
+        .setContentTitle("PDF İndirildi")
+        .setContentText("$fileName dosyası hazır. Açmak için dokunun.")
+        .setContentIntent(pendingIntent)
+        .setAutoCancel(true)
+        .setPriority(NotificationCompat.PRIORITY_HIGH)
+        .build()
+
+    try {
+        notificationManager.notify(uri.hashCode(), notification)
+    } catch (e: SecurityException) {
+        // Permission not granted
     }
 }

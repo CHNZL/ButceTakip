@@ -171,17 +171,17 @@ object PdfExporter {
         }
 
         yPosition += 5f
-        canvas.drawText("Toplam Gelir:", colType, yPosition, totalLabelPaint)
+        canvas.drawText("Toplam Gelir:", colCategory, yPosition, totalLabelPaint)
         incomePaint.textAlign = Paint.Align.RIGHT
         canvas.drawText("+" + currencyFormat.format(totalIncome), pageInfo.pageWidth - margin - 10f, yPosition, incomePaint)
         
         yPosition += 25f
-        canvas.drawText("Toplam Gider:", colType, yPosition, totalLabelPaint)
+        canvas.drawText("Toplam Gider:", colCategory, yPosition, totalLabelPaint)
         expensePaint.textAlign = Paint.Align.RIGHT
         canvas.drawText("-" + currencyFormat.format(totalExpense), pageInfo.pageWidth - margin - 10f, yPosition, expensePaint)
         
         yPosition += 25f
-        canvas.drawText("Toplam Birikim:", colType, yPosition, totalLabelPaint)
+        canvas.drawText("Toplam Birikim:", colCategory, yPosition, totalLabelPaint)
         savingPaint.textAlign = Paint.Align.RIGHT
         canvas.drawText("-" + currencyFormat.format(totalSaving), pageInfo.pageWidth - margin - 10f, yPosition, savingPaint)
 
