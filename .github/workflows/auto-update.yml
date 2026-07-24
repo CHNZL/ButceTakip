@@ -60,14 +60,14 @@ jobs:
           {
             "versionCode": $VERSION_CODE,
             "versionName": "$VERSION_NAME",
-            "downloadUrl": "https://github.com/CHNZL/ButceTakip/releases/download/latest/app-debug.apk",
+            "downloadUrl": "https://github.com/CHNZL/ButceTakip/releases/download/latest/ButceTakip.apk",
             "releaseNotes": "AI Studio üzerinden yeni kod gönderildi."
           }
           EOF
 
       - name: APK ve Version Dosyasını Kopyala
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk ./app-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk ./ButceTakip.apk
 
       - name: Latest Release Olarak Yayinla
         uses: softprops/action-gh-release@v1
@@ -77,7 +77,7 @@ jobs:
           body: "Bu sürüm uygulamanın en son kodlarından otomatik olarak derlenmiştir."
           prerelease: false
           files: |
-            app-debug.apk
+            ButceTakip.apk
             version.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -331,7 +331,7 @@ fun DashboardScreen(
                     },
                     modifier = Modifier.testTag("add_transaction_fab"),
                     containerColor = primaryBtnColor,
-                    contentColor = Color.White,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                     shape = RoundedCornerShape(24.dp)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Ekle", modifier = Modifier.size(32.dp))

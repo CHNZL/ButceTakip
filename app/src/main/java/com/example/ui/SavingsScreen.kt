@@ -236,7 +236,7 @@ fun SavingsScreen(
                         text = "Varlık Özetlerim",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF0F172A)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     
@@ -280,13 +280,13 @@ fun SavingsScreen(
                     text = "Birikim Kayıtları",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0F172A)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Button(
                     onClick = onAddSaving,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF0061A4),
-                        contentColor = Color.White
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
@@ -310,8 +310,8 @@ fun SavingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    border = BorderStroke(1.dp, Color(0xFFF1F5F9)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(
@@ -324,18 +324,18 @@ fun SavingsScreen(
                         Icon(
                             imageVector = Icons.Rounded.AccountBalanceWallet,
                             contentDescription = null,
-                            tint = Color(0xFF94A3B8),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             modifier = Modifier.size(48.dp)
                         )
                         Text(
                             text = "Henüz birikim kaydınız bulunmuyor.",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
-                            color = Color(0xFF64748B)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Button(
                             onClick = onAddSaving,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0061A4)),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             shape = RoundedCornerShape(10.dp)
                         ) {
                             Text("İlk Birikimi Ekle", fontWeight = FontWeight.Bold)
@@ -377,12 +377,12 @@ fun SavingsScreen(
                         editingCategoryPrice = null
                     }
                 ) {
-                    Text("Güncelle", color = Color(0xFF0061A4), fontWeight = FontWeight.Bold)
+                    Text("Güncelle", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { editingCategoryPrice = null }) {
-                    Text("İptal", color = Color(0xFF64748B))
+                    Text("İptal", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             title = {
@@ -390,7 +390,7 @@ fun SavingsScreen(
                     text = "$catName Fiyatını Güncelle",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1E293B)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             text = {
@@ -398,7 +398,7 @@ fun SavingsScreen(
                     Text(
                         text = "Lütfen 1 gram veya 1 adet için güncel birim fiyatını giriniz (₺):",
                         fontSize = 13.sp,
-                        color = Color(0xFF64748B)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     OutlinedTextField(
                         value = newPriceText,
@@ -413,7 +413,7 @@ fun SavingsScreen(
                 }
             },
             shape = RoundedCornerShape(16.dp),
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 }
@@ -446,9 +446,9 @@ fun AssetSummaryCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
         shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, Color(0xFFECEFF3)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
@@ -477,10 +477,10 @@ fun AssetSummaryCard(
                         text = "%,.1f %s".format(Locale("tr"), summary.currentUnitPrice, rateUnitStr),
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF64748B),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier
-                            .background(Color(0xFFF1F5F9), RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp))
                             .padding(horizontal = 4.dp, vertical = 2.dp)
                     )
 
@@ -492,7 +492,7 @@ fun AssetSummaryCard(
                             Icon(
                                 imageVector = Icons.Rounded.Edit,
                                 contentDescription = "Fiyat Düzenle",
-                                tint = Color(0xFF0061A4),
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(14.dp)
                             )
                         }
@@ -507,7 +507,7 @@ fun AssetSummaryCard(
                 text = summary.category,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1E293B),
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -521,7 +521,7 @@ fun AssetSummaryCard(
                 ),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
-                color = Color(0xFF64748B)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -531,7 +531,7 @@ fun AssetSummaryCard(
                 text = currencyFormat.format(summary.currentValue),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Black,
-                color = Color(0xFF0F172A)
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             // Dynamic Profit Loss Display
@@ -572,7 +572,7 @@ fun AssetSummaryCard(
                 Text(
                     text = "Son Güncelleme: $timeStr",
                     fontSize = 8.sp,
-                    color = Color(0xFF94A3B8),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -603,9 +603,9 @@ fun LedgerRowItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, Color(0xFFF1F5F9))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             // First Row: Header/Title + Delete Button
@@ -628,7 +628,7 @@ fun LedgerRowItem(
                         text = tx.category,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1E293B)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 
@@ -639,7 +639,7 @@ fun LedgerRowItem(
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Kayıt Sil",
-                        tint = Color(0xFF64748B),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -651,7 +651,7 @@ fun LedgerRowItem(
             Text(
                 text = formattedDate,
                 fontSize = 11.sp,
-                color = Color(0xFF94A3B8)
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -666,7 +666,7 @@ fun LedgerRowItem(
                     Text(
                         text = "Miktar & Maliyet",
                         fontSize = 10.sp,
-                        color = Color(0xFF94A3B8)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
@@ -678,7 +678,7 @@ fun LedgerRowItem(
                         ),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF475569),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontFamily = FontFamily.Monospace
                     )
                 }
@@ -688,20 +688,20 @@ fun LedgerRowItem(
                     Text(
                         text = "Ödeme",
                         fontSize = 10.sp,
-                        color = Color(0xFF94A3B8)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = currencyFormat.format(tx.amount),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF475569)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
-            Divider(color = Color(0xFFF1F5F9), thickness = 1.dp)
+            Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
             Spacer(modifier = Modifier.height(10.dp))
 
             // Value / Profit-Loss Row
@@ -714,13 +714,13 @@ fun LedgerRowItem(
                     Text(
                         text = "Güncel Değer",
                         fontSize = 10.sp,
-                        color = Color(0xFF94A3B8)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                     Text(
                         text = currencyFormat.format(currentValue),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Black,
-                        color = Color(0xFF1E293B)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
