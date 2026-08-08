@@ -478,8 +478,9 @@ fun DashboardScreen(
                         viewModel.updateCustomPrice(category, price)
                     },
                     ziraatRates = ziraatRates,
-                    besPortfolio = uiState.besPortfolio,
+                    besPortfolios = uiState.besPortfolios,
                     onUpdateBes = { viewModel.updateBesPortfolio(it) },
+                    onDeleteBes = { viewModel.deleteBesPortfolio(it) }
                 )
             }
         } else if (selectedTab == 4) {

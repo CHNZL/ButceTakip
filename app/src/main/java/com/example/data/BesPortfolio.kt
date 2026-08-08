@@ -5,7 +5,8 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "bes_portfolio")
 data class BesPortfolio(
-    @PrimaryKey val id: Int = 1,
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val holderName: String = "BES",
     val startDate: Long,
     val investment: Double,
     val investmentReturn: Double,
@@ -13,3 +14,4 @@ data class BesPortfolio(
     val stateContributionReturn: Double,
     val isRetired: Boolean = false
 )
+

@@ -56,12 +56,14 @@ fun SavingsScreen(
     customPricesTrigger: Long = 0L,
     onUpdateCustomPrice: ((String, Double) -> Unit)? = null,
     ziraatRates: List<BankRate> = emptyList(),
-    besPortfolio: com.example.data.BesPortfolio? = null,
-    onUpdateBes: ((com.example.data.BesPortfolio) -> Unit)? = null
+    besPortfolios: List<com.example.data.BesPortfolio> = emptyList(),
+    onUpdateBes: ((com.example.data.BesPortfolio) -> Unit)? = null,
+    onDeleteBes: ((com.example.data.BesPortfolio) -> Unit)? = null
 ) {
     var editingCategoryPrice by remember { mutableStateOf<String?>(null) }
     var newPriceText by remember { mutableStateOf("") }
     var showBesDialog by remember { mutableStateOf(false) }
+    var editingBes by remember { mutableStateOf<com.example.data.BesPortfolio?>(null) }
 
     val savingTransactions = remember(transactions) {
         transactions.filter { it.type == TransactionType.SAVING }
@@ -94,21 +96,23 @@ fun SavingsScreen(
         }.sortedByDescending { it.currentValue }
     }
 
-    val besTotalValue = remember(besPortfolio) { 
-        besPortfolio?.let { 
-            val years = (System.currentTimeMillis() - it.startDate) / (1000L * 60 * 60 * 24 * 365) 
-            val stateVesting = if (it.isRetired) 1.0 else { 
-                when { 
-                    years < 3 -> 0.0 
-                    years < 6 -> 0.15 
-                    years < 10 -> 0.35 
-                    else -> 0.60 
-                } 
-            } 
-            it.investment + it.investmentReturn + (it.stateContribution + it.stateContributionReturn) * stateVesting 
-        } ?: 0.0 
-    } 
-    val besPaid = besPortfolio?.investment ?: 0.0
+    val besCalculatedValues = remember(besPortfolios) {
+        besPortfolios.map { bes ->
+            val years = (System.currentTimeMillis() - bes.startDate) / (1000L * 60 * 60 * 24 * 365)
+            val stateVesting = if (bes.isRetired) 1.0 else {
+                when {
+                    years < 3 -> 0.0
+                    years < 6 -> 0.15
+                    years < 10 -> 0.35
+                    else -> 0.60
+                }
+            }
+            val totalVal = bes.investment + bes.investmentReturn + (bes.stateContribution + bes.stateContributionReturn) * stateVesting
+            Triple(bes, totalVal, bes.investment)
+        }
+    }
+    val besTotalValue = remember(besCalculatedValues) { besCalculatedValues.sumOf { it.second } }
+    val besPaid = remember(besCalculatedValues) { besCalculatedValues.sumOf { it.third } }
     val totalCurrentValue = assetSummaries.sumOf { it.currentValue } + besTotalValue
     val totalPaidAll = assetSummaries.sumOf { it.totalPaid } + besPaid
     val totalProfitLoss = totalCurrentValue - totalPaidAll
@@ -279,15 +283,45 @@ fun SavingsScreen(
         }
 
         item { 
-            if (besPortfolio != null) { 
+            if (besPortfolios.isNotEmpty()) { 
                 Spacer(modifier = Modifier.height(8.dp)) 
-                BesSummaryCard(besPortfolio = besPortfolio, besTotalValue = besTotalValue, besPaid = besPaid, currencyFormat = currencyFormat) { 
-                    showBesDialog = true 
-                } 
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    besCalculatedValues.forEachIndexed { index, (bes, totalVal, paid) ->
+                        BesSummaryCard(
+                            besPortfolio = bes,
+                            besTotalValue = totalVal,
+                            besPaid = paid,
+                            currencyFormat = currencyFormat,
+                            isFirstCard = index == 0,
+                            onAddClick = {
+                                editingBes = null
+                                showBesDialog = true
+                            },
+                            onEditClick = {
+                                editingBes = bes
+                                showBesDialog = true
+                            },
+                            onDeleteClick = {
+                                onDeleteBes?.invoke(bes)
+                            }
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(16.dp)) 
             } else { 
                 Spacer(modifier = Modifier.height(16.dp)) 
-                Button(onClick = { showBesDialog = true }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) { 
+                Button(
+                    onClick = { 
+                        editingBes = null
+                        showBesDialog = true 
+                    }, 
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+                ) { 
+                    Icon(Icons.Rounded.Add, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text("Bireysel Emeklilik (BES) Ekle") 
                 } 
                 Spacer(modifier = Modifier.height(16.dp)) 
@@ -391,7 +425,7 @@ fun SavingsScreen(
 
     if (showBesDialog) { 
         BesDialog( 
-            besPortfolio = besPortfolio, 
+            besPortfolio = editingBes, 
             onDismiss = { showBesDialog = false }, 
             onSave = { 
                 onUpdateBes?.invoke(it) 
@@ -883,39 +917,109 @@ fun BesSummaryCard(
     besTotalValue: Double,
     besPaid: Double,
     currencyFormat: java.text.NumberFormat,
-    onEditClick: () -> Unit
+    isFirstCard: Boolean = false,
+    onAddClick: (() -> Unit)? = null,
+    onEditClick: () -> Unit,
+    onDeleteClick: (() -> Unit)? = null
 ) {
     val profit = besTotalValue - besPaid
     val profitPercent = if (besPaid > 0) (profit / besPaid) * 100 else 0.0
     val isProfit = profit >= 0
 
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).clickable { onEditClick() },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                Text("Bireysel Emeklilik (BES)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                Icon(Icons.Rounded.Edit, contentDescription = "Düzenle", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = besPortfolio.holderName.ifBlank { "Bireysel Emeklilik (BES)" },
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    if (isFirstCard && onAddClick != null) {
+                        FilledTonalIconButton(
+                            onClick = onAddClick,
+                            modifier = Modifier.size(32.dp),
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Add,
+                                contentDescription = "Yeni BES Ekle",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+
+                    IconButton(
+                        onClick = onEditClick,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Edit,
+                            contentDescription = "Düzenle",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    if (onDeleteClick != null) {
+                        IconButton(
+                            onClick = onDeleteClick,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Delete,
+                                contentDescription = "Sil",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(currencyFormat.format(besTotalValue), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = currencyFormat.format(besTotalValue),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
             Spacer(modifier = Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = if (isProfit) Icons.Rounded.TrendingUp else Icons.Rounded.TrendingDown,
                     contentDescription = null,
-                    tint = if (isProfit) Color(0xFF4CAF50) else Color(0xFFF44336),
+                    tint = if (isProfit) Color(0xFF10B981) else Color(0xFFEF4444),
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "${if (isProfit) "+" else ""}${currencyFormat.format(profit)} (%.2f%%)".format(profitPercent),
-                    color = if (isProfit) Color(0xFF4CAF50) else Color(0xFFF44336),
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 14.sp
+                    text = "${if (isProfit) "+" else ""}${currencyFormat.format(profit)} (${if (isProfit) "+" else ""}${String.format(Locale.US, "%.2f", profitPercent)}%)",
+                    color = if (isProfit) Color(0xFF10B981) else Color(0xFFEF4444),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
                 )
             }
         }

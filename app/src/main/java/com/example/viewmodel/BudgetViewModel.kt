@@ -38,8 +38,8 @@ data class BudgetUiState(
     val totalBalance: Double = 0.0,
     val totalIncome: Double = 0.0,
     val totalExpense: Double = 0.0,
-    val totalSaved: Double = 0.0
-    , val besPortfolio: BesPortfolio? = null
+    val totalSaved: Double = 0.0,
+    val besPortfolios: List<BesPortfolio> = emptyList()
 )
 
 class BudgetViewModel(
@@ -361,10 +361,10 @@ class BudgetViewModel(
     val persons = repository.allPersons.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val uiState: StateFlow<BudgetUiState> = combine(
-        repository.besPortfolio,
+        repository.besPortfolios,
         repository.allTransactions,
         repository.allSavings
-    ) { bes, transactions, savings ->
+    ) { besList, transactions, savings ->
         var income = 0.0
         var expense = 0.0
         var savingTx = 0.0
@@ -387,7 +387,7 @@ class BudgetViewModel(
             totalIncome = income,
             totalExpense = expense,
             totalSaved = totalSaved,
-            besPortfolio = bes
+            besPortfolios = besList
         )
     }.stateIn(
         scope = viewModelScope,
@@ -439,6 +439,12 @@ class BudgetViewModel(
     fun updateBesPortfolio(bes: BesPortfolio) {
         viewModelScope.launch {
             repository.insertOrUpdateBes(bes)
+        }
+    }
+
+    fun deleteBesPortfolio(bes: BesPortfolio) {
+        viewModelScope.launch {
+            repository.deleteBes(bes)
         }
     }
 

@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Transaction::class, SavingGoal::class, AppCategory::class, Person::class, BesPortfolio::class], version = 6, exportSchema = false)
+@Database(entities = [Transaction::class, SavingGoal::class, AppCategory::class, Person::class, BesPortfolio::class], version = 7, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
     abstract fun savingDao(): SavingDao
@@ -21,6 +21,11 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("CREATE TABLE IF NOT EXISTS `bes_portfolio` (`id` INTEGER NOT NULL, `startDate` INTEGER NOT NULL, `investment` REAL NOT NULL, `investmentReturn` REAL NOT NULL, `stateContribution` REAL NOT NULL, `stateContributionReturn` REAL NOT NULL, `isRetired` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))")
             }
         }
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `bes_portfolio` ADD COLUMN `holderName` TEXT NOT NULL DEFAULT 'BES'")
+            }
+        }
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -31,7 +36,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "budget_database"
                 )
-                    .addMigrations(MIGRATION_5_6)
+                    .addMigrations(MIGRATION_5_6, MIGRATION_6_7)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

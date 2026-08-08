@@ -19,6 +19,7 @@ fun BesDialog(
     onDismiss: () -> Unit,
     onSave: (BesPortfolio) -> Unit
 ) {
+    var holderNameText by remember { mutableStateOf(besPortfolio?.holderName ?: "BES") }
     var startDate by remember { mutableLongStateOf(besPortfolio?.startDate ?: System.currentTimeMillis()) }
     var investmentText by remember { mutableStateOf(besPortfolio?.investment?.let { com.example.util.formatDoubleForInput(it) } ?: "") }
     var investmentReturnText by remember { mutableStateOf(besPortfolio?.investmentReturn?.let { com.example.util.formatDoubleForInput(it) } ?: "") }
@@ -55,6 +56,14 @@ fun BesDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                OutlinedTextField(
+                    value = holderNameText,
+                    onValueChange = { holderNameText = it },
+                    label = { Text("Hesap / Kişi Adı (örn. Ahmet, Eşim, Benim BES)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
                 OutlinedTextField(
                     value = dateFormat.format(Date(startDate)),
                     onValueChange = {},
@@ -125,7 +134,8 @@ fun BesDialog(
                     val stateContributionReturn = com.example.util.parseFormattedAmount(stateContributionReturnText)
                     
                     val newBes = BesPortfolio(
-                        id = 1,
+                        id = besPortfolio?.id ?: 0,
+                        holderName = holderNameText.ifBlank { "BES" },
                         startDate = startDate,
                         investment = investment,
                         investmentReturn = investmentReturn,
