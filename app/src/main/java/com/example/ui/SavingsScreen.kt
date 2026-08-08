@@ -45,12 +45,29 @@ data class SavingAssetSummary(
 
 data class AssetCardPalette(
     val containerColor: Color,
+    val borderColor: Color,
+    val iconContainerColor: Color,
+    val iconColor: Color,
     val onContainerColor: Color,
     val secondaryTextColor: Color,
     val badgeContainerColor: Color,
     val badgeContentColor: Color,
     val accentColor: Color
 )
+
+fun getAssetIcon(category: String): androidx.compose.ui.graphics.vector.ImageVector {
+    val clean = category.lowercase(Locale("tr"))
+    return when {
+        clean.contains("altın") || clean.contains("altin") || clean.contains("24") || clean.contains("22") || clean.contains("bilezik") || clean.contains("xau") -> Icons.Rounded.Savings
+        clean.contains("dolar") || clean.contains("usd") || clean.contains("$") -> Icons.Rounded.AttachMoney
+        clean.contains("euro") || clean.contains("eur") || clean.contains("€") -> Icons.Rounded.Euro
+        clean.contains("borsa") || clean.contains("hisse") || clean.contains("stock") -> Icons.Rounded.ShowChart
+        clean.contains("fon") -> Icons.Rounded.PieChart
+        clean.contains("gümüş") || clean.contains("gumus") || clean.contains("xag") -> Icons.Rounded.Layers
+        clean.contains("emeklilik") || clean.contains("bes") -> Icons.Rounded.Shield
+        else -> Icons.Rounded.AccountBalance
+    }
+}
 
 @Composable
 fun getAssetCardPalette(category: String): AssetCardPalette {
@@ -61,20 +78,26 @@ fun getAssetCardPalette(category: String): AssetCardPalette {
         clean.contains("altın") || clean.contains("altin") || clean.contains("24") || clean.contains("22") || clean.contains("bilezik") || clean.contains("xau") -> {
             if (isDark) {
                 AssetCardPalette(
-                    containerColor = Color(0xFF3B2D00),
-                    onContainerColor = Color(0xFFFFECB3),
-                    secondaryTextColor = Color(0xFFFFD54F).copy(alpha = 0.85f),
-                    badgeContainerColor = Color(0xFF5A4300),
-                    badgeContentColor = Color(0xFFFFE082),
+                    containerColor = Color(0xFF1E1C16),
+                    borderColor = Color(0xFFEAB308).copy(alpha = 0.22f),
+                    iconContainerColor = Color(0xFFEAB308).copy(alpha = 0.16f),
+                    iconColor = Color(0xFFFACC15),
+                    onContainerColor = Color(0xFFFEF08A),
+                    secondaryTextColor = Color(0xFFEAB308).copy(alpha = 0.85f),
+                    badgeContainerColor = Color(0xFFCA8A04).copy(alpha = 0.22f),
+                    badgeContentColor = Color(0xFFFDE047),
                     accentColor = Color(0xFFEAB308)
                 )
             } else {
                 AssetCardPalette(
-                    containerColor = Color(0xFFFEF3C7),
-                    onContainerColor = Color(0xFF78350F),
-                    secondaryTextColor = Color(0xFF92400E),
-                    badgeContainerColor = Color(0xFFFDE68A),
-                    badgeContentColor = Color(0xFF78350F),
+                    containerColor = Color(0xFFFFFFFF),
+                    borderColor = Color(0xFFFDE047).copy(alpha = 0.6f),
+                    iconContainerColor = Color(0xFFFEF9C3),
+                    iconColor = Color(0xFFCA8A04),
+                    onContainerColor = Color(0xFF713F12),
+                    secondaryTextColor = Color(0xFF854D0E),
+                    badgeContainerColor = Color(0xFFFEF08A),
+                    badgeContentColor = Color(0xFF713F12),
                     accentColor = Color(0xFFD97706)
                 )
             }
@@ -82,20 +105,26 @@ fun getAssetCardPalette(category: String): AssetCardPalette {
         clean.contains("dolar") || clean.contains("usd") || clean.contains("$") -> {
             if (isDark) {
                 AssetCardPalette(
-                    containerColor = Color(0xFF064E3B),
-                    onContainerColor = Color(0xFFA7F3D0),
+                    containerColor = Color(0xFF14201A),
+                    borderColor = Color(0xFF10B981).copy(alpha = 0.22f),
+                    iconContainerColor = Color(0xFF10B981).copy(alpha = 0.16f),
+                    iconColor = Color(0xFF34D399),
+                    onContainerColor = Color(0xFFECFDF5),
                     secondaryTextColor = Color(0xFF6EE7B7).copy(alpha = 0.85f),
-                    badgeContainerColor = Color(0xFF047857),
-                    badgeContentColor = Color(0xFFD1FAE5),
+                    badgeContainerColor = Color(0xFF059669).copy(alpha = 0.22f),
+                    badgeContentColor = Color(0xFFA7F3D0),
                     accentColor = Color(0xFF10B981)
                 )
             } else {
                 AssetCardPalette(
-                    containerColor = Color(0xFFD1FAE5),
-                    onContainerColor = Color(0xFF065F46),
+                    containerColor = Color(0xFFFFFFFF),
+                    borderColor = Color(0xFF6EE7B7).copy(alpha = 0.6f),
+                    iconContainerColor = Color(0xFFDCFCE7),
+                    iconColor = Color(0xFF059669),
+                    onContainerColor = Color(0xFF064E3B),
                     secondaryTextColor = Color(0xFF047857),
                     badgeContainerColor = Color(0xFFA7F3D0),
-                    badgeContentColor = Color(0xFF065F46),
+                    badgeContentColor = Color(0xFF064E3B),
                     accentColor = Color(0xFF059669)
                 )
             }
@@ -103,17 +132,23 @@ fun getAssetCardPalette(category: String): AssetCardPalette {
         clean.contains("euro") || clean.contains("eur") || clean.contains("€") -> {
             if (isDark) {
                 AssetCardPalette(
-                    containerColor = Color(0xFF312E81),
-                    onContainerColor = Color(0xFFC7D2FE),
+                    containerColor = Color(0xFF171A26),
+                    borderColor = Color(0xFF6366F1).copy(alpha = 0.22f),
+                    iconContainerColor = Color(0xFF6366F1).copy(alpha = 0.16f),
+                    iconColor = Color(0xFF818CF8),
+                    onContainerColor = Color(0xFFEEF2FF),
                     secondaryTextColor = Color(0xFFA5B4FC).copy(alpha = 0.85f),
-                    badgeContainerColor = Color(0xFF4338CA),
-                    badgeContentColor = Color(0xFFE0E7FF),
+                    badgeContainerColor = Color(0xFF4F46E5).copy(alpha = 0.22f),
+                    badgeContentColor = Color(0xFFC7D2FE),
                     accentColor = Color(0xFF6366F1)
                 )
             } else {
                 AssetCardPalette(
-                    containerColor = Color(0xFFE0E7FF),
-                    onContainerColor = Color(0xFF3730A3),
+                    containerColor = Color(0xFFFFFFFF),
+                    borderColor = Color(0xFFA5B4FC).copy(alpha = 0.6f),
+                    iconContainerColor = Color(0xFFE0E7FF),
+                    iconColor = Color(0xFF4F46E5),
+                    onContainerColor = Color(0xFF312E81),
                     secondaryTextColor = Color(0xFF4338CA),
                     badgeContainerColor = Color(0xFFC7D2FE),
                     badgeContentColor = Color(0xFF312E81),
@@ -124,20 +159,26 @@ fun getAssetCardPalette(category: String): AssetCardPalette {
         clean.contains("borsa") || clean.contains("hisse") || clean.contains("stock") -> {
             if (isDark) {
                 AssetCardPalette(
-                    containerColor = Color(0xFF0C4A6E),
-                    onContainerColor = Color(0xFFBAE6FD),
+                    containerColor = Color(0xFF141C26),
+                    borderColor = Color(0xFF0284C7).copy(alpha = 0.22f),
+                    iconContainerColor = Color(0xFF0284C7).copy(alpha = 0.16f),
+                    iconColor = Color(0xFF38BDF8),
+                    onContainerColor = Color(0xFFF0F9FF),
                     secondaryTextColor = Color(0xFF7DD3FC).copy(alpha = 0.85f),
-                    badgeContainerColor = Color(0xFF0369A1),
-                    badgeContentColor = Color(0xFFE0F2FE),
+                    badgeContainerColor = Color(0xFF0284C7).copy(alpha = 0.22f),
+                    badgeContentColor = Color(0xFFBAE6FD),
                     accentColor = Color(0xFF0284C7)
                 )
             } else {
                 AssetCardPalette(
-                    containerColor = Color(0xFFE0F2FE),
-                    onContainerColor = Color(0xFF075985),
+                    containerColor = Color(0xFFFFFFFF),
+                    borderColor = Color(0xFF7DD3FC).copy(alpha = 0.6f),
+                    iconContainerColor = Color(0xFFE0F2FE),
+                    iconColor = Color(0xFF0284C7),
+                    onContainerColor = Color(0xFF0C4A6E),
                     secondaryTextColor = Color(0xFF0369A1),
                     badgeContainerColor = Color(0xFFBAE6FD),
-                    badgeContentColor = Color(0xFF075985),
+                    badgeContentColor = Color(0xFF0C4A6E),
                     accentColor = Color(0xFF0284C7)
                 )
             }
@@ -145,20 +186,26 @@ fun getAssetCardPalette(category: String): AssetCardPalette {
         clean.contains("fon") -> {
             if (isDark) {
                 AssetCardPalette(
-                    containerColor = Color(0xFF581C87),
-                    onContainerColor = Color(0xFFE9D5FF),
+                    containerColor = Color(0xFF1C1626),
+                    borderColor = Color(0xFF9333EA).copy(alpha = 0.22f),
+                    iconContainerColor = Color(0xFF9333EA).copy(alpha = 0.16f),
+                    iconColor = Color(0xFFC084FC),
+                    onContainerColor = Color(0xFFFAF5FF),
                     secondaryTextColor = Color(0xFFD8B4FE).copy(alpha = 0.85f),
-                    badgeContainerColor = Color(0xFF7E22CE),
-                    badgeContentColor = Color(0xFFF3E8FF),
+                    badgeContainerColor = Color(0xFF7E22CE).copy(alpha = 0.22f),
+                    badgeContentColor = Color(0xFFE9D5FF),
                     accentColor = Color(0xFF9333EA)
                 )
             } else {
                 AssetCardPalette(
-                    containerColor = Color(0xFFF3E8FF),
-                    onContainerColor = Color(0xFF6B21A8),
-                    secondaryTextColor = Color(0xFF7E22CE),
+                    containerColor = Color(0xFFFFFFFF),
+                    borderColor = Color(0xFFD8B4FE).copy(alpha = 0.6f),
+                    iconContainerColor = Color(0xFFF3E8FF),
+                    iconColor = Color(0xFF7E22CE),
+                    onContainerColor = Color(0xFF3B0764),
+                    secondaryTextColor = Color(0xFF6B21A8),
                     badgeContainerColor = Color(0xFFE9D5FF),
-                    badgeContentColor = Color(0xFF581C87),
+                    badgeContentColor = Color(0xFF3B0764),
                     accentColor = Color(0xFF9333EA)
                 )
             }
@@ -166,40 +213,79 @@ fun getAssetCardPalette(category: String): AssetCardPalette {
         clean.contains("gümüş") || clean.contains("gumus") || clean.contains("xag") -> {
             if (isDark) {
                 AssetCardPalette(
-                    containerColor = Color(0xFF1E293B),
-                    onContainerColor = Color(0xFFE2E8F0),
+                    containerColor = Color(0xFF1B1E22),
+                    borderColor = Color(0xFF94A3B8).copy(alpha = 0.22f),
+                    iconContainerColor = Color(0xFF94A3B8).copy(alpha = 0.16f),
+                    iconColor = Color(0xFFCBD5E1),
+                    onContainerColor = Color(0xFFF8FAFC),
                     secondaryTextColor = Color(0xFF94A3B8).copy(alpha = 0.85f),
-                    badgeContainerColor = Color(0xFF334155),
-                    badgeContentColor = Color(0xFFF8FAFC),
-                    accentColor = Color(0xFF64748B)
+                    badgeContainerColor = Color(0xFF64748B).copy(alpha = 0.22f),
+                    badgeContentColor = Color(0xFFE2E8F0),
+                    accentColor = Color(0xFF94A3B8)
                 )
             } else {
                 AssetCardPalette(
-                    containerColor = Color(0xFFF1F5F9),
-                    onContainerColor = Color(0xFF1E293B),
-                    secondaryTextColor = Color(0xFF475569),
+                    containerColor = Color(0xFFFFFFFF),
+                    borderColor = Color(0xFFCBD5E1).copy(alpha = 0.6f),
+                    iconContainerColor = Color(0xFFF1F5F9),
+                    iconColor = Color(0xFF475569),
+                    onContainerColor = Color(0xFF0F172A),
+                    secondaryTextColor = Color(0xFF334155),
                     badgeContainerColor = Color(0xFFE2E8F0),
                     badgeContentColor = Color(0xFF0F172A),
                     accentColor = Color(0xFF64748B)
                 )
             }
         }
-        else -> {
+        clean.contains("emeklilik") || clean.contains("bes") -> {
             if (isDark) {
                 AssetCardPalette(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    onContainerColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    secondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    badgeContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    badgeContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    accentColor = MaterialTheme.colorScheme.primary
+                    containerColor = Color(0xFF131F21),
+                    borderColor = Color(0xFF0D9488).copy(alpha = 0.22f),
+                    iconContainerColor = Color(0xFF0D9488).copy(alpha = 0.16f),
+                    iconColor = Color(0xFF2DD4BF),
+                    onContainerColor = Color(0xFFF0FDFA),
+                    secondaryTextColor = Color(0xFF5EEAD4).copy(alpha = 0.85f),
+                    badgeContainerColor = Color(0xFF0D9488).copy(alpha = 0.22f),
+                    badgeContentColor = Color(0xFF99F6E4),
+                    accentColor = Color(0xFF0D9488)
                 )
             } else {
                 AssetCardPalette(
-                    containerColor = Color(0xFFEFF6FF),
+                    containerColor = Color(0xFFFFFFFF),
+                    borderColor = Color(0xFF5EEAD4).copy(alpha = 0.6f),
+                    iconContainerColor = Color(0xFFCCFBF1),
+                    iconColor = Color(0xFF0D9488),
+                    onContainerColor = Color(0xFF134E4A),
+                    secondaryTextColor = Color(0xFF115E59),
+                    badgeContainerColor = Color(0xFF99F6E4),
+                    badgeContentColor = Color(0xFF134E4A),
+                    accentColor = Color(0xFF0D9488)
+                )
+            }
+        }
+        else -> {
+            if (isDark) {
+                AssetCardPalette(
+                    containerColor = Color(0xFF171B24),
+                    borderColor = Color(0xFF3B82F6).copy(alpha = 0.22f),
+                    iconContainerColor = Color(0xFF3B82F6).copy(alpha = 0.16f),
+                    iconColor = Color(0xFF60A5FA),
+                    onContainerColor = Color(0xFFEFF6FF),
+                    secondaryTextColor = Color(0xFF93C5FD).copy(alpha = 0.85f),
+                    badgeContainerColor = Color(0xFF2563EB).copy(alpha = 0.22f),
+                    badgeContentColor = Color(0xFFBFDBFE),
+                    accentColor = Color(0xFF3B82F6)
+                )
+            } else {
+                AssetCardPalette(
+                    containerColor = Color(0xFFFFFFFF),
+                    borderColor = Color(0xFF93C5FD).copy(alpha = 0.6f),
+                    iconContainerColor = Color(0xFFDBEAFE),
+                    iconColor = Color(0xFF2563EB),
                     onContainerColor = Color(0xFF1E3A8A),
                     secondaryTextColor = Color(0xFF1D4ED8),
-                    badgeContainerColor = Color(0xFFDBEAFE),
+                    badgeContainerColor = Color(0xFFBFDBFE),
                     badgeContentColor = Color(0xFF1E3A8A),
                     accentColor = Color(0xFF2563EB)
                 )
@@ -693,56 +779,71 @@ fun AssetSummaryCard(
             .fillMaxWidth()
             .clickable { onCardClick() }
             .testTag("asset_summary_card_${summary.category}"),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = palette.containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        border = BorderStroke(1.dp, palette.borderColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            // Top Row: Category + Dot + Quantity & Action Buttons
+            // Top Row: Icon + Category Name & Quantity + Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Category name + dot
+                // Category Icon + Title
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.weight(1f, fill = false)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(palette.accentColor)
-                    )
-                    Text(
-                        text = summary.category,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = palette.onContainerColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = "(${com.example.util.FormatUtil.getNumberFormat(2).format(summary.totalQuantity)} ${if (summary.category.lowercase().contains("bilezik") || summary.category.lowercase().contains("altın") || summary.category.lowercase().contains("altin")) "gr" else "adet"})",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = palette.secondaryTextColor
-                    )
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(palette.iconContainerColor),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = getAssetIcon(summary.category),
+                            contentDescription = summary.category,
+                            tint = palette.iconColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Column {
+                        Text(
+                            text = summary.category,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = palette.onContainerColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        val unitLabel = if (summary.category.lowercase().contains("bilezik") || summary.category.lowercase().contains("altın") || summary.category.lowercase().contains("altin") || summary.category.lowercase().contains("gümüş")) "gr" else "adet"
+                        Text(
+                            text = "${com.example.util.FormatUtil.getNumberFormat(2).format(summary.totalQuantity)} $unitLabel",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = palette.secondaryTextColor
+                        )
+                    }
                 }
 
                 // Quick Action Buttons
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     // Quick Add (+) Button
                     FilledTonalIconButton(
                         onClick = onQuickAdd,
-                        modifier = Modifier.size(32.dp).testTag("quick_add_btn_${summary.category}"),
+                        modifier = Modifier
+                            .size(32.dp)
+                            .testTag("quick_add_btn_${summary.category}"),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = palette.accentColor,
                             contentColor = Color.White
@@ -758,7 +859,9 @@ fun AssetSummaryCard(
                     if (onEditClick != null && isEditableCategory(summary.category, preferenceManager)) {
                         IconButton(
                             onClick = onEditClick,
-                            modifier = Modifier.size(32.dp).testTag("custom_price_edit_btn_${summary.category}")
+                            modifier = Modifier
+                                .size(32.dp)
+                                .testTag("custom_price_edit_btn_${summary.category}")
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Edit,
@@ -783,27 +886,30 @@ fun AssetSummaryCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Unit Price Badge
+            // Unit Price Badge Pill
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                val rateUnitStr = if (summary.category.lowercase().contains("bilezik") || summary.category.lowercase().contains("altın") || summary.category.lowercase().contains("altin")) "₺/g" else "₺"
-                Text(
-                    text = "Birim Fiyat: ${com.example.util.FormatUtil.getNumberFormat(1).format(summary.currentUnitPrice)} $rateUnitStr",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = palette.badgeContentColor,
-                    fontFamily = FontFamily.Monospace,
-                    modifier = Modifier
-                        .background(palette.badgeContainerColor, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+                val rateUnitStr = if (summary.category.lowercase().contains("bilezik") || summary.category.lowercase().contains("altın") || summary.category.lowercase().contains("altin") || summary.category.lowercase().contains("gümüş")) "₺/g" else "₺"
+                Surface(
+                    color = palette.badgeContainerColor,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = "Birim Fiyat: ${com.example.util.FormatUtil.getNumberFormat(1).format(summary.currentUnitPrice)} $rateUnitStr",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = palette.badgeContentColor,
+                        fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Portfolio Value & Profit/Loss Row
             Row(
@@ -818,6 +924,7 @@ fun AssetSummaryCard(
                         color = palette.secondaryTextColor,
                         fontWeight = FontWeight.Medium
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = currencyFormat.format(summary.currentValue),
                         fontSize = 20.sp,
@@ -826,24 +933,34 @@ fun AssetSummaryCard(
                     )
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                // Profit/Loss Badge Pill
+                val profitBgColor = if (isProfit) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFEF4444).copy(alpha = 0.15f)
+                val profitTextColor = if (isProfit) Color(0xFF10B981) else Color(0xFFEF4444)
+
+                Surface(
+                    color = profitBgColor,
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Icon(
-                        imageVector = if (isProfit) Icons.Rounded.TrendingUp else Icons.Rounded.TrendingDown,
-                        contentDescription = null,
-                        tint = if (isProfit) Color(0xFF10B981) else Color(0xFFEF4444),
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "${if (summary.profitLoss > 0) "+" else ""}${currencyFormat.format(summary.profitLoss)} (${if (summary.profitLoss > 0) "+" else ""}${com.example.util.FormatUtil.getNumberFormat(2).format(summary.profitLossPercent)}%)",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isProfit) Color(0xFF10B981) else Color(0xFFEF4444),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isProfit) Icons.Rounded.TrendingUp else Icons.Rounded.TrendingDown,
+                            contentDescription = null,
+                            tint = profitTextColor,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = "${if (summary.profitLoss > 0) "+" else ""}${currencyFormat.format(summary.profitLoss)} (${if (summary.profitLoss > 0) "+" else ""}${com.example.util.FormatUtil.getNumberFormat(2).format(summary.profitLossPercent)}%)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = profitTextColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
 
@@ -1279,16 +1396,17 @@ fun BesSummaryCard(
     onEditClick: () -> Unit,
     onDeleteClick: (() -> Unit)? = null
 ) {
+    val palette = getAssetCardPalette("bes")
     val profit = besTotalValue - besPaid
     val profitPercent = if (besPaid > 0) (profit / besPaid) * 100 else 0.0
     val isProfit = profit >= 0
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = palette.containerColor),
+        border = BorderStroke(1.dp, palette.borderColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -1296,27 +1414,55 @@ fun BesSummaryCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    text = besPortfolio.holderName.ifBlank { "Bireysel Emeklilik (BES)" },
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.weight(1f, fill = false)
-                )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(palette.iconContainerColor),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Shield,
+                            contentDescription = "BES",
+                            tint = palette.iconColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Column {
+                        Text(
+                            text = besPortfolio.holderName.ifBlank { "Bireysel Emeklilik (BES)" },
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = palette.onContainerColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "Devlet Katkısı Dahil Emeklilik",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = palette.secondaryTextColor
+                        )
+                    }
+                }
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     if (isFirstCard && onAddClick != null) {
                         FilledTonalIconButton(
                             onClick = onAddClick,
                             modifier = Modifier.size(32.dp),
                             colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                containerColor = palette.accentColor,
+                                contentColor = Color.White
                             )
                         ) {
                             Icon(
@@ -1325,7 +1471,6 @@ fun BesSummaryCard(
                                 modifier = Modifier.size(18.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.width(4.dp))
                     }
 
                     IconButton(
@@ -1335,7 +1480,7 @@ fun BesSummaryCard(
                         Icon(
                             imageVector = Icons.Rounded.Edit,
                             contentDescription = "Düzenle",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            tint = palette.onContainerColor,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -1355,28 +1500,56 @@ fun BesSummaryCard(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = currencyFormat.format(besTotalValue),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = if (isProfit) Icons.Rounded.TrendingUp else Icons.Rounded.TrendingDown,
-                    contentDescription = null,
-                    tint = if (isProfit) Color(0xFF10B981) else Color(0xFFEF4444),
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "${if (isProfit) "+" else ""}${currencyFormat.format(profit)} (${if (isProfit) "+" else ""}${String.format(Locale.US, "%.2f", profitPercent)}%)",
-                    color = if (isProfit) Color(0xFF10B981) else Color(0xFFEF4444),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
-                )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Column {
+                    Text(
+                        text = "Toplam BES Değeri",
+                        fontSize = 11.sp,
+                        color = palette.secondaryTextColor,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = currencyFormat.format(besTotalValue),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Black,
+                        color = palette.onContainerColor
+                    )
+                }
+
+                val profitBgColor = if (isProfit) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFEF4444).copy(alpha = 0.15f)
+                val profitTextColor = if (isProfit) Color(0xFF10B981) else Color(0xFFEF4444)
+
+                Surface(
+                    color = profitBgColor,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isProfit) Icons.Rounded.TrendingUp else Icons.Rounded.TrendingDown,
+                            contentDescription = null,
+                            tint = profitTextColor,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = "${if (isProfit) "+" else ""}${currencyFormat.format(profit)} (${if (isProfit) "+" else ""}${String.format(Locale.US, "%.2f", profitPercent)}%)",
+                            color = profitTextColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
             }
         }
     }
