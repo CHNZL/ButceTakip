@@ -593,7 +593,7 @@ fun DashboardScreen(
 
 @Composable
 fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving: Double, isDark: Boolean = false) {
-    val format = NumberFormat.getCurrencyInstance(Locale("tr", "TR"))
+    val format = com.example.util.FormatUtil.getCurrencyFormat()
     
     val cardBg = Color.Transparent
     val cardText = Color.White
@@ -636,7 +636,7 @@ fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving:
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(modifier = Modifier.height(2.dp))
-                val balanceFormat = NumberFormat.getCurrencyInstance(Locale("tr", "TR")).apply { maximumFractionDigits = 0 }
+                val balanceFormat = com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 }
                 Text(
                     text = balanceFormat.format(balance),
                     style = MaterialTheme.typography.displaySmall,
@@ -717,7 +717,7 @@ fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving:
 
 @Composable
 fun TransactionItem(transaction: Transaction, onDelete: () -> Unit, isDark: Boolean = false) {
-    val format = NumberFormat.getCurrencyInstance(Locale("tr", "TR"))
+    val format = com.example.util.FormatUtil.getCurrencyFormat()
     val sdf = SimpleDateFormat("dd MMM yyyy", Locale("tr", "TR"))
     
     val amountColor = when (transaction.type) {

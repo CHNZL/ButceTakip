@@ -295,7 +295,7 @@ fun AddTransactionDialog(
                         val computedAmount = q * up
 
                         Text(
-                            text = "Toplam: %,.2f ₺".format(Locale("tr"), computedAmount),
+                            text = "Toplam: ${com.example.util.FormatUtil.getCurrencyFormat().format(computedAmount)}",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Black,
                             color = Color.White,

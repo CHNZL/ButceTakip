@@ -60,7 +60,7 @@ fun PaymentsScreen(transactions: List<Transaction>, onTogglePaid: (Transaction, 
     val totalPaid = thisMonthPaidTx.sumOf { it.amount }
     val pastDueRemaining = pastDueTx.sumOf { it.amount }
 
-    val format = NumberFormat.getCurrencyInstance(Locale("tr", "TR"))
+    val format = com.example.util.FormatUtil.getCurrencyFormat()
     val sdf = SimpleDateFormat("dd MMM yyyy", Locale("tr"))
 
     Column(
@@ -229,7 +229,7 @@ fun PaymentItem(tx: Transaction, isPaid: Boolean, sdf: SimpleDateFormat, isPastD
             Spacer(modifier = Modifier.height(2.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(sdf.format(Date(tx.timestamp)), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha))
-                Text(NumberFormat.getCurrencyInstance(Locale("tr","TR")).format(tx.amount), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = color.copy(alpha))
+                Text(com.example.util.FormatUtil.getCurrencyFormat().format(tx.amount), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = color.copy(alpha))
             }
         }
     }

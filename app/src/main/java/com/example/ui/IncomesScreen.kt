@@ -43,7 +43,7 @@ fun IncomesScreen(transactions: List<Transaction>) {
     val thisMonthIncomes = incomeTx.filter { it.timestamp in startOfMonth until endOfMonth }.sortedByDescending { it.timestamp }
     val totalIncomeThisMonth = thisMonthIncomes.sumOf { it.amount }
 
-    val format = NumberFormat.getCurrencyInstance(Locale("tr", "TR"))
+    val format = com.example.util.FormatUtil.getCurrencyFormat()
     val sdf = SimpleDateFormat("dd MMM yyyy", Locale("tr"))
 
     Column(

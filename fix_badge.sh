@@ -1,2 +1,2 @@
-sed -i 's/color = MaterialTheme.colorScheme.onSurfaceVariant,/color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),/g' app/src/main/java/com/example/ui/SavingsScreen.kt
-sed -i 's/\.background(MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp))/\.background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(4.dp))/g' app/src/main/java/com/example/ui/SavingsScreen.kt
+sed -i 's/color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),/color = MaterialTheme.colorScheme.onSecondaryContainer,/g' app/src/main/java/com/example/ui/SavingsScreen.kt
+sed -i 's/\.background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(4.dp))/\.background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(4.dp))/g' app/src/main/java/com/example/ui/SavingsScreen.kt

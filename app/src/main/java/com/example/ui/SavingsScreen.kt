@@ -96,7 +96,7 @@ fun SavingsScreen(
     val totalProfitLoss = totalCurrentValue - totalPaidAll
     val totalProfitLossPercent = if (totalPaidAll > 0.0) (totalProfitLoss / totalPaidAll) * 100.0 else 0.0
 
-    val currencyFormat = remember { NumberFormat.getCurrencyInstance(Locale("tr", "TR")) }
+    val currencyFormat = remember { com.example.util.FormatUtil.getCurrencyFormat() }
     val dateFormat = remember { SimpleDateFormat("dd MMMM yyyy", Locale("tr")) }
 
     LazyColumn(
@@ -474,13 +474,13 @@ fun AssetSummaryCard(
                     val rateUnitStr = if (summary.category.lowercase().contains("bilezik") || summary.category.lowercase().contains("altın") || summary.category.lowercase().contains("altin")) "₺/g" else "₺"
                     // Asset Unit Price Badge
                     Text(
-                        text = "%,.1f %s".format(Locale("tr"), summary.currentUnitPrice, rateUnitStr),
+                        text = "${com.example.util.FormatUtil.getNumberFormat(1).format(summary.currentUnitPrice)} $rateUnitStr",
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier
-                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(4.dp))
                             .padding(horizontal = 4.dp, vertical = 2.dp)
                     )
 
@@ -514,12 +514,10 @@ fun AssetSummaryCard(
 
             // Physical Quantity
             Text(
-                text = "%,.2f %s".format(
-                    Locale("tr"), 
-                    summary.totalQuantity, 
-                    if (summary.category.lowercase().contains("bilezik") || summary.category.lowercase().contains("altın") || summary.category.lowercase().contains("altin")) "gr" else "adet"
-                ),
+                text = "${com.example.util.FormatUtil.getNumberFormat(2).format(summary.totalQuantity)} ${if (summary.category.lowercase().contains("bilezik") || summary.category.lowercase().contains("altın") || summary.category.lowercase().contains("altin")) "gr" else "adet"}",
                 fontSize = 11.sp,
+
+
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -546,12 +544,8 @@ fun AssetSummaryCard(
                     modifier = Modifier.size(10.dp)
                 )
                 Text(
-                    text = "%s%,.1f ₺ (%s%,.1f%%)".format(
-                        if (summary.profitLoss > 0) "+" else "",
-                        summary.profitLoss,
-                        if (summary.profitLoss > 0) "+" else "",
-                        summary.profitLossPercent
-                    ),
+                    text = "${if (summary.profitLoss > 0) "+" else ""}${com.example.util.FormatUtil.getNumberFormat(1).format(summary.profitLoss)} ₺ (${if (summary.profitLoss > 0) "+" else ""}${com.example.util.FormatUtil.getNumberFormat(1).format(summary.profitLossPercent)}%)",
+
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (isProfit) Color(0xFF10B981) else Color(0xFFEF4444),
@@ -670,15 +664,11 @@ fun LedgerRowItem(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "%,.2f %s @ %,.1f ₺".format(
-                            Locale("tr"),
-                            tx.quantity ?: 0.0,
-                            if (tx.category.lowercase().contains("bilezik") || tx.category.lowercase().contains("altın") || tx.category.lowercase().contains("altin")) "gr" else "ad",
-                            tx.unitPrice ?: 0.0
-                        ),
+                        text = "${com.example.util.FormatUtil.getNumberFormat(2).format(tx.quantity ?: 0.0)} ${if (tx.category.lowercase().contains("bilezik") || tx.category.lowercase().contains("altın") || tx.category.lowercase().contains("altin")) "gr" else "ad"} @ ${com.example.util.FormatUtil.getNumberFormat(1).format(tx.unitPrice ?: 0.0)} ₺",
+
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                         fontFamily = FontFamily.Monospace
                     )
                 }

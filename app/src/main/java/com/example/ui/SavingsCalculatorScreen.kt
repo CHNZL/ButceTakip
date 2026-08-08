@@ -35,7 +35,7 @@ fun SavingsCalculatorScreen() {
     val totalInstallments = if (monthlyPayment > 0) ceil(remainingAmount / monthlyPayment).toInt() else 0
     val deliveryMonth = ceil((totalInstallments * bddkMinRatio) - ((downPayment / targetAmount.coerceAtLeast(1.0)) * totalInstallments)).toInt().coerceAtLeast(1)
     val orgFee = targetAmount * organizationFeeRate
-    val format = NumberFormat.getCurrencyInstance(Locale("tr", "TR")).apply { maximumFractionDigits = 0 }
+    val format = com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(12.dp)) {
         item {

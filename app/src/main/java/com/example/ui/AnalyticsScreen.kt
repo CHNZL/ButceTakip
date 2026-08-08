@@ -35,7 +35,7 @@ import java.util.Date
 import java.util.Locale
 
 fun getCurrencyFormat(): NumberFormat {
-    return NumberFormat.getCurrencyInstance(Locale("tr", "TR")).apply {
+    return com.example.util.FormatUtil.getCurrencyFormat().apply {
         maximumFractionDigits = 0
     }
 }
@@ -270,7 +270,7 @@ fun PersonAnalysisScreen(transactions: List<Transaction>) {
     val persons = transactions.mapNotNull { it.person }.filter { it.isNotBlank() }.distinct()
     var selectedPerson by remember { mutableStateOf(persons.firstOrNull() ?: "") }
     var selectedTime by remember { mutableStateOf("Bu Yıl") }
-    val format = NumberFormat.getCurrencyInstance(Locale("tr", "TR"))
+    val format = com.example.util.FormatUtil.getCurrencyFormat()
     
     val timeFilters = listOf("Bu Ay", "Önceki Ay", "Son 3 Ay", "Son 6 Ay", "Son 1 Yıl", "Bu Yıl", "Önceki Yıl")
 

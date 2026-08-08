@@ -100,7 +100,7 @@ object PdfExporter {
         yPosition += 30f
 
         val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale("tr"))
-        val currencyFormat = NumberFormat.getCurrencyInstance(Locale("tr", "TR"))
+        val currencyFormat = com.example.util.FormatUtil.getCurrencyFormat()
 
         for (transaction in transactions) {
             // Check if we need a new page

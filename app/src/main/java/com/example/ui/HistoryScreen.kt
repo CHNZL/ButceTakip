@@ -200,7 +200,7 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
     val totalExpense = filteredTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
     val totalSaving = filteredTransactions.filter { it.type == TransactionType.SAVING }.sumOf { it.amount }
 
-    val format = NumberFormat.getCurrencyInstance(Locale("tr", "TR"))
+    val format = com.example.util.FormatUtil.getCurrencyFormat()
     val sdf = SimpleDateFormat("dd.MM.yyyy", Locale("tr"))
 
     Column(

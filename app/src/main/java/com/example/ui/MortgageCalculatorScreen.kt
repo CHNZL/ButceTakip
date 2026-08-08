@@ -50,12 +50,12 @@ fun MortgageCalculatorScreen() {
         terms.distinct().sorted().filter { it <= 120 }
     }
     
-    val numberFormat = NumberFormat.getNumberInstance(Locale("tr", "TR")).apply {
+    val numberFormat = com.example.util.FormatUtil.getNumberFormat(2).apply {
         maximumFractionDigits = 2
         minimumFractionDigits = 0
     }
     
-    val format = NumberFormat.getCurrencyInstance(Locale("tr", "TR")).apply { maximumFractionDigits = 0 }
+    val format = com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 }
     
     // Helper to format input for display
     fun formatInput(text: String): String {

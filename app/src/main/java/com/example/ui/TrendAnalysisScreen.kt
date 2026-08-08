@@ -277,7 +277,7 @@ fun TrendAnalysisScreen(transactions: List<Transaction>, isDark: Boolean = false
                                 }
                                 if (data.diffPercent != null) {
                                     Text(
-                                        text = "%${String.format(Locale("tr"), "%.1f", abs(data.diffPercent))}",
+                                        text = "%${com.example.util.FormatUtil.getNumberFormat(1).format(abs(data.diffPercent))}",
                                         fontSize = 10.sp,
                                         color = diffColor.copy(alpha = 0.8f)
                                     )
