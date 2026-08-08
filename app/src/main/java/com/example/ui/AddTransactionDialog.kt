@@ -42,6 +42,7 @@ fun AddTransactionDialog(
     persons: List<Person>,
     fixedType: TransactionType? = null,
     editingTransaction: com.example.data.Transaction? = null,
+    initialCategoryName: String? = null,
     onDismiss: () -> Unit,
     onSave: (Int, Double, String, TransactionType, String, String?, Long, Double?, Double?, Int?, Boolean, Boolean) -> Unit
 ) {
@@ -54,7 +55,13 @@ fun AddTransactionDialog(
         TransactionType.SAVING -> savingCategories
     }
 
-    var category by remember { mutableStateOf<AppCategory?>(editingTransaction?.let { tx -> categories.firstOrNull { it.name == tx.category } }) }
+    var category by remember(type, initialCategoryName, editingTransaction, categories) {
+        mutableStateOf<AppCategory?>(
+            editingTransaction?.let { tx -> categories.firstOrNull { it.name == tx.category } }
+                ?: initialCategoryName?.let { name -> categories.firstOrNull { it.name.equals(name, ignoreCase = true) || it.name.contains(name, ignoreCase = true) } }
+                ?: categories.firstOrNull()
+        )
+    }
     var person by remember { mutableStateOf<Person?>(editingTransaction?.let { tx -> persons.firstOrNull { it.name == tx.person } }) }
     var timestamp by remember { mutableLongStateOf(editingTransaction?.timestamp ?: System.currentTimeMillis()) }
 

@@ -3,7 +3,6 @@ package com.example.ui
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -44,13 +43,178 @@ data class SavingAssetSummary(
     val profitLossPercent: Double
 )
 
-@OptIn(ExperimentalLayoutApi::class)
+data class AssetCardPalette(
+    val containerColor: Color,
+    val onContainerColor: Color,
+    val secondaryTextColor: Color,
+    val badgeContainerColor: Color,
+    val badgeContentColor: Color,
+    val accentColor: Color
+)
+
+@Composable
+fun getAssetCardPalette(category: String): AssetCardPalette {
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val clean = category.lowercase(Locale("tr"))
+
+    return when {
+        clean.contains("altın") || clean.contains("altin") || clean.contains("24") || clean.contains("22") || clean.contains("bilezik") || clean.contains("xau") -> {
+            if (isDark) {
+                AssetCardPalette(
+                    containerColor = Color(0xFF3B2D00),
+                    onContainerColor = Color(0xFFFFECB3),
+                    secondaryTextColor = Color(0xFFFFD54F).copy(alpha = 0.85f),
+                    badgeContainerColor = Color(0xFF5A4300),
+                    badgeContentColor = Color(0xFFFFE082),
+                    accentColor = Color(0xFFEAB308)
+                )
+            } else {
+                AssetCardPalette(
+                    containerColor = Color(0xFFFEF3C7),
+                    onContainerColor = Color(0xFF78350F),
+                    secondaryTextColor = Color(0xFF92400E),
+                    badgeContainerColor = Color(0xFFFDE68A),
+                    badgeContentColor = Color(0xFF78350F),
+                    accentColor = Color(0xFFD97706)
+                )
+            }
+        }
+        clean.contains("dolar") || clean.contains("usd") || clean.contains("$") -> {
+            if (isDark) {
+                AssetCardPalette(
+                    containerColor = Color(0xFF064E3B),
+                    onContainerColor = Color(0xFFA7F3D0),
+                    secondaryTextColor = Color(0xFF6EE7B7).copy(alpha = 0.85f),
+                    badgeContainerColor = Color(0xFF047857),
+                    badgeContentColor = Color(0xFFD1FAE5),
+                    accentColor = Color(0xFF10B981)
+                )
+            } else {
+                AssetCardPalette(
+                    containerColor = Color(0xFFD1FAE5),
+                    onContainerColor = Color(0xFF065F46),
+                    secondaryTextColor = Color(0xFF047857),
+                    badgeContainerColor = Color(0xFFA7F3D0),
+                    badgeContentColor = Color(0xFF065F46),
+                    accentColor = Color(0xFF059669)
+                )
+            }
+        }
+        clean.contains("euro") || clean.contains("eur") || clean.contains("€") -> {
+            if (isDark) {
+                AssetCardPalette(
+                    containerColor = Color(0xFF312E81),
+                    onContainerColor = Color(0xFFC7D2FE),
+                    secondaryTextColor = Color(0xFFA5B4FC).copy(alpha = 0.85f),
+                    badgeContainerColor = Color(0xFF4338CA),
+                    badgeContentColor = Color(0xFFE0E7FF),
+                    accentColor = Color(0xFF6366F1)
+                )
+            } else {
+                AssetCardPalette(
+                    containerColor = Color(0xFFE0E7FF),
+                    onContainerColor = Color(0xFF3730A3),
+                    secondaryTextColor = Color(0xFF4338CA),
+                    badgeContainerColor = Color(0xFFC7D2FE),
+                    badgeContentColor = Color(0xFF312E81),
+                    accentColor = Color(0xFF4F46E5)
+                )
+            }
+        }
+        clean.contains("borsa") || clean.contains("hisse") || clean.contains("stock") -> {
+            if (isDark) {
+                AssetCardPalette(
+                    containerColor = Color(0xFF0C4A6E),
+                    onContainerColor = Color(0xFFBAE6FD),
+                    secondaryTextColor = Color(0xFF7DD3FC).copy(alpha = 0.85f),
+                    badgeContainerColor = Color(0xFF0369A1),
+                    badgeContentColor = Color(0xFFE0F2FE),
+                    accentColor = Color(0xFF0284C7)
+                )
+            } else {
+                AssetCardPalette(
+                    containerColor = Color(0xFFE0F2FE),
+                    onContainerColor = Color(0xFF075985),
+                    secondaryTextColor = Color(0xFF0369A1),
+                    badgeContainerColor = Color(0xFFBAE6FD),
+                    badgeContentColor = Color(0xFF075985),
+                    accentColor = Color(0xFF0284C7)
+                )
+            }
+        }
+        clean.contains("fon") -> {
+            if (isDark) {
+                AssetCardPalette(
+                    containerColor = Color(0xFF581C87),
+                    onContainerColor = Color(0xFFE9D5FF),
+                    secondaryTextColor = Color(0xFFD8B4FE).copy(alpha = 0.85f),
+                    badgeContainerColor = Color(0xFF7E22CE),
+                    badgeContentColor = Color(0xFFF3E8FF),
+                    accentColor = Color(0xFF9333EA)
+                )
+            } else {
+                AssetCardPalette(
+                    containerColor = Color(0xFFF3E8FF),
+                    onContainerColor = Color(0xFF6B21A8),
+                    secondaryTextColor = Color(0xFF7E22CE),
+                    badgeContainerColor = Color(0xFFE9D5FF),
+                    badgeContentColor = Color(0xFF581C87),
+                    accentColor = Color(0xFF9333EA)
+                )
+            }
+        }
+        clean.contains("gümüş") || clean.contains("gumus") || clean.contains("xag") -> {
+            if (isDark) {
+                AssetCardPalette(
+                    containerColor = Color(0xFF1E293B),
+                    onContainerColor = Color(0xFFE2E8F0),
+                    secondaryTextColor = Color(0xFF94A3B8).copy(alpha = 0.85f),
+                    badgeContainerColor = Color(0xFF334155),
+                    badgeContentColor = Color(0xFFF8FAFC),
+                    accentColor = Color(0xFF64748B)
+                )
+            } else {
+                AssetCardPalette(
+                    containerColor = Color(0xFFF1F5F9),
+                    onContainerColor = Color(0xFF1E293B),
+                    secondaryTextColor = Color(0xFF475569),
+                    badgeContainerColor = Color(0xFFE2E8F0),
+                    badgeContentColor = Color(0xFF0F172A),
+                    accentColor = Color(0xFF64748B)
+                )
+            }
+        }
+        else -> {
+            if (isDark) {
+                AssetCardPalette(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    onContainerColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    secondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    badgeContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    badgeContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    accentColor = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                AssetCardPalette(
+                    containerColor = Color(0xFFEFF6FF),
+                    onContainerColor = Color(0xFF1E3A8A),
+                    secondaryTextColor = Color(0xFF1D4ED8),
+                    badgeContainerColor = Color(0xFFDBEAFE),
+                    badgeContentColor = Color(0xFF1E3A8A),
+                    accentColor = Color(0xFF2563EB)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SavingsScreen(
     transactions: List<Transaction>,
     goldPrices: List<GoldPrice>,
     bankRates: List<BankRate>,
-    onAddSaving: () -> Unit,
+    onAddSaving: (categoryName: String?) -> Unit,
     onDeleteSavingTransaction: (Int) -> Unit,
     preferenceManager: com.example.data.PreferenceManager? = null,
     customPricesTrigger: Long = 0L,
@@ -64,6 +228,7 @@ fun SavingsScreen(
     var newPriceText by remember { mutableStateOf("") }
     var showBesDialog by remember { mutableStateOf(false) }
     var editingBes by remember { mutableStateOf<com.example.data.BesPortfolio?>(null) }
+    var selectedCategoryForDetails by remember { mutableStateOf<String?>(null) }
 
     val savingTransactions = remember(transactions) {
         transactions.filter { it.type == TransactionType.SAVING }
@@ -250,18 +415,69 @@ fun SavingsScreen(
             }
         }
 
-        // --- 2. ASSETS ROW/GRID SUMMARY CARDS ---
-        if (assetSummaries.isNotEmpty()) {
-            item {
-                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+        // --- 2. ASSETS SUMMARY CARDS ---
+        item {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = "Varlık Özetlerim",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    
+                    IconButton(
+                        onClick = { onAddSaving(null) },
+                        modifier = Modifier.size(32.dp).testTag("add_new_asset_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.AddCircle,
+                            contentDescription = "Yeni Birikim Ekle",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                
+                if (assetSummaries.isEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Savings,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(36.dp)
+                            )
+                            Text(
+                                text = "Henüz birikim varlığı eklenmedi.",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Button(
+                                onClick = { onAddSaving(null) },
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Birikim Ekle", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                } else {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -271,9 +487,15 @@ fun SavingsScreen(
                                 summary = summary,
                                 currencyFormat = currencyFormat,
                                 preferenceManager = preferenceManager,
+                                onQuickAdd = {
+                                    onAddSaving(summary.category)
+                                },
                                 onEditClick = {
                                     editingCategoryPrice = summary.category
                                     newPriceText = if (summary.currentUnitPrice > 0.0) com.example.util.formatDoubleForInput(summary.currentUnitPrice) else ""
+                                },
+                                onCardClick = {
+                                    selectedCategoryForDetails = summary.category
                                 }
                             )
                         }
@@ -282,13 +504,11 @@ fun SavingsScreen(
             }
         }
 
+        // --- 3. BIREYSEL EMEKLILIK (BES) SECTION ---
         item { 
-            if (besPortfolios.isNotEmpty()) { 
-                Spacer(modifier = Modifier.height(8.dp)) 
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+                Spacer(modifier = Modifier.height(8.dp))
+                if (besPortfolios.isNotEmpty()) { 
                     besCalculatedValues.forEachIndexed { index, (bes, totalVal, paid) ->
                         BesSummaryCard(
                             besPortfolio = bes,
@@ -308,121 +528,76 @@ fun SavingsScreen(
                                 onDeleteBes?.invoke(bes)
                             }
                         )
+                        Spacer(modifier = Modifier.height(10.dp))
                     }
-                }
-                Spacer(modifier = Modifier.height(16.dp)) 
-            } else { 
-                Spacer(modifier = Modifier.height(16.dp)) 
-                Button(
-                    onClick = { 
-                        editingBes = null
-                        showBesDialog = true 
-                    }, 
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
-                ) { 
-                    Icon(Icons.Rounded.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Bireysel Emeklilik (BES) Ekle") 
+                } else { 
+                    Button(
+                        onClick = { 
+                            editingBes = null
+                            showBesDialog = true 
+                        }, 
+                        modifier = Modifier.fillMaxWidth()
+                    ) { 
+                        Icon(Icons.Rounded.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Bireysel Emeklilik (BES) Ekle") 
+                    } 
                 } 
-                Spacer(modifier = Modifier.height(16.dp)) 
-            } 
+            }
         }
-        // --- 3. LEDGER HISTORY HEADER & BUTTON ---
+
+        // --- 4. BOTTOM QUICK ADD BUTTON ---
         item {
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "Birikim Kayıtları",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Button(
-                    onClick = onAddSaving,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                    modifier = Modifier.height(36.dp).testTag("add_saving_transaction_btn")
+                OutlinedButton(
+                    onClick = { onAddSaving(null) },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Text("Birikim Ekle", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
+                    Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Yeni Birikim Kaydı Ekle", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
-            }
-        }
-
-        // --- 4. DETAILED LEDGER ENTRIES LIST ---
-        if (savingTransactions.isEmpty()) {
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.AccountBalanceWallet,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Text(
-                            text = "Henüz birikim kaydınız bulunmuyor.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Button(
-                            onClick = onAddSaving,
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Text("İlk Birikimi Ekle", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-        } else {
-            items(savingTransactions, key = { it.id }) { tx ->
-                val livePrice = resolveCurrentUnitPrice(tx.category, goldPrices, bankRates, preferenceManager, ziraatRates)
-                val rate = livePrice ?: tx.unitPrice ?: 0.0
-                val qty = tx.quantity ?: 0.0
-                val currentValue = qty * rate
-                val profitLoss = currentValue - tx.amount
-
-                LedgerRowItem(
-                    tx = tx,
-                    currentValue = currentValue,
-                    profitLoss = profitLoss,
-                    dateFormat = dateFormat,
-                    currencyFormat = currencyFormat,
-                    onDelete = { onDeleteSavingTransaction(tx.id) }
-                )
             }
         }
     }
 
+    // --- DIALOGS & MODAL SHEETS ---
+
+    // 1. Asset Category Transactions Detail Sheet
+    if (selectedCategoryForDetails != null) {
+        val cat = selectedCategoryForDetails!!
+        val catTransactions = savingTransactions.filter { it.category == cat }
+        val catSummary = assetSummaries.find { it.category == cat }
+
+        AssetTransactionsSheet(
+            category = cat,
+            summary = catSummary,
+            transactions = catTransactions,
+            goldPrices = goldPrices,
+            bankRates = bankRates,
+            ziraatRates = ziraatRates,
+            preferenceManager = preferenceManager,
+            dateFormat = dateFormat,
+            currencyFormat = currencyFormat,
+            onDismiss = { selectedCategoryForDetails = null },
+            onAddTransaction = { categoryName ->
+                selectedCategoryForDetails = null
+                onAddSaving(categoryName)
+            },
+            onDeleteTransaction = { id ->
+                onDeleteSavingTransaction(id)
+            }
+        )
+    }
+
+    // 2. BES Dialog
     if (showBesDialog) { 
         BesDialog( 
             besPortfolio = editingBes, 
@@ -433,6 +608,8 @@ fun SavingsScreen(
             } 
         ) 
     }
+
+    // 3. Custom Price Dialog
     if (editingCategoryPrice != null) {
         val catName = editingCategoryPrice!!
         AlertDialog(
@@ -504,47 +681,48 @@ fun AssetSummaryCard(
     summary: SavingAssetSummary,
     currencyFormat: NumberFormat,
     preferenceManager: com.example.data.PreferenceManager?,
-    onEditClick: (() -> Unit)? = null
+    onQuickAdd: () -> Unit,
+    onEditClick: (() -> Unit)? = null,
+    onCardClick: () -> Unit
 ) {
+    val palette = getAssetCardPalette(summary.category)
     val isProfit = summary.profitLoss >= 0.0
-    val dynamicColor = when {
-        summary.category.contains("24", ignoreCase = true) || summary.category.contains("altın", ignoreCase = true) || summary.category.contains("altin", ignoreCase = true) || summary.category.contains("xau", ignoreCase = true) -> Color(0xFFD4AF37) // Bright Gold
-        summary.category.contains("22", ignoreCase = true) -> Color(0xFFCD7F32) // Bronze/Dark Gold
-        summary.category.contains("dolar", ignoreCase = true) || summary.category.contains("usd", ignoreCase = true) -> Color(0xFF10B981) // Emerald
-        else -> Color(0xFF3B82F6) // Saving Blue
-    }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCardClick() }
+            .testTag("asset_summary_card_${summary.category}"),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = palette.containerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
+            // Top Row: Category + Dot + Quantity & Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Category + Quantity
+                // Category name + dot
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f, fill = false)
                 ) {
                     Box(
                         modifier = Modifier
                             .size(10.dp)
                             .clip(CircleShape)
-                            .background(dynamicColor)
+                            .background(palette.accentColor)
                     )
                     Text(
                         text = summary.category,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = palette.onContainerColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -552,44 +730,82 @@ fun AssetSummaryCard(
                         text = "(${com.example.util.FormatUtil.getNumberFormat(2).format(summary.totalQuantity)} ${if (summary.category.lowercase().contains("bilezik") || summary.category.lowercase().contains("altın") || summary.category.lowercase().contains("altin")) "gr" else "adet"})",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = palette.secondaryTextColor
                     )
                 }
-                
+
+                // Quick Action Buttons
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    val rateUnitStr = if (summary.category.lowercase().contains("bilezik") || summary.category.lowercase().contains("altın") || summary.category.lowercase().contains("altin")) "₺/g" else "₺"
-                    Text(
-                        text = "${com.example.util.FormatUtil.getNumberFormat(1).format(summary.currentUnitPrice)} $rateUnitStr",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        fontFamily = FontFamily.Monospace,
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(6.dp))
-                            .padding(horizontal = 6.dp, vertical = 3.dp)
-                    )
+                    // Quick Add (+) Button
+                    FilledTonalIconButton(
+                        onClick = onQuickAdd,
+                        modifier = Modifier.size(32.dp).testTag("quick_add_btn_${summary.category}"),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = palette.accentColor,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Add,
+                            contentDescription = "${summary.category} Ekle",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
 
                     if (onEditClick != null && isEditableCategory(summary.category, preferenceManager)) {
                         IconButton(
                             onClick = onEditClick,
-                            modifier = Modifier.size(28.dp).testTag("custom_price_edit_btn_${summary.category}")
+                            modifier = Modifier.size(32.dp).testTag("custom_price_edit_btn_${summary.category}")
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Edit,
                                 contentDescription = "Fiyat Düzenle",
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = palette.onContainerColor,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
                     }
+
+                    IconButton(
+                        onClick = onCardClick,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.ChevronRight,
+                            contentDescription = "Detaylar",
+                            tint = palette.onContainerColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Unit Price Badge
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                val rateUnitStr = if (summary.category.lowercase().contains("bilezik") || summary.category.lowercase().contains("altın") || summary.category.lowercase().contains("altin")) "₺/g" else "₺"
+                Text(
+                    text = "Birim Fiyat: ${com.example.util.FormatUtil.getNumberFormat(1).format(summary.currentUnitPrice)} $rateUnitStr",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = palette.badgeContentColor,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier
+                        .background(palette.badgeContainerColor, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Portfolio Value & Profit/Loss Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -599,14 +815,14 @@ fun AssetSummaryCard(
                     Text(
                         text = "Portföy Değeri",
                         fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = palette.secondaryTextColor,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
                         text = currencyFormat.format(summary.currentValue),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = palette.onContainerColor
                     )
                 }
 
@@ -643,9 +859,153 @@ fun AssetSummaryCard(
                 Text(
                     text = "Son Güncelleme: $timeStr",
                     fontSize = 9.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    color = palette.secondaryTextColor.copy(alpha = 0.7f),
                     fontWeight = FontWeight.Medium
                 )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AssetTransactionsSheet(
+    category: String,
+    summary: SavingAssetSummary?,
+    transactions: List<Transaction>,
+    goldPrices: List<GoldPrice>,
+    bankRates: List<BankRate>,
+    ziraatRates: List<BankRate>,
+    preferenceManager: com.example.data.PreferenceManager?,
+    dateFormat: SimpleDateFormat,
+    currencyFormat: NumberFormat,
+    onDismiss: () -> Unit,
+    onAddTransaction: (String) -> Unit,
+    onDeleteTransaction: (Int) -> Unit
+) {
+    val palette = getAssetCardPalette(category)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Header Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .clip(CircleShape)
+                            .background(palette.accentColor)
+                    )
+                    Text(
+                        text = "$category Kayıtları",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Button(
+                    onClick = { onAddTransaction(category) },
+                    colors = ButtonDefaults.buttonColors(containerColor = palette.accentColor, contentColor = Color.White),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Ekle", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            if (summary != null) {
+                // Overview Summary Card inside Sheet
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = palette.containerColor),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Toplam Portföy Değeri", fontSize = 11.sp, color = palette.secondaryTextColor)
+                            Text(
+                                currencyFormat.format(summary.currentValue),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Black,
+                                color = palette.onContainerColor
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("Toplam Miktar", fontSize = 11.sp, color = palette.secondaryTextColor)
+                            Text(
+                                "${com.example.util.FormatUtil.getNumberFormat(2).format(summary.totalQuantity)} ${if (category.lowercase().contains("bilezik") || category.lowercase().contains("altın") || category.lowercase().contains("altin")) "gr" else "adet"}",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = palette.onContainerColor
+                            )
+                        }
+                    }
+                }
+            }
+
+            Text(
+                text = "İşlem Geçmişi (${transactions.size})",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            if (transactions.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Bu varlığa ait kayıt bulunmuyor.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f, fill = false).heightIn(max = 380.dp)
+                ) {
+                    items(transactions, key = { it.id }) { tx ->
+                        val livePrice = resolveCurrentUnitPrice(tx.category, goldPrices, bankRates, preferenceManager, ziraatRates)
+                        val rate = livePrice ?: tx.unitPrice ?: 0.0
+                        val qty = tx.quantity ?: 0.0
+                        val currentValue = qty * rate
+                        val profitLoss = currentValue - tx.amount
+
+                        LedgerRowItem(
+                            tx = tx,
+                            currentValue = currentValue,
+                            profitLoss = profitLoss,
+                            dateFormat = dateFormat,
+                            currencyFormat = currencyFormat,
+                            onDelete = { onDeleteTransaction(tx.id) }
+                        )
+                    }
+                }
             }
         }
     }
@@ -671,15 +1031,13 @@ fun LedgerRowItem(
     }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp),
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            // First Row: Header/Title + Delete Button
+            // First Row: Category Title + Date & Delete Button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -710,7 +1068,7 @@ fun LedgerRowItem(
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Kayıt Sil",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -725,7 +1083,7 @@ fun LedgerRowItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Metrics Grid
             Row(
@@ -742,7 +1100,6 @@ fun LedgerRowItem(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "${com.example.util.FormatUtil.getNumberFormat(2).format(tx.quantity ?: 0.0)} ${if (tx.category.lowercase().contains("bilezik") || tx.category.lowercase().contains("altın") || tx.category.lowercase().contains("altin")) "gr" else "ad"} @ ${com.example.util.FormatUtil.getNumberFormat(1).format(tx.unitPrice ?: 0.0)} ₺",
-
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -767,9 +1124,9 @@ fun LedgerRowItem(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-            Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), thickness = 1.dp)
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Value / Profit-Loss Row
             Row(
@@ -793,7 +1150,7 @@ fun LedgerRowItem(
 
                 // Row Profit Loss pill
                 Surface(
-                    color = if (isProfit) Color(0xFF10B981).copy(alpha = 0.1f) else Color(0xFFEF4444).copy(alpha = 0.1f),
+                    color = if (isProfit) Color(0xFF10B981).copy(alpha = 0.12f) else Color(0xFFEF4444).copy(alpha = 0.12f),
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Row(
@@ -928,9 +1285,8 @@ fun BesSummaryCard(
 
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp),
-        shape = RoundedCornerShape(16.dp),
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {

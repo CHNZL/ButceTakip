@@ -65,6 +65,7 @@ fun DashboardScreen(
     val ziraatRates by viewModel.ziraatRates.collectAsStateWithLifecycle()
     val customPricesTrigger by viewModel.customPricesRefreshTrigger.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
+    var initialSavingCategory by remember { mutableStateOf<String?>(null) }
     var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
     var showAddGoalDialog by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -470,7 +471,10 @@ fun DashboardScreen(
                     transactions = uiState.transactions,
                     goldPrices = goldPrices,
                     bankRates = bankRates,
-                    onAddSaving = { showAddDialog = true },
+                    onAddSaving = { cat ->
+                        initialSavingCategory = cat
+                        showAddDialog = true
+                    },
                     onDeleteSavingTransaction = { viewModel.deleteTransaction(it) },
                     preferenceManager = viewModel.preferenceManager,
                     customPricesTrigger = customPricesTrigger,
@@ -556,7 +560,12 @@ fun DashboardScreen(
             persons = viewModel.persons.collectAsStateWithLifecycle().value,
             fixedType = fixedType,
             editingTransaction = editingTransaction,
-            onDismiss = { showAddDialog = false },
+            initialCategoryName = initialSavingCategory,
+            onDismiss = {
+                showAddDialog = false
+                initialSavingCategory = null
+                editingTransaction = null
+            },
             onSave = { id, amount, title, type, category, person, timestamp, q, up, inst, isPaid, repeatUntilYearEnd ->
                 val newTx = Transaction(
                     id = id,
@@ -573,6 +582,8 @@ fun DashboardScreen(
                 )
                 viewModel.addTransactionWithInstallments(newTx, repeatUntilYearEnd)
                 showAddDialog = false
+                initialSavingCategory = null
+                editingTransaction = null
             }
         )
     }
