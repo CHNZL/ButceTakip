@@ -258,27 +258,20 @@ fun SavingsScreen(
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     
-                    FlowRow(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        maxItemsInEachRow = 2
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         assetSummaries.forEach { summary ->
-                            Box(modifier = Modifier.weight(1f).minimumInteractiveComponentSize()) {
-                                AssetSummaryCard(
-                                    summary = summary,
-                                    currencyFormat = currencyFormat,
-                                    preferenceManager = preferenceManager,
-                                    onEditClick = {
-                                        editingCategoryPrice = summary.category
-                                        newPriceText = if (summary.currentUnitPrice > 0.0) com.example.util.formatDoubleForInput(summary.currentUnitPrice) else ""
-                                    }
-                                )
-                            }
-                        }
-                        if (assetSummaries.size % 2 != 0) {
-                            Spacer(modifier = Modifier.weight(1f))
+                            AssetSummaryCard(
+                                summary = summary,
+                                currencyFormat = currencyFormat,
+                                preferenceManager = preferenceManager,
+                                onEditClick = {
+                                    editingCategoryPrice = summary.category
+                                    newPriceText = if (summary.currentUnitPrice > 0.0) com.example.util.formatDoubleForInput(summary.currentUnitPrice) else ""
+                                }
+                            )
                         }
                     }
                 }
@@ -490,111 +483,118 @@ fun AssetSummaryCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.padding(14.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Colored Asset Badge Indicator
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(dynamicColor)
-                )
+                // Category + Quantity
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(dynamicColor)
+                    )
+                    Text(
+                        text = summary.category,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "(${com.example.util.FormatUtil.getNumberFormat(2).format(summary.totalQuantity)} ${if (summary.category.lowercase().contains("bilezik") || summary.category.lowercase().contains("altın") || summary.category.lowercase().contains("altin")) "gr" else "adet"})",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     val rateUnitStr = if (summary.category.lowercase().contains("bilezik") || summary.category.lowercase().contains("altın") || summary.category.lowercase().contains("altin")) "₺/g" else "₺"
-                    // Asset Unit Price Badge
                     Text(
                         text = "${com.example.util.FormatUtil.getNumberFormat(1).format(summary.currentUnitPrice)} $rateUnitStr",
-                        fontSize = 9.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier
-                            .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(4.dp))
-                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                            .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 6.dp, vertical = 3.dp)
                     )
 
                     if (onEditClick != null && isEditableCategory(summary.category, preferenceManager)) {
                         IconButton(
                             onClick = onEditClick,
-                            modifier = Modifier.size(24.dp).testTag("custom_price_edit_btn_${summary.category}")
+                            modifier = Modifier.size(28.dp).testTag("custom_price_edit_btn_${summary.category}")
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Edit,
                                 contentDescription = "Fiyat Düzenle",
                                 tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Asset Category Name
-            Text(
-                text = summary.category,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            // Physical Quantity
-            Text(
-                text = "${com.example.util.FormatUtil.getNumberFormat(2).format(summary.totalQuantity)} ${if (summary.category.lowercase().contains("bilezik") || summary.category.lowercase().contains("altın") || summary.category.lowercase().contains("altin")) "gr" else "adet"}",
-                fontSize = 11.sp,
-
-
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Current Portfolio Value for this asset
-            Text(
-                text = currencyFormat.format(summary.currentValue),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            // Dynamic Profit Loss Display
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
             ) {
-                Icon(
-                    imageVector = if (isProfit) Icons.Rounded.TrendingUp else Icons.Rounded.TrendingDown,
-                    contentDescription = null,
-                    tint = if (isProfit) Color(0xFF10B981) else Color(0xFFEF4444),
-                    modifier = Modifier.size(10.dp)
-                )
-                Text(
-                    text = "${if (summary.profitLoss > 0) "+" else ""}${com.example.util.FormatUtil.getNumberFormat(1).format(summary.profitLoss)} ₺ (${if (summary.profitLoss > 0) "+" else ""}${com.example.util.FormatUtil.getNumberFormat(1).format(summary.profitLossPercent)}%)",
+                Column {
+                    Text(
+                        text = "Portföy Değeri",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = currencyFormat.format(summary.currentValue),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
 
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isProfit) Color(0xFF10B981) else Color(0xFFEF4444),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isProfit) Icons.Rounded.TrendingUp else Icons.Rounded.TrendingDown,
+                        contentDescription = null,
+                        tint = if (isProfit) Color(0xFF10B981) else Color(0xFFEF4444),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "${if (summary.profitLoss > 0) "+" else ""}${currencyFormat.format(summary.profitLoss)} (${if (summary.profitLoss > 0) "+" else ""}${com.example.util.FormatUtil.getNumberFormat(2).format(summary.profitLossPercent)}%)",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isProfit) Color(0xFF10B981) else Color(0xFFEF4444),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
 
             if (isEditableCategory(summary.category, preferenceManager)) {
@@ -608,7 +608,7 @@ fun AssetSummaryCard(
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "Son Güncelleme: $timeStr",
-                    fontSize = 8.sp,
+                    fontSize = 9.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     fontWeight = FontWeight.Medium
                 )
