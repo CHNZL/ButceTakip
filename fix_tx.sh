@@ -1,0 +1,2 @@
+sed -i 's/modifier = Modifier.fillMaxWidth()/visualTransformation = com.example.util.AmountVisualTransformation(), modifier = Modifier.fillMaxWidth()/g' app/src/main/java/com/example/ui/AddTransactionDialog.kt
+sed -i 's/modifier = Modifier.fillMaxWidth().testTag("custom_price_input")/visualTransformation = com.example.util.AmountVisualTransformation(), modifier = Modifier.fillMaxWidth().testTag("custom_price_input")/g' app/src/main/java/com/example/ui/SavingsScreen.kt

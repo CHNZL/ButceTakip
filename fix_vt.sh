@@ -1,0 +1,3 @@
+sed -i 's/modifier = Modifier.fillMaxWidth()/modifier = Modifier.fillMaxWidth(), visualTransformation = com.example.util.AmountVisualTransformation()/g' app/src/main/java/com/example/ui/AddSavingDialog.kt
+sed -i 's/modifier = Modifier.fillMaxWidth()/modifier = Modifier.fillMaxWidth(), visualTransformation = com.example.util.AmountVisualTransformation()/g' app/src/main/java/com/example/ui/SavingsCalculatorScreen.kt
+sed -i 's/modifier = Modifier.fillMaxWidth()/modifier = Modifier.fillMaxWidth(), visualTransformation = com.example.util.AmountVisualTransformation()/g' app/src/main/java/com/example/ui/MortgageCalculatorScreen.kt

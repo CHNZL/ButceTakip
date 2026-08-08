@@ -1,37 +1,24 @@
 package com.example.util
 
 fun formatInputAmount(text: String): String {
-    var cleanedText = text.replace(" ", "")
-    cleanedText = cleanedText.replace(".", ",")
+    var result = ""
+    var hasDecimal = false
     
-    val firstCommaIndex = cleanedText.indexOf(',')
-    if (firstCommaIndex != -1) {
-        cleanedText = cleanedText.substring(0, firstCommaIndex + 1) + 
-                      cleanedText.substring(firstCommaIndex + 1).replace(",", "")
+    for (char in text) {
+        if (char.isDigit()) {
+            result += char
+        } else if ((char == ',' || char == '.') && !hasDecimal) {
+            result += ','
+            hasDecimal = true
+        }
     }
-
-    cleanedText = cleanedText.filter { it.isDigit() || it == ',' }
-
-    if (cleanedText.isEmpty()) return ""
-
-    val parts = cleanedText.split(",")
-    val integerPart = parts[0]
     
-    val formattedInteger = if (integerPart.isNotEmpty()) {
-        integerPart.reversed().chunked(3).joinToString(" ").reversed()
-    } else {
-        if (parts.size > 1) "0" else ""
+    val parts = result.split(",")
+    if (parts.size > 1) {
+        result = parts[0] + "," + parts[1].take(2)
     }
-
-    val decimalPart = if (parts.size > 1) {
-        "," + parts[1].take(2)
-    } else if (cleanedText.endsWith(",")) {
-        ","
-    } else {
-        ""
-    }
-
-    return formattedInteger + decimalPart
+    
+    return result
 }
 
 fun parseFormattedAmount(text: String): Double {
@@ -42,5 +29,5 @@ fun formatDoubleForInput(value: Double): String {
     if (value == 0.0) return ""
     val str = java.math.BigDecimal(value.toString()).toPlainString()
     val cleanStr = if (str.endsWith(".0")) str.dropLast(2) else str
-    return formatInputAmount(cleanStr)
+    return cleanStr.replace(".", ",")
 }
