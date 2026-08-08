@@ -254,7 +254,7 @@ fun SavingsScreen(
                                     preferenceManager = preferenceManager,
                                     onEditClick = {
                                         editingCategoryPrice = summary.category
-                                        newPriceText = if (summary.currentUnitPrice > 0.0) summary.currentUnitPrice.toString() else ""
+                                        newPriceText = if (summary.currentUnitPrice > 0.0) com.example.util.formatDoubleForInput(summary.currentUnitPrice) else ""
                                     }
                                 )
                             }
@@ -758,7 +758,7 @@ fun resolveCurrentUnitPrice(
 
     fun parseVal(s: String?): Double? {
         if (s == null || s.isBlank() || s == "-") return null
-        return s.replace(".", "").replace(",", ".").trim().toDoubleOrNull()
+        return com.example.util.parseFormattedAmount(s)
     }
 
     val marketMatch = preferenceManager?.getMarketMatch(category)

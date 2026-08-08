@@ -45,7 +45,7 @@ fun AddTransactionDialog(
     onDismiss: () -> Unit,
     onSave: (Int, Double, String, TransactionType, String, String?, Long, Double?, Double?, Int?, Boolean, Boolean) -> Unit
 ) {
-    var amountText by remember { mutableStateOf(editingTransaction?.amount?.let { if (it > 0) it.toString() else "" } ?: "") }
+    var amountText by remember { mutableStateOf(editingTransaction?.amount?.let { com.example.util.formatDoubleForInput(it) } ?: "") }
     var type by remember { mutableStateOf(editingTransaction?.type ?: (fixedType ?: TransactionType.EXPENSE)) }
 
     val categories = when (type) {
@@ -60,8 +60,8 @@ fun AddTransactionDialog(
 
     var showDatePicker by remember { mutableStateOf(false) }
 
-    var quantityText by remember { mutableStateOf(editingTransaction?.quantity?.toString() ?: "") }
-    var unitPriceText by remember { mutableStateOf(editingTransaction?.unitPrice?.toString() ?: "") }
+    var quantityText by remember { mutableStateOf(editingTransaction?.quantity?.let { com.example.util.formatDoubleForInput(it) } ?: "") }
+    var unitPriceText by remember { mutableStateOf(editingTransaction?.unitPrice?.let { com.example.util.formatDoubleForInput(it) } ?: "") }
     var installmentsText by remember { mutableStateOf(editingTransaction?.installments?.toString() ?: "") }
     
     var isPaid by remember { mutableStateOf(editingTransaction?.isPaid ?: false) }
@@ -268,7 +268,7 @@ fun AddTransactionDialog(
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedTextField(
                                 value = quantityText,
-                                onValueChange = { newValue -> if (newValue.all { it.isDigit() || it == '.' || it == ',' }) quantityText = newValue },
+                                onValueChange = { quantityText = com.example.util.formatInputAmount(it) },
                                 placeholder = { Text("Adet", color = Color.White.copy(0.7f)) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 modifier = Modifier.weight(1f).height(50.dp),
@@ -279,7 +279,7 @@ fun AddTransactionDialog(
                             )
                             OutlinedTextField(
                                 value = unitPriceText,
-                                onValueChange = { newValue -> if (newValue.all { it.isDigit() || it == '.' || it == ',' }) unitPriceText = newValue },
+                                onValueChange = { unitPriceText = com.example.util.formatInputAmount(it) },
                                 placeholder = { Text("Birim Fiyat", color = Color.White.copy(0.7f)) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 modifier = Modifier.weight(1f).height(50.dp),
@@ -290,8 +290,8 @@ fun AddTransactionDialog(
                             )
                         }
 
-                        val q = quantityText.replace(".", "").replace(",", ".").toDoubleOrNull() ?: 0.0
-                        val up = unitPriceText.replace(".", "").replace(",", ".").toDoubleOrNull() ?: 0.0
+                        val q = com.example.util.parseFormattedAmount(quantityText) ?: 0.0
+                        val up = com.example.util.parseFormattedAmount(unitPriceText) ?: 0.0
                         val computedAmount = q * up
 
                         Text(
@@ -305,7 +305,7 @@ fun AddTransactionDialog(
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedTextField(
                                 value = amountText,
-                                onValueChange = { newValue -> if (newValue.all { it.isDigit() || it == '.' || it == ',' }) amountText = newValue },
+                                onValueChange = { amountText = com.example.util.formatInputAmount(it) },
                                 placeholder = { Text("İşlem Tutarı (₺)", color = Color.White.copy(0.7f)) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                 modifier = Modifier.weight(1.5f).height(50.dp).testTag("amount_input"),
@@ -380,11 +380,11 @@ fun AddTransactionDialog(
                                 var inst: Int? = null
                                 
                                 if (type == TransactionType.SAVING) {
-                                    q = quantityText.replace(".", "").replace(",", ".").toDoubleOrNull()
-                                    up = unitPriceText.replace(".", "").replace(",", ".").toDoubleOrNull()
+                                    q = com.example.util.parseFormattedAmount(quantityText)
+                                    up = com.example.util.parseFormattedAmount(unitPriceText)
                                     if (q != null && up != null) { finalAmount = q * up } else { return@Button }
                                 } else {
-                                    val parsedAmt = amountText.replace(".", "").replace(",", ".").toDoubleOrNull()
+                                    val parsedAmt = com.example.util.parseFormattedAmount(amountText)
                                     if (parsedAmt != null) { finalAmount = parsedAmt } else { return@Button }
                                     if (type == TransactionType.EXPENSE) { inst = installmentsText.toIntOrNull() }
                                 }

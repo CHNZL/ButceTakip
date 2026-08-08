@@ -22,7 +22,7 @@ fun MortgageCalculatorScreen() {
     
     // Improved cleaning function
     fun cleanNumber(text: String): String {
-        return text.replace(".", "").replace(",", ".")
+        return com.example.util.parseFormattedAmount(text).toString()
     }
 
     // Re-parse with cleaned input

@@ -1,8 +1,8 @@
 package com.example.util
 
 fun formatInputAmount(text: String): String {
-    // replace dot with comma for users who might press dot on keypad
-    var cleanedText = text.replace(".", ",")
+    var cleanedText = text.replace(" ", "")
+    cleanedText = cleanedText.replace(".", ",")
     
     val firstCommaIndex = cleanedText.indexOf(',')
     if (firstCommaIndex != -1) {
@@ -18,7 +18,7 @@ fun formatInputAmount(text: String): String {
     val integerPart = parts[0]
     
     val formattedInteger = if (integerPart.isNotEmpty()) {
-        integerPart.reversed().chunked(3).joinToString(".").reversed()
+        integerPart.reversed().chunked(3).joinToString(" ").reversed()
     } else {
         if (parts.size > 1) "0" else ""
     }
@@ -35,5 +35,12 @@ fun formatInputAmount(text: String): String {
 }
 
 fun parseFormattedAmount(text: String): Double {
-    return text.replace(".", "").replace(",", ".").toDoubleOrNull() ?: 0.0
+    return text.replace(" ", "").replace(".", "").replace(",", ".").toDoubleOrNull() ?: 0.0
+}
+
+fun formatDoubleForInput(value: Double): String {
+    if (value == 0.0) return ""
+    val str = java.math.BigDecimal(value.toString()).toPlainString()
+    val cleanStr = if (str.endsWith(".0")) str.dropLast(2) else str
+    return formatInputAmount(cleanStr)
 }

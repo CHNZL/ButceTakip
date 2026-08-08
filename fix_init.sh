@@ -1,0 +1,3 @@
+sed -i 's/editingTransaction?.amount?.let { if (it > 0) it.toString() else "" } ?: ""/editingTransaction?.amount?.let { com.example.util.formatDoubleForInput(it) } ?: ""/g' app/src/main/java/com/example/ui/AddTransactionDialog.kt
+sed -i 's/editingTransaction?.quantity?.toString() ?: ""/editingTransaction?.quantity?.let { com.example.util.formatDoubleForInput(it) } ?: ""/g' app/src/main/java/com/example/ui/AddTransactionDialog.kt
+sed -i 's/editingTransaction?.unitPrice?.toString() ?: ""/editingTransaction?.unitPrice?.let { com.example.util.formatDoubleForInput(it) } ?: ""/g' app/src/main/java/com/example/ui/AddTransactionDialog.kt
