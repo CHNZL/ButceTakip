@@ -1,0 +1,1 @@
+sed -i '/fun addTransaction/i \    fun updateBesPortfolio(bes: BesPortfolio) {\n        viewModelScope.launch {\n            repository.insertOrUpdateBes(bes)\n        }\n    }\n' app/src/main/java/com/example/viewmodel/BudgetViewModel.kt

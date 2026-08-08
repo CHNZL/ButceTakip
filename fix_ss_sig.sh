@@ -1,0 +1,1 @@
+sed -i 's/ziraatRates: List<BankRate> = emptyList()/ziraatRates: List<BankRate> = emptyList(),\n    besPortfolio: com.example.data.BesPortfolio? = null,\n    onUpdateBes: ((com.example.data.BesPortfolio) -> Unit)? = null/g' app/src/main/java/com/example/ui/SavingsScreen.kt

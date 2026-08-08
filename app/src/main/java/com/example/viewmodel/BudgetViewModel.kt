@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.data.SavingGoal
+import com.example.data.BesPortfolio
 import com.example.data.Transaction
 import com.example.data.TransactionRepository
 import kotlinx.coroutines.flow.SharingStarted
@@ -38,6 +39,7 @@ data class BudgetUiState(
     val totalIncome: Double = 0.0,
     val totalExpense: Double = 0.0,
     val totalSaved: Double = 0.0
+    , val besPortfolio: BesPortfolio? = null
 )
 
 class BudgetViewModel(
@@ -359,9 +361,10 @@ class BudgetViewModel(
     val persons = repository.allPersons.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val uiState: StateFlow<BudgetUiState> = combine(
+        repository.besPortfolio,
         repository.allTransactions,
         repository.allSavings
-    ) { transactions, savings ->
+    ) { bes, transactions, savings ->
         var income = 0.0
         var expense = 0.0
         var savingTx = 0.0
@@ -383,7 +386,8 @@ class BudgetViewModel(
             totalBalance = income - expense - savingTx, // Saved money might still be in balance or excluded based on user preference, we can just show it.
             totalIncome = income,
             totalExpense = expense,
-            totalSaved = totalSaved
+            totalSaved = totalSaved,
+            besPortfolio = bes
         )
     }.stateIn(
         scope = viewModelScope,
@@ -413,6 +417,7 @@ class BudgetViewModel(
         }
     }
 
+
     fun addTransaction(transaction: Transaction) {
         executeAndBackup { repository.insert(transaction) }
     }
@@ -428,6 +433,12 @@ class BudgetViewModel(
     fun deleteAllData() {
         executeAndBackup {
             repository.clearAllData()
+        }
+    }
+
+    fun updateBesPortfolio(bes: BesPortfolio) {
+        viewModelScope.launch {
+            repository.insertOrUpdateBes(bes)
         }
     }
 

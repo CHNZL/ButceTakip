@@ -82,7 +82,7 @@ class MainActivity : ComponentActivity() {
             database.transactionDao(), 
             database.savingDao(),
             database.categoryDao(),
-            database.personDao()
+            database.personDao(), database.besDao()
         )
         val prefManager = com.example.data.PreferenceManager(applicationContext)
         val viewModelFactory = BudgetViewModelFactory(application, repository, prefManager)

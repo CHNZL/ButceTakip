@@ -34,7 +34,7 @@ class CloudBackupWorker(
             database.transactionDao(),
             database.savingDao(),
             database.categoryDao(),
-            database.personDao()
+            database.personDao(), database.besDao()
         )
 
         try {

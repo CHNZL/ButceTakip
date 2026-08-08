@@ -6,10 +6,11 @@ class TransactionRepository(
     private val transactionDao: TransactionDao,
     private val savingDao: SavingDao,
     private val categoryDao: CategoryDao,
-    private val personDao: PersonDao
+    private val personDao: PersonDao, private val besDao: BesDao
 ) {
     val allTransactions: Flow<List<Transaction>> = transactionDao.getAllTransactions()
     val allSavings: Flow<List<SavingGoal>> = savingDao.getAllSavings()
+    val besPortfolio: Flow<BesPortfolio?> = besDao.getBesPortfolio()
     
     fun getCategoriesByType(type: String) = categoryDao.getCategoriesByType(type)
     val allPersons = personDao.getAllPersons()
@@ -19,6 +20,7 @@ class TransactionRepository(
     
     suspend fun insertSaving(saving: SavingGoal) = savingDao.insertSaving(saving)
     suspend fun deleteSavingById(id: Int) = savingDao.deleteSavingById(id)
+    suspend fun insertOrUpdateBes(bes: BesPortfolio) = besDao.insertOrUpdate(bes)
     
     suspend fun insertCategory(category: AppCategory) = categoryDao.insertCategory(category)
     suspend fun updateCategory(category: AppCategory) = categoryDao.updateCategory(category)

@@ -1,0 +1,1 @@
+sed -i 's/ziraatRates = ziraatRates/ziraatRates = ziraatRates,\n                    besPortfolio = uiState.besPortfolio,\n                    onUpdateBes = { viewModel.updateBesPortfolio(it) }/g' app/src/main/java/com/example/ui/DashboardScreen.kt

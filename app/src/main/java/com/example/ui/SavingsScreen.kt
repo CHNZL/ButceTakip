@@ -55,10 +55,13 @@ fun SavingsScreen(
     preferenceManager: com.example.data.PreferenceManager? = null,
     customPricesTrigger: Long = 0L,
     onUpdateCustomPrice: ((String, Double) -> Unit)? = null,
-    ziraatRates: List<BankRate> = emptyList()
+    ziraatRates: List<BankRate> = emptyList(),
+    besPortfolio: com.example.data.BesPortfolio? = null,
+    onUpdateBes: ((com.example.data.BesPortfolio) -> Unit)? = null
 ) {
     var editingCategoryPrice by remember { mutableStateOf<String?>(null) }
     var newPriceText by remember { mutableStateOf("") }
+    var showBesDialog by remember { mutableStateOf(false) }
 
     val savingTransactions = remember(transactions) {
         transactions.filter { it.type == TransactionType.SAVING }
@@ -91,8 +94,23 @@ fun SavingsScreen(
         }.sortedByDescending { it.currentValue }
     }
 
-    val totalCurrentValue = assetSummaries.sumOf { it.currentValue }
-    val totalPaidAll = assetSummaries.sumOf { it.totalPaid }
+    val besTotalValue = remember(besPortfolio) { 
+        besPortfolio?.let { 
+            val years = (System.currentTimeMillis() - it.startDate) / (1000L * 60 * 60 * 24 * 365) 
+            val stateVesting = if (it.isRetired) 1.0 else { 
+                when { 
+                    years < 3 -> 0.0 
+                    years < 6 -> 0.15 
+                    years < 10 -> 0.35 
+                    else -> 0.60 
+                } 
+            } 
+            it.investment + it.investmentReturn + (it.stateContribution + it.stateContributionReturn) * stateVesting 
+        } ?: 0.0 
+    } 
+    val besPaid = besPortfolio?.investment ?: 0.0
+    val totalCurrentValue = assetSummaries.sumOf { it.currentValue } + besTotalValue
+    val totalPaidAll = assetSummaries.sumOf { it.totalPaid } + besPaid
     val totalProfitLoss = totalCurrentValue - totalPaidAll
     val totalProfitLossPercent = if (totalPaidAll > 0.0) (totalProfitLoss / totalPaidAll) * 100.0 else 0.0
 
@@ -267,6 +285,21 @@ fun SavingsScreen(
             }
         }
 
+        item { 
+            if (besPortfolio != null) { 
+                Spacer(modifier = Modifier.height(8.dp)) 
+                BesSummaryCard(besPortfolio = besPortfolio, besTotalValue = besTotalValue, besPaid = besPaid, currencyFormat = currencyFormat) { 
+                    showBesDialog = true 
+                } 
+                Spacer(modifier = Modifier.height(16.dp)) 
+            } else { 
+                Spacer(modifier = Modifier.height(16.dp)) 
+                Button(onClick = { showBesDialog = true }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) { 
+                    Text("Bireysel Emeklilik (BES) Ekle") 
+                } 
+                Spacer(modifier = Modifier.height(16.dp)) 
+            } 
+        }
         // --- 3. LEDGER HISTORY HEADER & BUTTON ---
         item {
             Row(
@@ -363,6 +396,16 @@ fun SavingsScreen(
         }
     }
 
+    if (showBesDialog) { 
+        BesDialog( 
+            besPortfolio = besPortfolio, 
+            onDismiss = { showBesDialog = false }, 
+            onSave = { 
+                onUpdateBes?.invoke(it) 
+                showBesDialog = false 
+            } 
+        ) 
+    }
     if (editingCategoryPrice != null) {
         val catName = editingCategoryPrice!!
         AlertDialog(
@@ -751,7 +794,9 @@ fun resolveCurrentUnitPrice(
     goldPrices: List<GoldPrice>,
     bankRates: List<BankRate>,
     preferenceManager: com.example.data.PreferenceManager? = null,
-    ziraatRates: List<BankRate> = emptyList()
+    ziraatRates: List<BankRate> = emptyList(),
+    besPortfolio: com.example.data.BesPortfolio? = null,
+    onUpdateBes: ((com.example.data.BesPortfolio) -> Unit)? = null
 ): Double? {
     val cleanCatLower = category.trim().lowercase(java.util.Locale("tr", "TR"))
     val cleanCatRoot = category.trim().lowercase(java.util.Locale.ROOT)
@@ -830,4 +875,49 @@ fun resolveCurrentUnitPrice(
         }
     }
     return null
+}
+
+@Composable
+fun BesSummaryCard(
+    besPortfolio: com.example.data.BesPortfolio,
+    besTotalValue: Double,
+    besPaid: Double,
+    currencyFormat: java.text.NumberFormat,
+    onEditClick: () -> Unit
+) {
+    val profit = besTotalValue - besPaid
+    val profitPercent = if (besPaid > 0) (profit / besPaid) * 100 else 0.0
+    val isProfit = profit >= 0
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).clickable { onEditClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Text("Bireysel Emeklilik (BES)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Icon(Icons.Rounded.Edit, contentDescription = "Düzenle", tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp))
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(currencyFormat.format(besTotalValue), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (isProfit) Icons.Rounded.TrendingUp else Icons.Rounded.TrendingDown,
+                    contentDescription = null,
+                    tint = if (isProfit) Color(0xFF4CAF50) else Color(0xFFF44336),
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "${if (isProfit) "+" else ""}${currencyFormat.format(profit)} (%.2f%%)".format(profitPercent),
+                    color = if (isProfit) Color(0xFF4CAF50) else Color(0xFFF44336),
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp
+                )
+            }
+        }
+    }
 }

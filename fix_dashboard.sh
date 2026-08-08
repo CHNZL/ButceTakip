@@ -1,0 +1,1 @@
+sed -i '/onUpdateCustomPrice = { category, price ->/a \                    ziraatRates = ziraatRates,\n                    besPortfolio = uiState.besPortfolio,\n                    onUpdateBes = { viewModel.updateBesPortfolio(it) }' app/src/main/java/com/example/ui/DashboardScreen.kt
