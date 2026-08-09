@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -71,7 +72,7 @@ fun getAssetIcon(category: String): androidx.compose.ui.graphics.vector.ImageVec
 
 @Composable
 fun getAssetCardPalette(category: String): AssetCardPalette {
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val clean = category.lowercase(Locale("tr"))
 
     return when {
@@ -779,13 +780,13 @@ fun AssetSummaryCard(
             .fillMaxWidth()
             .clickable { onCardClick() }
             .testTag("asset_summary_card_${summary.category}"),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = palette.containerColor),
         border = BorderStroke(1.dp, palette.borderColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(12.dp)
         ) {
             // Top Row: Icon + Category Name & Quantity + Action Buttons
             Row(
@@ -801,8 +802,8 @@ fun AssetSummaryCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(8.dp))
                             .background(palette.iconContainerColor),
                         contentAlignment = Alignment.Center
                     ) {
@@ -810,14 +811,14 @@ fun AssetSummaryCard(
                             imageVector = getAssetIcon(summary.category),
                             contentDescription = summary.category,
                             tint = palette.iconColor,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
 
                     Column {
                         Text(
                             text = summary.category,
-                            fontSize = 15.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = palette.onContainerColor,
                             maxLines = 1,
@@ -842,7 +843,7 @@ fun AssetSummaryCard(
                     FilledTonalIconButton(
                         onClick = onQuickAdd,
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(28.dp)
                             .testTag("quick_add_btn_${summary.category}"),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = palette.accentColor,
@@ -852,7 +853,7 @@ fun AssetSummaryCard(
                         Icon(
                             imageVector = Icons.Rounded.Add,
                             contentDescription = "${summary.category} Ekle",
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                     }
 
@@ -860,7 +861,7 @@ fun AssetSummaryCard(
                         IconButton(
                             onClick = onEditClick,
                             modifier = Modifier
-                                .size(32.dp)
+                                .size(28.dp)
                                 .testTag("custom_price_edit_btn_${summary.category}")
                         ) {
                             Icon(
@@ -874,42 +875,19 @@ fun AssetSummaryCard(
 
                     IconButton(
                         onClick = onCardClick,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(28.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.ChevronRight,
                             contentDescription = "Detaylar",
                             tint = palette.onContainerColor,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Unit Price Badge Pill
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                val rateUnitStr = if (summary.category.lowercase().contains("bilezik") || summary.category.lowercase().contains("altın") || summary.category.lowercase().contains("altin") || summary.category.lowercase().contains("gümüş")) "₺/g" else "₺"
-                Surface(
-                    color = palette.badgeContainerColor,
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = "Birim Fiyat: ${com.example.util.FormatUtil.getNumberFormat(1).format(summary.currentUnitPrice)} $rateUnitStr",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = palette.badgeContentColor,
-                        fontFamily = FontFamily.Monospace,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Portfolio Value & Profit/Loss Row
             Row(
@@ -927,9 +905,18 @@ fun AssetSummaryCard(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = currencyFormat.format(summary.currentValue),
-                        fontSize = 20.sp,
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Black,
                         color = palette.onContainerColor
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    val rateUnitStr = if (summary.category.lowercase().contains("bilezik") || summary.category.lowercase().contains("altın") || summary.category.lowercase().contains("altin") || summary.category.lowercase().contains("gümüş")) "₺/g" else "₺"
+                    Text(
+                        text = "Birim Fiyat: ${com.example.util.FormatUtil.getNumberFormat(1).format(summary.currentUnitPrice)} $rateUnitStr",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = palette.secondaryTextColor,
+                        fontFamily = FontFamily.Monospace
                     )
                 }
 
@@ -950,11 +937,11 @@ fun AssetSummaryCard(
                             imageVector = if (isProfit) Icons.Rounded.TrendingUp else Icons.Rounded.TrendingDown,
                             contentDescription = null,
                             tint = profitTextColor,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(12.dp)
                         )
                         Text(
                             text = "${if (summary.profitLoss > 0) "+" else ""}${currencyFormat.format(summary.profitLoss)} (${if (summary.profitLoss > 0) "+" else ""}${com.example.util.FormatUtil.getNumberFormat(2).format(summary.profitLossPercent)}%)",
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = profitTextColor,
                             maxLines = 1,
@@ -1403,12 +1390,12 @@ fun BesSummaryCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = palette.containerColor),
         border = BorderStroke(1.dp, palette.borderColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
@@ -1421,8 +1408,8 @@ fun BesSummaryCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(8.dp))
                             .background(palette.iconContainerColor),
                         contentAlignment = Alignment.Center
                     ) {
@@ -1430,7 +1417,7 @@ fun BesSummaryCard(
                             imageVector = Icons.Rounded.Shield,
                             contentDescription = "BES",
                             tint = palette.iconColor,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                     }
 
@@ -1438,7 +1425,7 @@ fun BesSummaryCard(
                         Text(
                             text = besPortfolio.holderName.ifBlank { "Bireysel Emeklilik (BES)" },
                             fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
+                            fontSize = 14.sp,
                             color = palette.onContainerColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -1459,7 +1446,7 @@ fun BesSummaryCard(
                     if (isFirstCard && onAddClick != null) {
                         FilledTonalIconButton(
                             onClick = onAddClick,
-                            modifier = Modifier.size(32.dp),
+                            modifier = Modifier.size(28.dp),
                             colors = IconButtonDefaults.filledTonalIconButtonColors(
                                 containerColor = palette.accentColor,
                                 contentColor = Color.White
@@ -1468,40 +1455,40 @@ fun BesSummaryCard(
                             Icon(
                                 imageVector = Icons.Rounded.Add,
                                 contentDescription = "Yeni BES Ekle",
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
 
                     IconButton(
                         onClick = onEditClick,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(28.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Edit,
                             contentDescription = "Düzenle",
                             tint = palette.onContainerColor,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                     }
 
                     if (onDeleteClick != null) {
                         IconButton(
                             onClick = onDeleteClick,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(28.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Delete,
                                 contentDescription = "Sil",
                                 tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1518,7 +1505,7 @@ fun BesSummaryCard(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = currencyFormat.format(besTotalValue),
-                        fontSize = 20.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Black,
                         color = palette.onContainerColor
                     )
@@ -1540,13 +1527,13 @@ fun BesSummaryCard(
                             imageVector = if (isProfit) Icons.Rounded.TrendingUp else Icons.Rounded.TrendingDown,
                             contentDescription = null,
                             tint = profitTextColor,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(12.dp)
                         )
                         Text(
                             text = "${if (isProfit) "+" else ""}${currencyFormat.format(profit)} (${if (isProfit) "+" else ""}${String.format(Locale.US, "%.2f", profitPercent)}%)",
                             color = profitTextColor,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
+                            fontSize = 11.sp
                         )
                     }
                 }
