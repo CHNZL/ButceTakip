@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -731,13 +732,13 @@ fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving:
 
 @Composable
 fun TransactionItem(transaction: Transaction, onDelete: () -> Unit, isDark: Boolean = false) {
-    val format = com.example.util.FormatUtil.getCurrencyFormat()
-    val sdf = SimpleDateFormat("dd MMM yyyy", Locale("tr", "TR"))
+    val format = remember { com.example.util.FormatUtil.getCurrencyFormat() }
+    val sdf = remember { SimpleDateFormat("dd MMM yyyy", Locale("tr", "TR")) }
     
     val amountColor = when (transaction.type) {
         TransactionType.INCOME -> if (isDark) Color(0xFF4ADE80) else Color(0xFF16A34A)
         TransactionType.EXPENSE -> if (isDark) Color(0xFFF87171) else Color(0xFFDC2626)
-        TransactionType.SAVING -> if (isDark) Color(0xFFFB923C) else Color(0xFFF97316)
+        TransactionType.SAVING -> if (isDark) Color(0xFFFB923C) else Color(0xFFEA580C)
     }
     
     val prefix = when (transaction.type) {
@@ -753,53 +754,47 @@ fun TransactionItem(transaction: Transaction, onDelete: () -> Unit, isDark: Bool
     }
     
     val iconBg = when (transaction.type) {
-        TransactionType.INCOME -> if (isDark) Color(0xFF1E3A8A) else Color(0xFFDBEAFE)
-        TransactionType.EXPENSE -> if (isDark) Color(0xFF7C2D12) else Color(0xFFFFEDD5)
-        TransactionType.SAVING -> if (isDark) Color(0xFF581C87) else Color(0xFFF3E8FF)
+        TransactionType.INCOME -> if (isDark) Color(0xFF1E3A8A).copy(alpha = 0.5f) else Color(0xFFDBEAFE)
+        TransactionType.EXPENSE -> if (isDark) Color(0xFF7C2D12).copy(alpha = 0.5f) else Color(0xFFFFEDD5)
+        TransactionType.SAVING -> if (isDark) Color(0xFF581C87).copy(alpha = 0.5f) else Color(0xFFF3E8FF)
     }
+
+    val cardBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
+    val cardBorder = if (isDark) Color(0xFF334155).copy(alpha = 0.4f) else Color(0xFFF1F5F9)
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.6f)),
-        shape = RoundedCornerShape(16.dp),
+            .padding(horizontal = 12.dp, vertical = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFF1F5F9)) // border-slate-700 or slate-100
+        border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(8.dp))
                     .background(iconBg),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = transaction.category.firstOrNull()?.toString()?.uppercase() ?: "D",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = iconColor
                 )
             }
             
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(10.dp))
             
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = sdf.format(Date(transaction.timestamp)),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
-                    fontWeight = FontWeight.SemiBold
-                )
-                
-                Spacer(modifier = Modifier.height(2.dp))
-                
                 val subtitle = buildString {
                     append(transaction.title)
                     if (transaction.person != null) {
@@ -821,22 +816,34 @@ fun TransactionItem(transaction: Transaction, onDelete: () -> Unit, isDark: Bool
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
-                
-                Spacer(modifier = Modifier.height(2.dp))
-                
+
                 Text(
-                    text = prefix + format.format(transaction.amount),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Black,
-                    color = amountColor
+                    text = sdf.format(Date(transaction.timestamp)),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 10.sp
                 )
             }
             
-            IconButton(onClick = onDelete, modifier = Modifier.testTag("delete_btn")) {
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = prefix + format.format(transaction.amount),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Black,
+                color = amountColor
+            )
+
+            IconButton(
+                onClick = onDelete, 
+                modifier = Modifier.size(28.dp).padding(start = 4.dp).testTag("delete_btn")
+            ) {
                 Icon(
                     Icons.Default.Delete,
                     contentDescription = "Sil",
-                    tint = Color(0xFFCBD5E1)
+                    tint = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8),
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }
@@ -846,33 +853,40 @@ fun TransactionItem(transaction: Transaction, onDelete: () -> Unit, isDark: Bool
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun GoldPricesSection(goldPrices: List<com.example.data.GoldPrice>, isFetching: Boolean, lastUpdate: String?, onRefresh: () -> Unit) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val cardBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
+    val cardBorder = if (isDark) Color(0xFF334155).copy(alpha = 0.4f) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF1E293B).copy(alpha = 0.5f) else Color(0xFFF8FAFC)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .padding(horizontal = 12.dp, vertical = 3.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(6.dp).fillMaxWidth()) {
+        Column(modifier = Modifier.padding(8.dp).fillMaxWidth()) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Rounded.TrendingUp, contentDescription = null, tint = Color(0xFFD4AF37))
+                    Icon(Icons.Rounded.TrendingUp, contentDescription = null, tint = Color(0xFFD4AF37), modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Column {
-                        Text("Sivas Altın Fiyatları", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                        Text("CANLI PİYASA VERİLERİ", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Text("Sivas Altın Fiyatları", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Text("CANLI PİYASA VERİLERİ", fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (lastUpdate != null && !isFetching) {
-                        Text("SON GÜNCELLEME: $lastUpdate", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("GÜNCEL: $lastUpdate", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(modifier = Modifier.width(4.dp))
-                    IconButton(onClick = onRefresh, modifier = Modifier.size(28.dp)) {
+                    IconButton(onClick = onRefresh, modifier = Modifier.size(26.dp)) {
                         if (isFetching) {
-                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp)
                         } else {
-                            Icon(Icons.Default.Refresh, contentDescription = "Yenile", modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Refresh, contentDescription = "Yenile", modifier = Modifier.size(15.dp))
                         }
                     }
                 }
@@ -880,7 +894,7 @@ fun GoldPricesSection(goldPrices: List<com.example.data.GoldPrice>, isFetching: 
             Spacer(modifier = Modifier.height(4.dp))
             
             if (goldPrices.isEmpty() && !isFetching) {
-                Text("Veriler şu an alınamıyor, lütfen Yenile butonuna basın.", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                Text("Veriler şu an alınamıyor, lütfen Yenile butonuna basın.", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     goldPrices.chunked(2).forEach { rowPrices ->
@@ -888,20 +902,21 @@ fun GoldPricesSection(goldPrices: List<com.example.data.GoldPrice>, isFetching: 
                             rowPrices.forEach { gp ->
                                 Card(
                                     modifier = Modifier.weight(1f),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f)),
+                                    colors = CardDefaults.cardColors(containerColor = innerCardBg),
+                                    shape = RoundedCornerShape(8.dp),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                                 ) {
-                                    Column(modifier = Modifier.padding(2.dp)) {
-                                        Text(gp.name, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                    Column(modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)) {
+                                        Text(gp.name, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text("ALIŞ", fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                Text(gp.buy, fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color(0xFFEF4444))
+                                            Column {
+                                                Text("ALIŞ", fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                Text(gp.buy, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(0xFFEF4444))
                                             }
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text("SATIŞ", fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                Text(gp.sell, fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color(0xFF10B981))
+                                            Column(horizontalAlignment = Alignment.End) {
+                                                Text("SATIŞ", fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                Text(gp.sell, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(0xFF10B981))
                                             }
                                         }
                                     }
@@ -921,40 +936,48 @@ fun GoldPricesSection(goldPrices: List<com.example.data.GoldPrice>, isFetching: 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun BankRatesSection(bankRates: List<com.example.data.BankRate>, isFetching: Boolean, lastUpdate: String?, onRefresh: () -> Unit) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val cardBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
+    val cardBorder = if (isDark) Color(0xFF334155).copy(alpha = 0.4f) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF1E293B).copy(alpha = 0.5f) else Color(0xFFF8FAFC)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .padding(horizontal = 12.dp, vertical = 3.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(6.dp).fillMaxWidth()) {
+        Column(modifier = Modifier.padding(8.dp).fillMaxWidth()) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                        modifier = Modifier.size(24.dp)
+                        shape = RoundedCornerShape(6.dp),
+                        modifier = Modifier.size(22.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp))
                         }
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                     Column {
-                        Text("Yapı Kredi Altın ve Döviz", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                        Text("BANKA GİŞE FİYATLARI", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Text("Yapı Kredi Altın ve Döviz", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Text("BANKA GİŞE FİYATLARI", fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (lastUpdate != null && !isFetching) {
-                        Text("SON GÜNCELLEME: $lastUpdate", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("GÜNCEL: $lastUpdate", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(modifier = Modifier.width(4.dp))
-                    IconButton(onClick = onRefresh, modifier = Modifier.size(28.dp)) {
+                    IconButton(onClick = onRefresh, modifier = Modifier.size(26.dp)) {
                         if (isFetching) {
-                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp)
                         } else {
-                            Icon(Icons.Default.Refresh, contentDescription = "Yenile", modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Refresh, contentDescription = "Yenile", modifier = Modifier.size(15.dp))
                         }
                     }
                 }
@@ -962,7 +985,7 @@ fun BankRatesSection(bankRates: List<com.example.data.BankRate>, isFetching: Boo
             Spacer(modifier = Modifier.height(4.dp))
             
             if (bankRates.isEmpty() && !isFetching) {
-                Text("Veriler şu an alınamıyor, lütfen Yenile butonuna basın.", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                Text("Veriler şu an alınamıyor, lütfen Yenile butonuna basın.", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     bankRates.chunked(2).forEach { rowRates ->
@@ -970,23 +993,24 @@ fun BankRatesSection(bankRates: List<com.example.data.BankRate>, isFetching: Boo
                             rowRates.forEach { rate ->
                                 Card(
                                     modifier = Modifier.weight(1f),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f)),
+                                    colors = CardDefaults.cardColors(containerColor = innerCardBg),
+                                    shape = RoundedCornerShape(8.dp),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                                 ) {
-                                    Column(modifier = Modifier.padding(2.dp)) {
+                                    Column(modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)) {
                                         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                                            Text(rate.code, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                                            Text(rate.name, fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                            Text(rate.code, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                            Text(rate.name, fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                         }
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text("ALIŞ", fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                Text(rate.buy, fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color(0xFFEF4444))
+                                            Column {
+                                                Text("ALIŞ", fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                Text(rate.buy, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(0xFFEF4444))
                                             }
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text("SATIŞ", fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                Text(rate.sell, fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color(0xFF10B981))
+                                            Column(horizontalAlignment = Alignment.End) {
+                                                Text("SATIŞ", fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                Text(rate.sell, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(0xFF10B981))
                                             }
                                         }
                                     }
@@ -1005,45 +1029,54 @@ fun BankRatesSection(bankRates: List<com.example.data.BankRate>, isFetching: Boo
 
 @Composable
 fun ZiraatRatesSection(ziraatRates: List<com.example.data.BankRate>, isFetching: Boolean, lastUpdate: String?, onRefresh: () -> Unit) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val cardBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
+    val cardBorder = if (isDark) Color(0xFF334155).copy(alpha = 0.4f) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF1E293B).copy(alpha = 0.5f) else Color(0xFFF8FAFC)
+    val ziraatIconBg = if (isDark) Color(0xFF450A0A) else Color(0xFFFFEBEC)
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .padding(horizontal = 12.dp, vertical = 3.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(6.dp).fillMaxWidth()) {
+        Column(modifier = Modifier.padding(8.dp).fillMaxWidth()) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEC)), // light red background
-                        modifier = Modifier.size(24.dp)
+                        colors = CardDefaults.cardColors(containerColor = ziraatIconBg),
+                        shape = RoundedCornerShape(6.dp),
+                        modifier = Modifier.size(22.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                             Icon(
                                 Icons.Default.AccountBalanceWallet,
                                 contentDescription = null, 
-                                tint = Color(0xFFE10514), // Ziraat Red
-                                modifier = Modifier.size(14.dp)
+                                tint = Color(0xFFE10514),
+                                modifier = Modifier.size(12.dp)
                             )
                         }
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                     Column {
-                        Text("Ziraat Bankası Altın ve Döviz", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                        Text("ZİRAAT GİŞE FİYATLARI", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Text("Ziraat Bankası Altın ve Döviz", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        Text("ZİRAAT GİŞE FİYATLARI", fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (lastUpdate != null && !isFetching) {
-                        Text("SON GÜNCELLEME: $lastUpdate", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("GÜNCEL: $lastUpdate", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(modifier = Modifier.width(4.dp))
-                    IconButton(onClick = onRefresh, modifier = Modifier.size(28.dp)) {
+                    IconButton(onClick = onRefresh, modifier = Modifier.size(26.dp)) {
                         if (isFetching) {
-                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = Color(0xFFE10514))
+                            CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp, color = Color(0xFFE10514))
                         } else {
-                            Icon(Icons.Default.Refresh, contentDescription = "Yenile", modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Refresh, contentDescription = "Yenile", modifier = Modifier.size(15.dp))
                         }
                     }
                 }
@@ -1051,7 +1084,7 @@ fun ZiraatRatesSection(ziraatRates: List<com.example.data.BankRate>, isFetching:
             Spacer(modifier = Modifier.height(4.dp))
             
             if (ziraatRates.isEmpty() && !isFetching) {
-                Text("Veriler şu an alınamıyor, lütfen Yenile butonuna basın.", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                Text("Veriler şu an alınamıyor, lütfen Yenile butonuna basın.", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     ziraatRates.chunked(2).forEach { rowRates ->
@@ -1059,23 +1092,24 @@ fun ZiraatRatesSection(ziraatRates: List<com.example.data.BankRate>, isFetching:
                             rowRates.forEach { rate ->
                                 Card(
                                     modifier = Modifier.weight(1f),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f)),
+                                    colors = CardDefaults.cardColors(containerColor = innerCardBg),
+                                    shape = RoundedCornerShape(8.dp),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                                 ) {
-                                    Column(modifier = Modifier.padding(2.dp)) {
+                                    Column(modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)) {
                                         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                                            Text(rate.code, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                                            Text(rate.name, fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                            Text(rate.code, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                            Text(rate.name, fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                         }
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text("ALIŞ", fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                Text(rate.buy, fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color(0xFFEF4444))
+                                            Column {
+                                                Text("ALIŞ", fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                Text(rate.buy, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(0xFFEF4444))
                                             }
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text("SATIŞ", fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                Text(rate.sell, fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color(0xFF10B981))
+                                            Column(horizontalAlignment = Alignment.End) {
+                                                Text("SATIŞ", fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                Text(rate.sell, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(0xFF10B981))
                                             }
                                         }
                                     }

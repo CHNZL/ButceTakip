@@ -472,14 +472,14 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
 fun SummaryBox(title: String, amount: String, bg: Color, fg: Color, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(bg)
-            .padding(vertical = 12.dp, horizontal = 8.dp)
+            .padding(vertical = 8.dp, horizontal = 8.dp)
     ) {
         Column {
-            Text(title, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = fg.copy(alpha=0.8f))
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(amount, fontSize = 13.sp, fontWeight = FontWeight.Black, color = fg, maxLines = 1)
+            Text(title, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = fg.copy(alpha=0.85f))
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(amount, fontSize = 12.sp, fontWeight = FontWeight.Black, color = fg, maxLines = 1)
         }
     }
 }
