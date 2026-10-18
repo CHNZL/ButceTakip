@@ -48,6 +48,9 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.Palette
+import com.example.ui.theme.AppThemePreset
+import com.example.ui.theme.LocalAppThemeColors
 import coil.compose.AsyncImage
 import com.example.viewmodel.AuthViewModel
 
@@ -71,6 +74,9 @@ fun DashboardScreen(
     var showAddGoalDialog by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableIntStateOf(0) }
     var showProfileMenu by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
+    val appThemeColors = LocalAppThemeColors.current
+    val currentThemePreset by viewModel.themePreset.collectAsStateWithLifecycle()
 
     LaunchedEffect(authState) {
         if (authState is com.example.viewmodel.AuthState.Authenticated) {
@@ -89,10 +95,10 @@ fun DashboardScreen(
     var isCheckingUpdate by remember { mutableStateOf(false) }
 
     val isDark = viewModel.darkThemeEnabled.collectAsStateWithLifecycle().value
-    val mainBgColor = if (isDark) MaterialTheme.colorScheme.background else Color(0xFFFDFBFF)
-    val primaryBtnColor = if (isDark) MaterialTheme.colorScheme.primary else Color(0xFF0061A4)
-    val secondaryContainerColor = if (isDark) MaterialTheme.colorScheme.secondaryContainer else Color(0xFFD1E4FF)
-    val onSecondaryContainerColor = if (isDark) MaterialTheme.colorScheme.onSecondaryContainer else Color(0xFF001D36)
+    val mainBgColor = MaterialTheme.colorScheme.background
+    val primaryBtnColor = MaterialTheme.colorScheme.primary
+    val secondaryContainerColor = MaterialTheme.colorScheme.secondaryContainer
+    val onSecondaryContainerColor = MaterialTheme.colorScheme.onSecondaryContainer
 
     val savedPicUrl = viewModel.preferenceManager.profilePicUrl
     val savedName = viewModel.preferenceManager.userName.takeIf { it.isNotBlank() } ?: "Gizli Kullanici"
@@ -213,6 +219,14 @@ fun DashboardScreen(
                                     leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
                                 )
                                 DropdownMenuItem(
+                                    text = { Text("Tema & Görünüm") },
+                                    onClick = {
+                                        showProfileMenu = false
+                                        showThemeDialog = true
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                                )
+                                DropdownMenuItem(
                                     text = { Text("Ayarlar") },
                                     onClick = {
                                         selectedTab = 6
@@ -247,10 +261,17 @@ fun DashboardScreen(
                 },
                 actions = {
                     val isDark by viewModel.darkThemeEnabled.collectAsStateWithLifecycle()
+                    IconButton(onClick = { showThemeDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Palette,
+                            contentDescription = "Görünüm ve Tema Seçimi",
+                            tint = onSecondaryContainerColor
+                        )
+                    }
                     IconButton(onClick = { viewModel.toggleDarkTheme(!isDark) }) {
                         Icon(
                             imageVector = if (isDark) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
-                            contentDescription = "Tema Değiştir",
+                            contentDescription = "Gece / Gündüz Modu",
                             tint = onSecondaryContainerColor
                         )
                     }
@@ -262,16 +283,16 @@ fun DashboardScreen(
         },
         bottomBar = {
             NavigationBar(
-                containerColor = Color(0xFF061226),
-                contentColor = Color(0xFF94A3B8),
+                containerColor = appThemeColors.navBarContainer,
+                contentColor = appThemeColors.navBarUnselected,
                 tonalElevation = 8.dp
             ) {
                 val navColors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color(0xFF061226),
-                    selectedTextColor = Color(0xFFD4AF37),
-                    indicatorColor = Color(0xFFD4AF37),
-                    unselectedIconColor = Color(0xFF94A3B8),
-                    unselectedTextColor = Color(0xFF94A3B8)
+                    selectedIconColor = appThemeColors.navBarSelectedText,
+                    selectedTextColor = if (isDark) appThemeColors.accentColor else MaterialTheme.colorScheme.primary,
+                    indicatorColor = appThemeColors.navBarIndicator,
+                    unselectedIconColor = appThemeColors.navBarUnselected,
+                    unselectedTextColor = appThemeColors.navBarUnselected
                 )
 
                 NavigationBarItem(
@@ -604,18 +625,29 @@ fun DashboardScreen(
             }
         )
     }
+
+    if (showThemeDialog) {
+        ThemeSelectionDialog(
+            onDismiss = { showThemeDialog = false },
+            currentPreset = currentThemePreset,
+            isDark = isDark,
+            onSelectPreset = { viewModel.setThemePreset(it) },
+            onToggleDarkTheme = { viewModel.toggleDarkTheme(it) }
+        )
+    }
 }
 
 @Composable
 fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving: Double, isDark: Boolean = false) {
+    val appThemeColors = LocalAppThemeColors.current
     val format = com.example.util.FormatUtil.getCurrencyFormat()
     
     val cardBg = Color.Transparent
     val cardText = Color.White
-    val innerCardBg = Color.White.copy(alpha = 0.15f)
+    val innerCardBg = Color.White.copy(alpha = if (isDark) 0.12f else 0.18f)
     val incomeText = Color(0xFF4ADE80)
     val expenseText = Color(0xFFF87171)
-    val labelText = Color.White.copy(alpha=0.8f)
+    val labelText = Color.White.copy(alpha=0.85f)
     val savingText = Color(0xFF38BDF8)
 
     Column(
@@ -634,7 +666,7 @@ fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving:
                     .fillMaxWidth()
                     .background(
                         androidx.compose.ui.graphics.Brush.linearGradient(
-                            colors = listOf(Color(0xFF061226), Color(0xFF0F2B5B))
+                            colors = appThemeColors.heroGradient
                         )
                     )
             ) {

@@ -2,17 +2,48 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Premium Light Colors
+// Classic Sapphire & Gold (Original)
 val PremiumDeepBlue = Color(0xFF0B2349)
 val PremiumGold = Color(0xFFD4AF37)
 val PremiumLightBackground = Color(0xFFF8FAFC)
 val PremiumLightSurface = Color(0xFFFFFFFF)
-
-// Premium Dark Colors
 val PremiumDarkBackground = Color(0xFF061226)
 val PremiumDarkSurface = Color(0xFF0F172A)
 val PremiumDarkSurfaceVariant = Color(0xFF1E293B)
 val PremiumDarkGold = Color(0xFFEAB308)
+
+// Royal Emerald & Champagne Gold (New Flagship Theme)
+val EmeraldDarkBackground = Color(0xFF041611)
+val EmeraldDarkSurface = Color(0xFF0A231C)
+val EmeraldDarkSurfaceVariant = Color(0xFF12342A)
+val EmeraldMintPrimary = Color(0xFF10B981)
+val EmeraldChampagneGold = Color(0xFFF59E0B)
+val EmeraldLightBackground = Color(0xFFF2FBF6)
+val EmeraldLightSurface = Color(0xFFFFFFFF)
+val EmeraldLightSurfaceVariant = Color(0xFFE2F4EB)
+val EmeraldNoblePrimary = Color(0xFF059669)
+
+// Obsidian & Rose Gold
+val ObsidianDarkBackground = Color(0xFF0E0D13)
+val ObsidianDarkSurface = Color(0xFF171520)
+val ObsidianDarkSurfaceVariant = Color(0xFF242031)
+val RoseGoldPrimary = Color(0xFFFB7185)
+val RoseGoldSecondary = Color(0xFFF472B6)
+val RoseLightBackground = Color(0xFFFFF5F6)
+val RoseLightSurface = Color(0xFFFFFFFF)
+val RoseLightSurfaceVariant = Color(0xFFFCE7E9)
+val RoseNoblePrimary = Color(0xFFBE123C)
+
+// Modern Titanium & Arctic Cyan
+val TitaniumDarkBackground = Color(0xFF080C14)
+val TitaniumDarkSurface = Color(0xFF0F1726)
+val TitaniumDarkSurfaceVariant = Color(0xFF1B283E)
+val ArcticCyanPrimary = Color(0xFF06B6D4)
+val ArcticSkySecondary = Color(0xFF38BDF8)
+val ArcticLightBackground = Color(0xFFF0F9FF)
+val ArcticLightSurface = Color(0xFFFFFFFF)
+val ArcticLightSurfaceVariant = Color(0xFFE0F2FE)
+val ArcticDeepPrimary = Color(0xFF0284C7)
 
 // Semantic Colors
 val SuccessGreen = Color(0xFF16A34A)

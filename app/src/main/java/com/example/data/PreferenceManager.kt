@@ -38,6 +38,10 @@ class PreferenceManager(context: Context) {
         get() = prefs.getBoolean("dark_theme", false)
         set(value) = prefs.edit().putBoolean("dark_theme", value).apply()
 
+    var appThemePreset: String
+        get() = prefs.getString("app_theme_preset", "EMERALD") ?: "EMERALD"
+        set(value) = prefs.edit().putString("app_theme_preset", value).apply()
+
     var silentHoursEnabled: Boolean
         get() = prefs.getBoolean("silent_hours_enabled", true)
         set(value) = prefs.edit().putBoolean("silent_hours_enabled", value).apply()

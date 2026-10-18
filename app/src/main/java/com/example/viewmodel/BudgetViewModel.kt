@@ -31,6 +31,7 @@ import java.util.Calendar
 import com.example.data.GoldPrice
 import kotlinx.coroutines.Dispatchers
 import org.jsoup.Jsoup
+import com.example.ui.theme.AppThemePreset
 
 data class BudgetUiState(
     val transactions: List<Transaction> = emptyList(),
@@ -84,9 +85,17 @@ class BudgetViewModel(
     private val _darkThemeEnabled = MutableStateFlow(preferenceManager.darkThemeEnabled)
     val darkThemeEnabled = _darkThemeEnabled.asStateFlow()
 
+    private val _themePreset = MutableStateFlow(AppThemePreset.fromId(preferenceManager.appThemePreset))
+    val themePreset = _themePreset.asStateFlow()
+
     fun toggleDarkTheme(enabled: Boolean) {
         preferenceManager.darkThemeEnabled = enabled
         _darkThemeEnabled.value = enabled
+    }
+
+    fun setThemePreset(preset: AppThemePreset) {
+        preferenceManager.appThemePreset = preset.id
+        _themePreset.value = preset
     }
 
     init {
