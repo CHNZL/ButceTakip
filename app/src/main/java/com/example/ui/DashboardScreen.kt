@@ -49,7 +49,11 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.ViewAgenda
+import androidx.compose.foundation.BorderStroke
 import com.example.ui.theme.AppThemePreset
+import com.example.ui.theme.LayoutStyle
 import com.example.ui.theme.LocalAppThemeColors
 import coil.compose.AsyncImage
 import com.example.viewmodel.AuthViewModel
@@ -77,6 +81,8 @@ fun DashboardScreen(
     var showThemeDialog by remember { mutableStateOf(false) }
     val appThemeColors = LocalAppThemeColors.current
     val currentThemePreset by viewModel.themePreset.collectAsStateWithLifecycle()
+    val currentLayoutStyleString by viewModel.layoutStyle.collectAsStateWithLifecycle()
+    val currentLayoutStyle = LayoutStyle.fromId(currentLayoutStyleString)
 
     LaunchedEffect(authState) {
         if (authState is com.example.viewmodel.AuthState.Authenticated) {
@@ -255,12 +261,59 @@ fun DashboardScreen(
                                 }
                             }
                         }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(when(selectedTab) { 0 -> "Bütçem"; 1 -> "Gelirler"; 2 -> "Ödeme Takibi"; 3 -> "Birikimlerim"; 4 -> "Geçmiş"; 5 -> "Analiz"; 7 -> "Tasarruf Finansmanı"; 8 -> "Konut Kredisi"; else -> "Ayarlar" }, fontWeight = FontWeight.Medium, color = onSecondaryContainerColor)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            val greetingName = if (savedName != "Gizli Kullanici" && savedName.isNotBlank()) savedName.split(" ").first() else "Cihan"
+                            Text(
+                                text = if (selectedTab == 0) "Merhaba, $greetingName 👋" else when(selectedTab) { 1 -> "Gelirler"; 2 -> "Ödeme Takibi"; 3 -> "Birikimlerim"; 4 -> "Geçmiş"; 5 -> "Analiz"; 7 -> "Tasarruf Finansmanı"; 8 -> "Konut Kredisi"; else -> "Ayarlar" },
+                                fontWeight = FontWeight.ExtraBold,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (selectedTab == 0) {
+                                val dateFormat = remember { SimpleDateFormat("d MMMM EEEE", Locale("tr", "TR")) }
+                                Text(
+                                    text = dateFormat.format(Date()),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
                     }
                 },
                 actions = {
                     val isDark by viewModel.darkThemeEnabled.collectAsStateWithLifecycle()
+                    Surface(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable {
+                                val nextStyle = if (currentLayoutStyle == LayoutStyle.MODERN) LayoutStyle.CLASSIC else LayoutStyle.MODERN
+                                viewModel.setLayoutStyle(nextStyle.id)
+                            },
+                        color = if (currentLayoutStyle == LayoutStyle.MODERN) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(20.dp),
+                        border = BorderStroke(1.dp, if (currentLayoutStyle == LayoutStyle.MODERN) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else Color.Transparent)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = if (currentLayoutStyle == LayoutStyle.MODERN) Icons.Default.Bolt else Icons.Default.ViewAgenda,
+                                contentDescription = null,
+                                tint = if (currentLayoutStyle == LayoutStyle.MODERN) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = if (currentLayoutStyle == LayoutStyle.MODERN) "Modern" else "Klasik",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (currentLayoutStyle == LayoutStyle.MODERN) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                     IconButton(onClick = { showThemeDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.Palette,
@@ -404,61 +457,198 @@ fun DashboardScreen(
                     val cmSaving = thisMonthTxs.filter { it.type == TransactionType.SAVING }.sumOf { it.amount }
                     val cmBalance = cmIncome - cmExpense - cmSaving
                     
-                    item {
-                        BudgetSummaryCards(cmBalance, cmIncome, cmExpense, cmSaving, isDark)
-                        
-                        // ALtin fiyatlari
-                        GoldPricesSection(
-                            goldPrices = viewModel.goldPrices.collectAsStateWithLifecycle().value,
-                            isFetching = viewModel.isFetchingGold.collectAsStateWithLifecycle().value,
-                            lastUpdate = viewModel.lastGoldUpdate.collectAsStateWithLifecycle().value,
-                            onRefresh = { viewModel.fetchGoldPrices() }
-                        )
-
-                        // Banka kurları
-                        BankRatesSection(
-                            bankRates = viewModel.bankRates.collectAsStateWithLifecycle().value,
-                            isFetching = viewModel.isFetchingBankRates.collectAsStateWithLifecycle().value,
-                            lastUpdate = viewModel.lastBankRateUpdate.collectAsStateWithLifecycle().value,
-                            onRefresh = { viewModel.fetchBankRates() }
-                        )
-
-                        // Ziraat kurları
-                        ZiraatRatesSection(
-                            ziraatRates = viewModel.ziraatRates.collectAsStateWithLifecycle().value,
-                            isFetching = viewModel.isFetchingZiraatRates.collectAsStateWithLifecycle().value,
-                            lastUpdate = viewModel.lastZiraatRateUpdate.collectAsStateWithLifecycle().value,
-                            onRefresh = { viewModel.fetchZiraatRates() }
-                        )
-                        
-                        Text(
-                            text = "Yaklaşan Ödemeler",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFF001D36),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                        )
-                    }
-                    items(upcoming) { transaction ->
-                        TransactionItem(
-                            transaction = transaction,
-                            onDelete = { viewModel.deleteTransaction(transaction.id) },
-                            isDark = isDark
-                        )
-                    }
-                    if (upcoming.isEmpty()) {
+                    if (currentLayoutStyle == LayoutStyle.MODERN) {
                         item {
-                            Box(
+                            ModernHeroWalletCard(
+                                balance = cmBalance,
+                                income = cmIncome,
+                                expense = cmExpense,
+                                saving = cmSaving,
+                                isDark = isDark,
+                                onAddExpense = {
+                                    editingTransaction = null
+                                    showAddDialog = true
+                                },
+                                onAddIncome = {
+                                    editingTransaction = null
+                                    showAddDialog = true
+                                },
+                                onAddSaving = {
+                                    editingTransaction = null
+                                    showAddDialog = true
+                                },
+                                onOpenTheme = {
+                                    showThemeDialog = true
+                                }
+                            )
+
+                            ModernMarketRatesHub(
+                                goldPrices = viewModel.goldPrices.collectAsStateWithLifecycle().value,
+                                isFetchingGold = viewModel.isFetchingGold.collectAsStateWithLifecycle().value,
+                                lastGoldUpdate = viewModel.lastGoldUpdate.collectAsStateWithLifecycle().value,
+                                onRefreshGold = { viewModel.fetchGoldPrices() },
+                                bankRates = viewModel.bankRates.collectAsStateWithLifecycle().value,
+                                isFetchingBank = viewModel.isFetchingBankRates.collectAsStateWithLifecycle().value,
+                                lastBankUpdate = viewModel.lastBankRateUpdate.collectAsStateWithLifecycle().value,
+                                onRefreshBank = { viewModel.fetchBankRates() },
+                                ziraatRates = viewModel.ziraatRates.collectAsStateWithLifecycle().value,
+                                isFetchingZiraat = viewModel.isFetchingZiraatRates.collectAsStateWithLifecycle().value,
+                                lastZiraatUpdate = viewModel.lastZiraatRateUpdate.collectAsStateWithLifecycle().value,
+                                onRefreshZiraat = { viewModel.fetchZiraatRates() },
+                                isDark = isDark
+                            )
+
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(32.dp),
-                                contentAlignment = Alignment.Center
+                                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    "Yaklaşan ödeme bulunmuyor.",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "Yaklaşan Ödemeler",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    if (upcoming.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Surface(
+                                            color = if (isDark) Color(0xFF450A0A) else Color(0xFFFEE2E2),
+                                            shape = RoundedCornerShape(6.dp)
+                                        ) {
+                                            Text(
+                                                text = "${upcoming.size} Bekliyor",
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = if (isDark) Color(0xFFFCA5A5) else Color(0xFFDC2626),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                                TextButton(
+                                    onClick = { selectedTab = 2 },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                                ) {
+                                    Text("Tümünü Gör", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        items(upcoming) { transaction ->
+                            ModernTransactionItem(
+                                transaction = transaction,
+                                onDelete = { viewModel.deleteTransaction(transaction.id) },
+                                isDark = isDark
+                            )
+                        }
+
+                        if (upcoming.isEmpty()) {
+                            item {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(containerColor = if (isDark) MaterialTheme.colorScheme.surface else Color.White),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(20.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(CircleShape)
+                                                .background(if (isDark) Color(0xFF064E3B) else Color(0xFFD1FAE5)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Rounded.CheckCircle,
+                                                contentDescription = null,
+                                                tint = Color(0xFF10B981),
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            "Harika! Yaklaşan ödemeniz bulunmuyor.",
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            "Bu ay için bekleyen tüm ödemeleriniz güncel.",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // CLASSIC LAYOUT
+                        item {
+                            BudgetSummaryCards(cmBalance, cmIncome, cmExpense, cmSaving, isDark)
+                            
+                            // Altin fiyatlari
+                            GoldPricesSection(
+                                goldPrices = viewModel.goldPrices.collectAsStateWithLifecycle().value,
+                                isFetching = viewModel.isFetchingGold.collectAsStateWithLifecycle().value,
+                                lastUpdate = viewModel.lastGoldUpdate.collectAsStateWithLifecycle().value,
+                                onRefresh = { viewModel.fetchGoldPrices() }
+                            )
+
+                            // Banka kurları
+                            BankRatesSection(
+                                bankRates = viewModel.bankRates.collectAsStateWithLifecycle().value,
+                                isFetching = viewModel.isFetchingBankRates.collectAsStateWithLifecycle().value,
+                                lastUpdate = viewModel.lastBankRateUpdate.collectAsStateWithLifecycle().value,
+                                onRefresh = { viewModel.fetchBankRates() }
+                            )
+
+                            // Ziraat kurları
+                            ZiraatRatesSection(
+                                ziraatRates = viewModel.ziraatRates.collectAsStateWithLifecycle().value,
+                                isFetching = viewModel.isFetchingZiraatRates.collectAsStateWithLifecycle().value,
+                                lastUpdate = viewModel.lastZiraatRateUpdate.collectAsStateWithLifecycle().value,
+                                onRefresh = { viewModel.fetchZiraatRates() }
+                            )
+                            
+                            Text(
+                                text = "Yaklaşan Ödemeler",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
+                        }
+                        items(upcoming) { transaction ->
+                            TransactionItem(
+                                transaction = transaction,
+                                onDelete = { viewModel.deleteTransaction(transaction.id) },
+                                isDark = isDark
+                            )
+                        }
+                        if (upcoming.isEmpty()) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "Yaklaşan ödeme bulunmuyor.",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
@@ -630,8 +820,10 @@ fun DashboardScreen(
         ThemeSelectionDialog(
             onDismiss = { showThemeDialog = false },
             currentPreset = currentThemePreset,
+            currentLayoutStyle = currentLayoutStyle,
             isDark = isDark,
             onSelectPreset = { viewModel.setThemePreset(it) },
+            onSelectLayoutStyle = { viewModel.setLayoutStyle(it.id) },
             onToggleDarkTheme = { viewModel.toggleDarkTheme(it) }
         )
     }

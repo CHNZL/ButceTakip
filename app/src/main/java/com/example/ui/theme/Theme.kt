@@ -160,6 +160,43 @@ private val TitaniumLightColorScheme = lightColorScheme(
     error = ErrorRed
 )
 
+// --- 5. ROYAL AMETHYST & VELVET LILAC ---
+private val AmethystDarkColorScheme = darkColorScheme(
+    primary = AmethystLilacPrimary,
+    onPrimary = Color(0xFF1E0A3C),
+    primaryContainer = Color(0xFF3B0764),
+    onPrimaryContainer = Color(0xFFF3E8FF),
+    secondary = AmethystVioletSecondary,
+    onSecondary = Color(0xFF1E0A3C),
+    secondaryContainer = Color(0xFF261D45),
+    onSecondaryContainer = Color(0xFFE9D5FF),
+    background = AmethystDarkBackground,
+    onBackground = Color(0xFFFAF5FF),
+    surface = AmethystDarkSurface,
+    onSurface = Color(0xFFFAF5FF),
+    surfaceVariant = AmethystDarkSurfaceVariant,
+    onSurfaceVariant = Color(0xFFA1A1AA),
+    error = ErrorRed
+)
+
+private val AmethystLightColorScheme = lightColorScheme(
+    primary = AmethystNoblePrimary,
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFF3E8FF),
+    onPrimaryContainer = Color(0xFF581C87),
+    secondary = AmethystLilacPrimary,
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFFAF5FF),
+    onSecondaryContainer = Color(0xFF6B21A8),
+    background = AmethystLightBackground,
+    onBackground = Color(0xFF3B0764),
+    surface = AmethystLightSurface,
+    onSurface = Color(0xFF0F172A),
+    surfaceVariant = AmethystLightSurfaceVariant,
+    onSurfaceVariant = Color(0xFF475569),
+    error = ErrorRed
+)
+
 @Composable
 fun MyApplicationTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -177,6 +214,7 @@ fun MyApplicationTheme(
             AppThemePreset.SAPPHIRE -> if (darkTheme) SapphireDarkColorScheme else SapphireLightColorScheme
             AppThemePreset.OBSIDIAN_ROSE -> if (darkTheme) ObsidianDarkColorScheme else ObsidianLightColorScheme
             AppThemePreset.TITANIUM_CYAN -> if (darkTheme) TitaniumDarkColorScheme else TitaniumLightColorScheme
+            AppThemePreset.AMETHYST -> if (darkTheme) AmethystDarkColorScheme else AmethystLightColorScheme
         }
     }
 
@@ -287,6 +325,33 @@ fun MyApplicationTheme(
                 accentColor = Color(0xFF0284C7),
                 cardBorder = Color(0xFFE0F2FE),
                 surfaceHighlight = Color(0xFFBAE6FD)
+            )
+        }
+        AppThemePreset.AMETHYST -> if (darkTheme) {
+            AppThemeColors(
+                preset = preset,
+                isDark = true,
+                heroGradient = listOf(Color(0xFF1A0B2E), Color(0xFF4C1D95), Color(0xFF6B21A8)),
+                navBarContainer = Color(0xFF0D0818),
+                navBarIndicator = Color(0xFFA855F7),
+                navBarSelectedText = Color(0xFF2E1065),
+                navBarUnselected = Color(0xFF94A3B8),
+                accentColor = Color(0xFFA855F7),
+                cardBorder = Color(0xFF261D45).copy(alpha = 0.8f),
+                surfaceHighlight = Color(0xFF3B0764)
+            )
+        } else {
+            AppThemeColors(
+                preset = preset,
+                isDark = false,
+                heroGradient = listOf(Color(0xFF581C87), Color(0xFF7E22CE)),
+                navBarContainer = Color(0xFFFFFFFF),
+                navBarIndicator = Color(0xFFF3E8FF),
+                navBarSelectedText = Color(0xFF581C87),
+                navBarUnselected = Color(0xFF6B7280),
+                accentColor = Color(0xFF7E22CE),
+                cardBorder = Color(0xFFF3E8FF),
+                surfaceHighlight = Color(0xFFF3E8FF)
             )
         }
     }

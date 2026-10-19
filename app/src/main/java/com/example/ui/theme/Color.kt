@@ -45,6 +45,17 @@ val ArcticLightSurface = Color(0xFFFFFFFF)
 val ArcticLightSurfaceVariant = Color(0xFFE0F2FE)
 val ArcticDeepPrimary = Color(0xFF0284C7)
 
+// Royal Amethyst & Velvet Lilac
+val AmethystDarkBackground = Color(0xFF0F0B1E)
+val AmethystDarkSurface = Color(0xFF17122C)
+val AmethystDarkSurfaceVariant = Color(0xFF261D45)
+val AmethystLilacPrimary = Color(0xFFA855F7)
+val AmethystVioletSecondary = Color(0xFFC084FC)
+val AmethystLightBackground = Color(0xFFFAF5FF)
+val AmethystLightSurface = Color(0xFFFFFFFF)
+val AmethystLightSurfaceVariant = Color(0xFFF3E8FF)
+val AmethystNoblePrimary = Color(0xFF7E22CE)
+
 // Semantic Colors
 val SuccessGreen = Color(0xFF16A34A)
 val ErrorRed = Color(0xFFDC2626)

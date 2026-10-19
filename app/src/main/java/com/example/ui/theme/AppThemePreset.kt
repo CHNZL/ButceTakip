@@ -3,6 +3,32 @@ package com.example.ui.theme
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
+enum class LayoutStyle(
+    val id: String,
+    val displayName: String,
+    val subtitle: String,
+    val badgeText: String
+) {
+    MODERN(
+        id = "MODERN",
+        displayName = "Modern Akıcı Tasarım (Neo-Fintech)",
+        subtitle = "Yeni nesil cüzdan kartı, akıllı nakit akışı çubuğu, hızlı işlem menüsü ve sekmeli piyasa merkezi",
+        badgeText = "YENİ TASARIM"
+    ),
+    CLASSIC(
+        id = "CLASSIC",
+        displayName = "Klasik Kurumsal Tasarım",
+        subtitle = "Geleneksel dikey akış ve orijinal liste görünümü",
+        badgeText = "ORİJİNAL"
+    );
+
+    companion object {
+        fun fromId(id: String?): LayoutStyle {
+            return entries.find { it.id.equals(id, ignoreCase = true) } ?: MODERN
+        }
+    }
+}
+
 enum class AppThemePreset(
     val id: String,
     val displayName: String,
@@ -47,6 +73,15 @@ enum class AppThemePreset(
         iconColor = Color(0xFF06B6D4),
         previewColors = listOf(Color(0xFF080C14), Color(0xFF0F1726), Color(0xFF0284C7), Color(0xFF06B6D4)),
         previewGradient = listOf(Color(0xFF0A1526), Color(0xFF113254), Color(0xFF06B6D4))
+    ),
+    AMETHYST(
+        id = "AMETHYST",
+        displayName = "Kraliyet Ametisti & Kadife Mor",
+        subtitle = "Derin lüks mor ve büyüleyici lila ışıltısı",
+        badgeText = "PRESTİJ",
+        iconColor = Color(0xFFA855F7),
+        previewColors = listOf(Color(0xFF0F0B1E), Color(0xFF17122C), Color(0xFF7E22CE), Color(0xFFA855F7)),
+        previewGradient = listOf(Color(0xFF1A0B2E), Color(0xFF4C1D95), Color(0xFFA855F7))
     );
 
     companion object {

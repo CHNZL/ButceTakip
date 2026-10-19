@@ -88,6 +88,9 @@ class BudgetViewModel(
     private val _themePreset = MutableStateFlow(AppThemePreset.fromId(preferenceManager.appThemePreset))
     val themePreset = _themePreset.asStateFlow()
 
+    private val _layoutStyle = MutableStateFlow(preferenceManager.layoutStyle)
+    val layoutStyle = _layoutStyle.asStateFlow()
+
     fun toggleDarkTheme(enabled: Boolean) {
         preferenceManager.darkThemeEnabled = enabled
         _darkThemeEnabled.value = enabled
@@ -96,6 +99,11 @@ class BudgetViewModel(
     fun setThemePreset(preset: AppThemePreset) {
         preferenceManager.appThemePreset = preset.id
         _themePreset.value = preset
+    }
+
+    fun setLayoutStyle(style: String) {
+        preferenceManager.layoutStyle = style
+        _layoutStyle.value = style
     }
 
     init {

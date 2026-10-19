@@ -11,8 +11,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material3.*
@@ -27,14 +30,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.AppThemePreset
+import com.example.ui.theme.LayoutStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThemeSelectionDialog(
     onDismiss: () -> Unit,
     currentPreset: AppThemePreset,
+    currentLayoutStyle: LayoutStyle = LayoutStyle.MODERN,
     isDark: Boolean,
     onSelectPreset: (AppThemePreset) -> Unit,
+    onSelectLayoutStyle: (LayoutStyle) -> Unit = {},
     onToggleDarkTheme: (Boolean) -> Unit
 ) {
     AlertDialog(
@@ -46,7 +52,7 @@ fun ThemeSelectionDialog(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(38.dp)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primaryContainer),
                     contentAlignment = Alignment.Center
@@ -55,18 +61,18 @@ fun ThemeSelectionDialog(
                         Icons.Default.Palette,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        "Görünüm & Tema",
+                        "Tasarım & Tema Merkezi",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(
-                        "Uygulamanın görsel temasını seçin",
+                        "Yeni akıcı tasarımı veya klasik görünümü seçin",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -74,72 +80,173 @@ fun ThemeSelectionDialog(
             }
         },
         text = {
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                    .heightIn(max = 480.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Dark / Light Mode Switch Row
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = if (isDark) Icons.Rounded.DarkMode else Icons.Rounded.LightMode,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(22.dp)
+                // --- 1. TASARIM DÜZENİ SEÇİMİ ---
+                item {
+                    Text(
+                        text = "GÖRÜNÜM VE TASARIM DÜZENİ",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LayoutStyle.entries.forEach { style ->
+                            val isSelected = currentLayoutStyle == style
+                            val borderCol by animateColorAsState(
+                                targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                label = "styleBorder"
                             )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    text = if (isDark) "Koyu Mod" else "Açık Mod",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = if (isDark) "Göz yormayan koyu renkler" else "Ferah ve aydınlık renkler",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            val containerCol by animateColorAsState(
+                                targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface,
+                                label = "styleContainer"
+                            )
+
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSelectLayoutStyle(style) },
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(containerColor = containerCol),
+                                border = BorderStroke(if (isSelected) 2.dp else 1.dp, borderCol)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = if (style == LayoutStyle.MODERN) Icons.Default.Bolt else Icons.Default.ViewAgenda,
+                                                contentDescription = null,
+                                                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Text(
+                                                    text = style.displayName,
+                                                    style = MaterialTheme.typography.titleSmall,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Surface(
+                                                    color = if (style == LayoutStyle.MODERN) Color(0xFF10B981) else Color(0xFF64748B),
+                                                    shape = RoundedCornerShape(6.dp)
+                                                ) {
+                                                    Text(
+                                                        text = style.badgeText,
+                                                        fontSize = 7.sp,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = Color.White,
+                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+                                            Text(
+                                                text = style.subtitle,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontSize = 11.sp,
+                                                lineHeight = 14.sp
+                                            )
+                                        }
+                                    }
+                                    if (isSelected) {
+                                        Icon(
+                                            Icons.Default.CheckCircle,
+                                            contentDescription = "Seçili",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
-                        Switch(
-                            checked = isDark,
-                            onCheckedChange = { onToggleDarkTheme(it) },
-                            thumbContent = {
-                                Icon(
-                                    imageVector = if (isDark) Icons.Rounded.DarkMode else Icons.Rounded.LightMode,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                            }
-                        )
                     }
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                // --- 2. DARK / LIGHT MODE ---
+                item {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = if (isDark) Icons.Rounded.DarkMode else Icons.Rounded.LightMode,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = if (isDark) "Koyu Mod" else "Açık Mod",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = if (isDark) "Göz yormayan koyu zemin" else "Ferah ve aydınlık zemin",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = isDark,
+                                onCheckedChange = { onToggleDarkTheme(it) },
+                                thumbContent = {
+                                    Icon(
+                                        imageVector = if (isDark) Icons.Rounded.DarkMode else Icons.Rounded.LightMode,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
 
-                Text(
-                    text = "TEMA PALETLERİ",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                // --- 3. RENK PALETLERİ ---
+                item {
+                    Text(
+                        text = "RENK PALETLERİ & AMBİYANS",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
 
-                // Theme Presets list
-                AppThemePreset.entries.forEach { preset ->
+                items(AppThemePreset.entries) { preset ->
                     ThemePresetCard(
                         preset = preset,
                         isSelected = currentPreset == preset,
@@ -148,12 +255,24 @@ fun ThemeSelectionDialog(
                 }
             }
         },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    onSelectPreset(AppThemePreset.SAPPHIRE)
+                    onSelectLayoutStyle(LayoutStyle.CLASSIC)
+                }
+            ) {
+                Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Klasiğe Dön", fontSize = 12.sp)
+            }
+        },
         confirmButton = {
             Button(
                 onClick = onDismiss,
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Tamam", fontWeight = FontWeight.Bold)
+                Text("Uygula & Kapat", fontWeight = FontWeight.Bold)
             }
         }
     )
@@ -179,15 +298,15 @@ fun ThemePresetCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         border = BorderStroke(if (isSelected) 2.dp else 1.dp, borderColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 4.dp else 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 3.dp else 1.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
+                .padding(10.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -213,7 +332,12 @@ fun ThemePresetCard(
                             if (preset.badgeText != null) {
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Surface(
-                                    color = if (preset == AppThemePreset.EMERALD) Color(0xFF10B981) else if (preset == AppThemePreset.SAPPHIRE) Color(0xFF0284C7) else MaterialTheme.colorScheme.primary,
+                                    color = when (preset) {
+                                        AppThemePreset.EMERALD -> Color(0xFF10B981)
+                                        AppThemePreset.SAPPHIRE -> Color(0xFF0284C7)
+                                        AppThemePreset.AMETHYST -> Color(0xFF9333EA)
+                                        else -> MaterialTheme.colorScheme.primary
+                                    },
                                     shape = RoundedCornerShape(6.dp)
                                 ) {
                                     Text(
@@ -221,7 +345,7 @@ fun ThemePresetCard(
                                         fontSize = 8.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = Color.White,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                                     )
                                 }
                             }
@@ -230,7 +354,8 @@ fun ThemePresetCard(
                             text = preset.subtitle,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1
+                            maxLines = 1,
+                            fontSize = 11.sp
                         )
                     }
                 }
@@ -240,12 +365,12 @@ fun ThemePresetCard(
                         Icons.Default.CheckCircle,
                         contentDescription = "Seçili",
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             // Palette preview bar and dots
             Row(
@@ -257,19 +382,19 @@ fun ThemePresetCard(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp))
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
                         .background(Brush.horizontalGradient(preset.previewGradient))
                 )
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
                 // Color swatches
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                     preset.previewColors.forEach { color ->
                         Box(
                             modifier = Modifier
-                                .size(12.dp)
+                                .size(10.dp)
                                 .clip(CircleShape)
                                 .background(color)
                                 .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)

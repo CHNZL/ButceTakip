@@ -42,6 +42,10 @@ class PreferenceManager(context: Context) {
         get() = prefs.getString("app_theme_preset", "EMERALD") ?: "EMERALD"
         set(value) = prefs.edit().putString("app_theme_preset", value).apply()
 
+    var layoutStyle: String
+        get() = prefs.getString("layout_style", "MODERN") ?: "MODERN"
+        set(value) = prefs.edit().putString("layout_style", value).apply()
+
     var silentHoursEnabled: Boolean
         get() = prefs.getBoolean("silent_hours_enabled", true)
         set(value) = prefs.edit().putBoolean("silent_hours_enabled", value).apply()
