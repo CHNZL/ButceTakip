@@ -30,6 +30,7 @@ fun PdfExportDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(24.dp),
         title = {
             Text("PDF Olarak İndir", fontWeight = FontWeight.Bold)
         },
@@ -127,15 +128,17 @@ fun PdfExportDialog(
                         onExport(selectedYear, selectedMonth)
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0B2349)),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text("İndir", color = Color.White)
+                Text("İndir", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("İptal", color = Color(0xFF475569))
+            OutlinedButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("İptal", fontWeight = FontWeight.SemiBold)
             }
         }
     )

@@ -19,7 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -83,7 +83,7 @@ fun AddTransactionDialog(
     var categoryExpanded by remember { mutableStateOf(false) }
     var personExpanded by remember { mutableStateOf(false) }
 
-    val sdf = SimpleDateFormat("dd MMMM yyyy", Locale("tr"))
+    val sdf = remember { SimpleDateFormat("dd MMMM yyyy", Locale("tr")) }
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = timestamp)
@@ -103,127 +103,171 @@ fun AddTransactionDialog(
         }
     }
 
-    // --- Premium Colors ---
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
-    val activeColor = when(type) {
-        TransactionType.INCOME -> Color(0xFF10B981) // Emerald
-        TransactionType.EXPENSE -> Color(0xFFEF4444) // Red
-        TransactionType.SAVING -> Color(0xFFF97316) // Orange
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val activeColor = when (type) {
+        TransactionType.INCOME -> Color(0xFF10B981)
+        TransactionType.EXPENSE -> Color(0xFFEF4444)
+        TransactionType.SAVING -> Color(0xFF0284C7)
     }
-    val dialogBgColor = activeColor
 
     androidx.compose.ui.window.Dialog(
         onDismissRequest = onDismiss,
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Surface(
+        Card(
             modifier = Modifier
                 .fillMaxWidth(0.92f)
                 .wrapContentHeight(),
             shape = RoundedCornerShape(28.dp),
-            color = dialogBgColor,
-            tonalElevation = 6.dp,
-            shadowElevation = 12.dp
+            colors = CardDefaults.cardColors(containerColor = if (isDark) MaterialTheme.colorScheme.surface else Color.White),
+            border = BorderStroke(1.dp, activeColor.copy(alpha = 0.35f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header Area
-                Text(
-                    text = "Yeni İşlem",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+                // Header Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(activeColor.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                when (type) {
+                                    TransactionType.INCOME -> Icons.Rounded.TrendingUp
+                                    TransactionType.EXPENSE -> Icons.Rounded.Payments
+                                    TransactionType.SAVING -> Icons.Rounded.Savings
+                                },
+                                contentDescription = null,
+                                tint = activeColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = if (editingTransaction != null) "İşlemi Düzenle" else "Yeni İşlem Ekle",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Black,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = when (type) {
+                                    TransactionType.INCOME -> "Gelir Kaydı"
+                                    TransactionType.EXPENSE -> "Gider / Ödeme Kaydı"
+                                    TransactionType.SAVING -> "Birikim / Varlık Kaydı"
+                                },
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = activeColor
+                            )
+                        }
+                    }
 
-                if (fixedType == null) {
-                    // Premium Segmented Control
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Rounded.Close, contentDescription = "Kapat", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Segmented Control if not fixed
+                if (fixedType == null && editingTransaction == null) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.White.copy(alpha=0.2f), RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                             .padding(4.dp),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        CompactTab(
-                            text = "Gelir",
-                            selected = type == TransactionType.INCOME,
-                            onClick = { type = TransactionType.INCOME; category = null },
-                            modifier = Modifier.weight(1f)
+                        val types = listOf(
+                            Triple(TransactionType.INCOME, "Gelir", Color(0xFF10B981)),
+                            Triple(TransactionType.EXPENSE, "Gider", Color(0xFFEF4444)),
+                            Triple(TransactionType.SAVING, "Birikim", Color(0xFF0284C7))
                         )
-                        CompactTab(
-                            text = "Gider",
-                            selected = type == TransactionType.EXPENSE,
-                            onClick = { type = TransactionType.EXPENSE; category = null },
-                            modifier = Modifier.weight(1f)
-                        )
-                        CompactTab(
-                            text = "Birikim",
-                            selected = type == TransactionType.SAVING,
-                            onClick = { type = TransactionType.SAVING; category = null },
-                            modifier = Modifier.weight(1f)
-                        )
+                        types.forEach { (t, label, col) ->
+                            val isSelected = type == t
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (isSelected) col else Color.Transparent)
+                                    .clickable {
+                                        type = t
+                                        category = null
+                                    }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = label,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                 }
 
-                // Form Body - Super Compact
+                // Form Fields
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp) // Reduced spacing
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    val fieldColors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.White,
-                        unfocusedBorderColor = Color.White.copy(alpha = 0.5f),
-                        focusedContainerColor = Color.White.copy(alpha = 0.1f),
-                        unfocusedContainerColor = Color.White.copy(alpha = 0.1f),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        cursorColor = Color.White,
-                        disabledContainerColor = Color.White.copy(alpha = 0.1f),
-                        disabledTextColor = Color.White,
-                        disabledBorderColor = Color.White.copy(alpha = 0.5f),
-                        focusedPlaceholderColor = Color.White.copy(alpha = 0.7f),
-                        unfocusedPlaceholderColor = Color.White.copy(alpha = 0.7f)
-                    )
-                    val fieldShape = RoundedCornerShape(10.dp)
-
-                    // ROW 1: DATE & CATEGORY
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Date & Category in one row or two
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         OutlinedTextField(
                             value = sdf.format(Date(timestamp)),
                             onValueChange = {},
-                            placeholder = { Text("Tarih", color = Color.White.copy(0.7f)) },
+                            label = { Text("Tarih") },
                             readOnly = true,
                             enabled = false,
                             singleLine = true,
-                            modifier = Modifier.weight(1f).clickable { showDatePicker = true }.height(50.dp),
-                            colors = fieldColors,
-                            textStyle = LocalTextStyle.current.copy(fontWeight = FontWeight.Medium, fontSize = 13.sp),
-                            shape = fieldShape,
-                            leadingIcon = { Icon(Icons.Rounded.EditCalendar, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp)) }
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { showDatePicker = true },
+                            shape = RoundedCornerShape(14.dp),
+                            leadingIcon = { Icon(Icons.Rounded.CalendarToday, contentDescription = null, tint = activeColor, modifier = Modifier.size(18.dp)) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                disabledBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         )
 
                         ExposedDropdownMenuBox(
                             expanded = categoryExpanded,
                             onExpandedChange = { categoryExpanded = !categoryExpanded },
-                            modifier = Modifier.weight(1.3f)
+                            modifier = Modifier.weight(1.2f)
                         ) {
                             OutlinedTextField(
                                 value = category?.name ?: "",
                                 onValueChange = {},
                                 readOnly = true,
-                                singleLine = true,
-                                placeholder = { Text("Kategori", color = Color.White.copy(0.7f)) },
+                                label = { Text("Kategori") },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
-                                modifier = Modifier.menuAnchor().fillMaxWidth().height(50.dp),
-                                shape = fieldShape,
-                                textStyle = LocalTextStyle.current.copy(fontWeight = FontWeight.Medium, fontSize = 13.sp),
-                                colors = fieldColors
+                                modifier = Modifier
+                                    .menuAnchor()
+                                    .fillMaxWidth(),
+                                shape = RoundedCornerShape(14.dp)
                             )
                             ExposedDropdownMenu(
                                 expanded = categoryExpanded,
@@ -231,15 +275,18 @@ fun AddTransactionDialog(
                             ) {
                                 categories.forEach { selectionOption ->
                                     DropdownMenuItem(
-                                        text = { Text(selectionOption.name) },
-                                        onClick = { category = selectionOption; categoryExpanded = false }
+                                        text = { Text(selectionOption.name, fontWeight = FontWeight.Medium) },
+                                        onClick = {
+                                            category = selectionOption
+                                            categoryExpanded = false
+                                        }
                                     )
                                 }
                             }
                         }
                     }
 
-                    // ROW 2: PERSON
+                    // Person Selector
                     ExposedDropdownMenuBox(
                         expanded = personExpanded,
                         onExpandedChange = { personExpanded = !personExpanded }
@@ -248,52 +295,57 @@ fun AddTransactionDialog(
                             value = person?.name ?: "",
                             onValueChange = {},
                             readOnly = true,
-                            singleLine = true,
-                            placeholder = { Text("İlgili Kişi (İsteğe Bağlı)", color = Color.White.copy(0.7f)) },
+                            label = { Text("İlgili Kişi (İsteğe Bağlı)") },
+                            leadingIcon = { Icon(Icons.Rounded.Person, contentDescription = null, tint = activeColor, modifier = Modifier.size(18.dp)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = personExpanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth().height(50.dp),
-                            shape = fieldShape,
-                            textStyle = LocalTextStyle.current.copy(fontWeight = FontWeight.Medium, fontSize = 13.sp),
-                            colors = fieldColors
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp)
                         )
                         ExposedDropdownMenu(
                             expanded = personExpanded,
                             onDismissRequest = { personExpanded = false }
                         ) {
-                            DropdownMenuItem(text = { Text("Temizle", color = MaterialTheme.colorScheme.error) }, onClick = { person = null; personExpanded = false })
-                            persons.forEach { selectionOption ->
+                            DropdownMenuItem(
+                                text = { Text("Temizle (Kişisiz)", color = MaterialTheme.colorScheme.error) },
+                                onClick = {
+                                    person = null
+                                    personExpanded = false
+                                }
+                            )
+                            persons.forEach { p ->
                                 DropdownMenuItem(
-                                    text = { Text(selectionOption.name) },
-                                    onClick = { person = selectionOption; personExpanded = false }
+                                    text = { Text(p.name, fontWeight = FontWeight.Medium) },
+                                    onClick = {
+                                        person = p
+                                        personExpanded = false
+                                    }
                                 )
                             }
                         }
                     }
 
-                    // ROW 3: AMOUNT & OPTIONS
+                    // Amount input or Quantity/UnitPrice
                     if (type == TransactionType.SAVING) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedTextField(
                                 value = quantityText,
                                 onValueChange = { quantityText = com.example.util.formatInputAmount(it) },
-                                placeholder = { Text("Adet", color = Color.White.copy(0.7f)) },
+                                label = { Text("Adet / Gram") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                modifier = Modifier.weight(1f).height(50.dp),
+                                modifier = Modifier.weight(1f),
                                 singleLine = true,
-                                shape = fieldShape,
-                                colors = fieldColors,
-                                textStyle = LocalTextStyle.current.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                shape = RoundedCornerShape(14.dp)
                             )
                             OutlinedTextField(
                                 value = unitPriceText,
                                 onValueChange = { unitPriceText = com.example.util.formatInputAmount(it) },
-                                placeholder = { Text("Birim Fiyat", color = Color.White.copy(0.7f)) },
+                                label = { Text("Birim Fiyat (₺)") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                modifier = Modifier.weight(1f).height(50.dp),
+                                modifier = Modifier.weight(1f),
                                 singleLine = true,
-                                shape = fieldShape,
-                                colors = fieldColors,
-                                textStyle = LocalTextStyle.current.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                shape = RoundedCornerShape(14.dp)
                             )
                         }
 
@@ -301,140 +353,162 @@ fun AddTransactionDialog(
                         val up = com.example.util.parseFormattedAmount(unitPriceText) ?: 0.0
                         val computedAmount = q * up
 
-                        Text(
-                            text = "Toplam: ${com.example.util.FormatUtil.getCurrencyFormat().format(computedAmount)}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Black,
-                            color = Color.White,
-                            modifier = Modifier.align(Alignment.End).padding(vertical = 4.dp)
-                        )
+                        Surface(
+                            color = activeColor.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Toplam Hesaplanan Tutar", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    com.example.util.FormatUtil.getCurrencyFormat().format(computedAmount),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = activeColor
+                                )
+                            }
+                        }
                     } else {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedTextField(
                                 value = amountText,
                                 onValueChange = { amountText = com.example.util.formatInputAmount(it) },
-                                placeholder = { Text("İşlem Tutarı (₺)", color = Color.White.copy(0.7f)) },
+                                label = { Text("Tutar (₺)") },
+                                leadingIcon = { Text("₺", fontWeight = FontWeight.Black, fontSize = 16.sp, color = activeColor, modifier = Modifier.padding(start = 12.dp)) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                modifier = Modifier.weight(1.5f).height(50.dp).testTag("amount_input"),
+                                modifier = Modifier
+                                    .weight(1.4f)
+                                    .testTag("amount_input"),
                                 singleLine = true,
-                                shape = fieldShape,
-                                colors = fieldColors,
-                                textStyle = LocalTextStyle.current.copy(fontWeight = FontWeight.Black, fontSize = 16.sp),
-                                leadingIcon = { Text("₺", fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.padding(start=12.dp)) }
+                                shape = RoundedCornerShape(14.dp),
+                                textStyle = LocalTextStyle.current.copy(fontWeight = FontWeight.Black, fontSize = 16.sp)
                             )
 
                             if (type == TransactionType.EXPENSE) {
                                 OutlinedTextField(
                                     value = installmentsText,
                                     onValueChange = { newValue -> if (newValue.all { it.isDigit() }) installmentsText = newValue },
-                                    placeholder = { Text("Taksit", color = Color.White.copy(0.7f)) },
+                                    label = { Text("Taksit") },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    modifier = Modifier.weight(1f).height(50.dp),
+                                    modifier = Modifier.weight(0.9f),
                                     singleLine = true,
-                                    shape = fieldShape,
-                                    colors = fieldColors,
-                                    textStyle = LocalTextStyle.current.copy(fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                                    shape = RoundedCornerShape(14.dp)
                                 )
                             }
                         }
                     }
-                    
+
                     if (type == TransactionType.EXPENSE) {
-                        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(
                                     checked = isPaid,
                                     onCheckedChange = { isPaid = it },
-                                    colors = CheckboxDefaults.colors(checkedColor = Color.White, uncheckedColor = Color.White.copy(alpha=0.7f), checkmarkColor = activeColor)
+                                    colors = CheckboxDefaults.colors(checkedColor = Color(0xFF10B981))
                                 )
-                                Text("Bu ödeme yapıldı", color = Color.White, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                Text("Bu ödeme peşin / şimdiden yapıldı", fontSize = 12.sp, fontWeight = FontWeight.Medium)
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(
                                     checked = repeatUntilYearEnd,
                                     onCheckedChange = { repeatUntilYearEnd = it },
-                                    colors = CheckboxDefaults.colors(checkedColor = Color.White, uncheckedColor = Color.White.copy(alpha=0.7f), checkmarkColor = activeColor)
+                                    colors = CheckboxDefaults.colors(checkedColor = activeColor)
                                 )
-                                Text("Yıl boyunca tekrarla", color = Color.White, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                Text("Yıl sonuna kadar her ay tekrarla", fontSize = 12.sp, fontWeight = FontWeight.Medium)
                             }
                         }
-                    } 
+                    }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                    // Action Buttons
+                    // Dialog Actions
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         OutlinedButton(
                             onClick = onDismiss,
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, Color.White),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(14.dp)
                         ) {
-                            Text("İptal", fontWeight = FontWeight.Bold)
+                            Text("İptal", fontWeight = FontWeight.SemiBold)
                         }
-                        
+
                         val isEnabled = category != null && (if (type == TransactionType.SAVING) quantityText.isNotBlank() && unitPriceText.isNotBlank() else amountText.isNotBlank())
-                        
+
                         Button(
                             onClick = {
                                 var finalAmount = 0.0
                                 var q: Double? = null
                                 var up: Double? = null
                                 var inst: Int? = null
-                                
+
                                 if (type == TransactionType.SAVING) {
                                     q = com.example.util.parseFormattedAmount(quantityText)
                                     up = com.example.util.parseFormattedAmount(unitPriceText)
-                                    if (q != null && up != null) { finalAmount = q * up } else { return@Button }
+                                    if (q != null && up != null) {
+                                        finalAmount = q * up
+                                    } else {
+                                        return@Button
+                                    }
                                 } else {
                                     val parsedAmt = com.example.util.parseFormattedAmount(amountText)
-                                    if (parsedAmt != null) { finalAmount = parsedAmt } else { return@Button }
-                                    if (type == TransactionType.EXPENSE) { inst = installmentsText.toIntOrNull() }
+                                    if (parsedAmt != null) {
+                                        finalAmount = parsedAmt
+                                    } else {
+                                        return@Button
+                                    }
+                                    if (type == TransactionType.EXPENSE) {
+                                        inst = installmentsText.toIntOrNull()
+                                    }
                                 }
 
                                 if (category != null) {
                                     val finalPaid = if (type == TransactionType.EXPENSE) isPaid else true
-                                    onSave(editingTransaction?.id ?: 0, finalAmount, category!!.name, type, category!!.name, person?.name, timestamp, q, up, inst, finalPaid, repeatUntilYearEnd)
+                                    onSave(
+                                        editingTransaction?.id ?: 0,
+                                        finalAmount,
+                                        category!!.name,
+                                        type,
+                                        category!!.name,
+                                        person?.name,
+                                        timestamp,
+                                        q,
+                                        up,
+                                        inst,
+                                        finalPaid,
+                                        repeatUntilYearEnd
+                                    )
                                 }
                             },
                             enabled = isEnabled,
-                            modifier = Modifier.weight(1f).height(48.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = activeColor),
-                            shape = RoundedCornerShape(12.dp)
+                            modifier = Modifier
+                                .weight(1.3f)
+                                .height(48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = activeColor),
+                            shape = RoundedCornerShape(14.dp)
                         ) {
-                            Text("Onayla", fontWeight = FontWeight.Bold)
+                            Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(if (editingTransaction != null) "Güncelle" else "Kaydet", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun CompactTab(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (selected) Color.White else Color.Transparent)
-            .clickable { onClick() }
-            .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            color = if (selected) Color.Black else Color.White,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelLarge
-        )
     }
 }

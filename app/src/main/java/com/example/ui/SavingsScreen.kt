@@ -30,6 +30,7 @@ import com.example.data.GoldPrice
 import com.example.data.BankRate
 import com.example.data.Transaction
 import com.example.data.TransactionType
+import com.example.ui.theme.LocalAppThemeColors
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -372,6 +373,7 @@ fun SavingsScreen(
 
     val currencyFormat = remember { com.example.util.FormatUtil.getCurrencyFormat() }
     val dateFormat = remember { SimpleDateFormat("dd MMMM yyyy", Locale("tr")) }
+    val appThemeColors = LocalAppThemeColors.current
 
     LazyColumn(
         modifier = Modifier
@@ -389,7 +391,7 @@ fun SavingsScreen(
                     .clip(RoundedCornerShape(24.dp))
                     .background(
                         Brush.linearGradient(
-                            colors = listOf(Color(0xFF001D36), Color(0xFF00335A))
+                            colors = appThemeColors.heroGradient
                         )
                     )
                     .padding(24.dp)

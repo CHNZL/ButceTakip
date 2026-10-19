@@ -19,25 +19,33 @@ import com.example.util.PdfExporter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.Transaction
 import com.example.data.TransactionType
+import com.example.ui.theme.LocalAppThemeColors
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -46,11 +54,16 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Unit)? = null, onDelete: ((Transaction) -> Unit)? = null, isDark: Boolean = false) {
+fun HistoryScreen(
+    transactions: List<Transaction>,
+    onEdit: ((Transaction) -> Unit)? = null,
+    onDelete: ((Transaction) -> Unit)? = null,
+    isDark: Boolean = false
+) {
     var searchQuery by remember { mutableStateOf("") }
     
     val timeFilters = listOf("Tüm Zamanlar", "Son 7 Gün", "Son 15 Gün", "Bu Ay", "Geçen Ay", "Son 3 Ay", "Son 6 Ay", "Bu Yıl")
-    var selectedTimeFilter by remember { mutableStateOf(timeFilters[0]) }
+    var selectedTimeFilter by remember { mutableStateOf("Bu Ay") }
     var expandedTimeFilter by remember { mutableStateOf(false) }
 
     var sortColumn by remember { mutableStateOf("Tarih") }
@@ -58,7 +71,6 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
 
     val typeFilters = listOf("Tüm Türler", "Gelir", "Gider", "Birikim")
     var selectedTypeFilter by remember { mutableStateOf(typeFilters[0]) }
-    var expandedTypeFilter by remember { mutableStateOf(false) }
     var showPdfExportDialog by remember { mutableStateOf(false) }
     var pdfTransactionsToExport by remember { mutableStateOf<List<Transaction>>(emptyList()) }
     var pdfTitleToExport by remember { mutableStateOf("") }
@@ -87,12 +99,11 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
         }
     }
 
-
     val categoryFilters = listOf("Tüm Kategoriler") + transactions.mapNotNull { it.category }.distinct().sorted()
     var selectedCategoryFilter by remember { mutableStateOf("Tüm Kategoriler") }
     var expandedCategoryFilter by remember { mutableStateOf(false) }
 
-    val filteredTransactions = remember(transactions, searchQuery, selectedTimeFilter, selectedTypeFilter, selectedCategoryFilter) {
+    val filteredTransactions = remember(transactions, searchQuery, selectedTimeFilter, selectedTypeFilter, selectedCategoryFilter, sortColumn, sortAscending) {
         val now = System.currentTimeMillis()
         val cal = Calendar.getInstance()
         
@@ -123,7 +134,7 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
                 cal.timeInMillis
             }
             "Son 3 Ay" -> {
-                cal.add(Calendar.MONTH, -2) // including current month
+                cal.add(Calendar.MONTH, -2)
                 cal.set(Calendar.DAY_OF_MONTH, 1)
                 cal.set(Calendar.HOUR_OF_DAY, 0)
                 cal.set(Calendar.MINUTE, 0)
@@ -132,7 +143,7 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
                 cal.timeInMillis
             }
             "Son 6 Ay" -> {
-                cal.add(Calendar.MONTH, -5) // including current month
+                cal.add(Calendar.MONTH, -5)
                 cal.set(Calendar.DAY_OF_MONTH, 1)
                 cal.set(Calendar.HOUR_OF_DAY, 0)
                 cal.set(Calendar.MINUTE, 0)
@@ -141,7 +152,7 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
                 cal.timeInMillis
             }
             "Bu Yıl" -> {
-                cal.timeInMillis = System.currentTimeMillis() // Reset to now
+                cal.timeInMillis = System.currentTimeMillis()
                 cal.set(Calendar.DAY_OF_YEAR, 1)
                 cal.set(Calendar.HOUR_OF_DAY, 0)
                 cal.set(Calendar.MINUTE, 0)
@@ -168,7 +179,8 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
         val filtered = transactions.filter { tx ->
             val matchSearch = if (searchQuery.isNotBlank()) {
                 tx.title.contains(searchQuery, true) ||
-                (tx.person?.contains(searchQuery, true) ?: false)
+                (tx.person?.contains(searchQuery, true) ?: false) ||
+                (tx.category?.contains(searchQuery, true) ?: false)
             } else true
 
             val matchTime = tx.timestamp in timeLimit until upperBound
@@ -199,220 +211,401 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
     val totalIncome = filteredTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
     val totalExpense = filteredTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
     val totalSaving = filteredTransactions.filter { it.type == TransactionType.SAVING }.sumOf { it.amount }
+    val netBalance = totalIncome - totalExpense - totalSaving
 
-    val format = com.example.util.FormatUtil.getCurrencyFormat()
-    val sdf = SimpleDateFormat("dd.MM.yyyy", Locale("tr"))
+    val format = remember { com.example.util.FormatUtil.getCurrencyFormat() }
+    val sdf = remember { SimpleDateFormat("dd MMM yyyy", Locale("tr")) }
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(top = 10.dp, bottom = 80.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text("İşlem Geçmişi", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
-                Text("TÜM GELİR VE GİDER KAYITLARI", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Button(
-                onClick = { showPdfExportDialog = true },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer),
-                shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text("PDF", fontWeight = FontWeight.ExtraBold)
-            }
-        }
-
-
-        // Summary row
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val incomeBg = if (isDark) Color(0xFF064E3B) else Color(0xFFF0FDF4)
-            val incomeFg = if (isDark) Color(0xFF34D399) else Color(0xFF16A34A)
-            val expenseBg = if (isDark) Color(0xFF7F1D1D) else Color(0xFFFFF1F2)
-            val expenseFg = if (isDark) Color(0xFFF87171) else Color(0xFFE11D48)
-            val savingBg = if (isDark) Color(0xFF0C4A6E) else Color(0xFFF0F9FF)
-            val savingFg = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
-
-            SummaryBox(title = "TOPLAM GELİR", amount = format.format(totalIncome), bg = incomeBg, fg = incomeFg, modifier = Modifier.weight(1f))
-            SummaryBox(title = "TOPLAM GİDER", amount = format.format(totalExpense), bg = expenseBg, fg = expenseFg, modifier = Modifier.weight(1f))
-            SummaryBox(title = "TOPLAM BİRİKİM", amount = format.format(totalSaving), bg = savingBg, fg = savingFg, modifier = Modifier.weight(1f))
-        }
-
-        // Filters
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+        // --- 1. HEADER & PDF EXPORT ---
+        item {
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("İşlemlerde ara (Kişi, başlık)...", fontSize = 14.sp) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ExposedDropdownMenuBox(
-                    expanded = expandedTimeFilter,
-                    onExpandedChange = { expandedTimeFilter = !expandedTimeFilter },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    OutlinedTextField(
-                        value = selectedTimeFilter,
-                        onValueChange = {},
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTimeFilter) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
-                        textStyle = LocalTextStyle.current.copy(fontSize = 11.sp),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        "İşlem Geçmişi",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    ExposedDropdownMenu(
-                        expanded = expandedTimeFilter,
-                        onDismissRequest = { expandedTimeFilter = false }
-                    ) {
-                        timeFilters.forEach { selectionOption ->
-                            DropdownMenuItem(
-                                text = { Text(selectionOption, fontSize = 13.sp) },
-                                onClick = {
-                                    selectedTimeFilter = selectionOption
-                                    expandedTimeFilter = false
-                                }
-                            )
-                        }
-                    }
+                    Text(
+                        "TÜM HAREKETLER VE KAYITLAR",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        letterSpacing = 1.sp
+                    )
                 }
 
-                ExposedDropdownMenuBox(
-                    expanded = expandedTypeFilter,
-                    onExpandedChange = { expandedTypeFilter = !expandedTypeFilter },
-                    modifier = Modifier.weight(1f)
+                Button(
+                    onClick = { showPdfExportDialog = true },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    OutlinedTextField(
-                        value = selectedTypeFilter,
-                        onValueChange = {},
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTypeFilter) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
-                        textStyle = LocalTextStyle.current.copy(fontSize = 11.sp),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expandedTypeFilter,
-                        onDismissRequest = { expandedTypeFilter = false }
-                    ) {
-                        typeFilters.forEach { selectionOption ->
-                            DropdownMenuItem(
-                                text = { Text(selectionOption, fontSize = 13.sp) },
-                                onClick = {
-                                    selectedTypeFilter = selectionOption
-                                    expandedTypeFilter = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                ExposedDropdownMenuBox(
-                    expanded = expandedCategoryFilter,
-                    onExpandedChange = { expandedCategoryFilter = !expandedCategoryFilter },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    OutlinedTextField(
-                        value = selectedCategoryFilter,
-                        onValueChange = {},
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategoryFilter) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
-                        textStyle = LocalTextStyle.current.copy(fontSize = 11.sp),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expandedCategoryFilter,
-                        onDismissRequest = { expandedCategoryFilter = false }
-                    ) {
-                        categoryFilters.forEach { selectionOption ->
-                            DropdownMenuItem(
-                                text = { Text(selectionOption, fontSize = 13.sp) },
-                                onClick = {
-                                    selectedCategoryFilter = selectionOption
-                                    expandedCategoryFilter = false
-                                }
-                            )
-                        }
-                    }
+                    Icon(Icons.Rounded.PictureAsPdf, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("PDF Çıktı", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(0.dp))
-
-        // Table Header
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            val updateSort: (String) -> Unit = { col ->
-                if (sortColumn == col) sortAscending = !sortAscending
-                else {
-                    sortColumn = col
-                    sortAscending = true
-                }
-            }
-            Text("TARİH ${if(sortColumn=="Tarih") (if(sortAscending) "↑" else "↓") else ""}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f).clickable { updateSort("Tarih") })
-            Text("TÜR ${if(sortColumn=="Tür") (if(sortAscending) "↑" else "↓") else ""}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(0.8f).clickable { updateSort("Tür") })
-            Text("KATEGORİ ${if(sortColumn=="Kategori") (if(sortAscending) "↑" else "↓") else ""}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1.2f).clickable { updateSort("Kategori") })
-            Text("TUTAR ${if(sortColumn=="Tutar") (if(sortAscending) "↑" else "↓") else ""}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f).clickable { updateSort("Tutar") }, textAlign = androidx.compose.ui.text.style.TextAlign.End)
-        }
-        HorizontalDivider()
-
-        LazyColumn {
-            items(filteredTransactions) { tx ->
-                    var expandedMenu by remember { mutableStateOf(false) }
-
+        // --- 2. SUMMARY METRICS ROW ---
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isDark) MaterialTheme.colorScheme.surface else Color.White
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { expandedMenu = true }
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(sdf.format(Date(tx.timestamp)), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        
-                        Box(modifier = Modifier.weight(0.8f)) {
-                            val typeBg = when(tx.type) {
-                                TransactionType.INCOME -> if (isDark) Color(0xFF064E3B) else Color(0xFFDCFCE7)
-                                TransactionType.EXPENSE -> if (isDark) Color(0xFF7F1D1D) else Color(0xFFFFE4E6)
-                                TransactionType.SAVING -> if (isDark) Color(0xFF0C4A6E) else Color(0xFFE0F2FE)
-                            }
-                            val typeFg = when(tx.type) {
-                                TransactionType.INCOME -> if (isDark) Color(0xFF34D399) else Color(0xFF16A34A)
-                                TransactionType.EXPENSE -> if (isDark) Color(0xFFF87171) else Color(0xFFE11D48)
-                                TransactionType.SAVING -> if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
-                            }
-                            val typeText = when(tx.type) {
-                                TransactionType.INCOME -> "GELİR"
-                                TransactionType.EXPENSE -> "GİDER"
-                                TransactionType.SAVING -> "BİRİKİM"
-                            }
-                            Box(modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(typeBg).padding(horizontal=6.dp, vertical=2.dp)) {
-                                Text(typeText, fontSize = 9.sp, fontWeight = FontWeight.Black, color = typeFg)
+                        Text(
+                            text = "Dönem Özeti ($selectedTimeFilter)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Surface(
+                            color = if (netBalance >= 0) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFEF4444).copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "Net: ${format.format(netBalance)}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (netBalance >= 0) Color(0xFF10B981) else Color(0xFFEF4444),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ModernSummaryBox(
+                            title = "GELİR",
+                            amount = format.format(totalIncome),
+                            color = Color(0xFF10B981),
+                            modifier = Modifier.weight(1f)
+                        )
+                        ModernSummaryBox(
+                            title = "GİDER",
+                            amount = format.format(totalExpense),
+                            color = Color(0xFFEF4444),
+                            modifier = Modifier.weight(1f)
+                        )
+                        ModernSummaryBox(
+                            title = "BİRİKİM",
+                            amount = format.format(totalSaving),
+                            color = Color(0xFF0284C7),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
+
+        // --- 3. SEARCH & TIME FILTER ---
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("İşlemlerde ara (başlık, kişi, kategori)...", fontSize = 13.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Temizle", modifier = Modifier.size(18.dp))
                             }
                         }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                )
 
-                        Text(tx.category ?: "-", fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1.2f))
-                        
-                        Text(format.format(tx.amount), fontSize = 12.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+                // Time & Type chips
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    item {
+                        Box {
+                            FilterChip(
+                                selected = true,
+                                onClick = { expandedTimeFilter = true },
+                                label = { Text("📅 $selectedTimeFilter ▼", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            DropdownMenu(
+                                expanded = expandedTimeFilter,
+                                onDismissRequest = { expandedTimeFilter = false }
+                            ) {
+                                timeFilters.forEach { t ->
+                                    DropdownMenuItem(
+                                        text = { Text(t, fontWeight = if (selectedTimeFilter == t) FontWeight.Bold else FontWeight.Normal) },
+                                        onClick = {
+                                            selectedTimeFilter = t
+                                            expandedTimeFilter = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    items(typeFilters) { typeName ->
+                        val isSelected = selectedTypeFilter == typeName
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { selectedTypeFilter = typeName },
+                            label = { Text(typeName, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        )
+                    }
+
+                    if (categoryFilters.size > 1) {
+                        item {
+                            Box {
+                                FilterChip(
+                                    selected = selectedCategoryFilter != "Tüm Kategoriler",
+                                    onClick = { expandedCategoryFilter = true },
+                                    label = { Text(if (selectedCategoryFilter == "Tüm Kategoriler") "Kategori ▼" else "$selectedCategoryFilter ▼", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                DropdownMenu(
+                                    expanded = expandedCategoryFilter,
+                                    onDismissRequest = { expandedCategoryFilter = false }
+                                ) {
+                                    categoryFilters.forEach { c ->
+                                        DropdownMenuItem(
+                                            text = { Text(c, fontWeight = if (selectedCategoryFilter == c) FontWeight.Bold else FontWeight.Normal) },
+                                            onClick = {
+                                                selectedCategoryFilter = c
+                                                expandedCategoryFilter = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- 4. TRANSACTION ITEMS LIST ---
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Kayıtlar (${filteredTransactions.size})",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Sıralama: $sortColumn ${if (sortAscending) "↑" else "↓"}",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable {
+                            sortAscending = !sortAscending
+                        }
+                    )
+                }
+            }
+        }
+
+        if (filteredTransactions.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = if (isDark) MaterialTheme.colorScheme.surface else Color.White),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.SearchOff,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Text(
+                            "Kriterlere uygun işlem bulunamadı.",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            "Filtreleri veya arama terimini değiştirerek tekrar deneyebilirsiniz.",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            }
+        } else {
+            items(filteredTransactions, key = { it.id }) { tx ->
+                var expandedMenu by remember { mutableStateOf(false) }
+
+                val typeColor = when (tx.type) {
+                    TransactionType.INCOME -> Color(0xFF10B981)
+                    TransactionType.EXPENSE -> Color(0xFFEF4444)
+                    TransactionType.SAVING -> Color(0xFF0284C7)
+                }
+
+                val typeSign = when (tx.type) {
+                    TransactionType.INCOME -> "+"
+                    TransactionType.EXPENSE -> "-"
+                    TransactionType.SAVING -> ""
+                }
+
+                val icon = when {
+                    tx.type == TransactionType.INCOME -> Icons.Rounded.TrendingUp
+                    tx.type == TransactionType.SAVING -> Icons.Rounded.Savings
+                    tx.category?.lowercase()?.contains("kira") == true -> Icons.Rounded.Home
+                    tx.category?.lowercase()?.contains("market") == true -> Icons.Rounded.ShoppingCart
+                    tx.category?.lowercase()?.contains("fatura") == true -> Icons.Rounded.ReceiptLong
+                    tx.category?.lowercase()?.contains("kredi") == true -> Icons.Rounded.CreditCard
+                    tx.category?.lowercase()?.contains("ulaşım") == true || tx.category?.lowercase()?.contains("yakıt") == true -> Icons.Rounded.DirectionsCar
+                    tx.category?.lowercase()?.contains("sağlık") == true -> Icons.Rounded.LocalHospital
+                    else -> Icons.Rounded.Payments
+                }
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { expandedMenu = true },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = if (isDark) MaterialTheme.colorScheme.surface else Color.White),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF334155).copy(alpha = 0.5f) else Color(0xFFE2E8F0)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(typeColor.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(icon, contentDescription = null, tint = typeColor, modifier = Modifier.size(22.dp))
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = tx.title,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    if (!tx.category.isNullOrBlank()) {
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                            shape = RoundedCornerShape(6.dp)
+                                        ) {
+                                            Text(
+                                                text = tx.category,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    if (!tx.person.isNullOrBlank()) {
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                                            shape = RoundedCornerShape(6.dp)
+                                        ) {
+                                            Text(
+                                                text = tx.person,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = sdf.format(Date(tx.timestamp)),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Text(
+                                text = "$typeSign${format.format(tx.amount)}",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 15.sp,
+                                color = typeColor
+                            )
+                        }
 
                         DropdownMenu(
                             expanded = expandedMenu,
                             onDismissRequest = { expandedMenu = false }
                         ) {
                             DropdownMenuItem(
+                                leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null, modifier = Modifier.size(18.dp)) },
                                 text = { Text("Düzenle") },
                                 onClick = { 
                                     expandedMenu = false
@@ -420,6 +613,7 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
                                 }
                             )
                             DropdownMenuItem(
+                                leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp)) },
                                 text = { Text("Sil", color = MaterialTheme.colorScheme.error) },
                                 onClick = { 
                                     expandedMenu = false
@@ -428,17 +622,11 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
                             )
                         }
                     }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.3f))
-            }
-            if (filteredTransactions.isEmpty()) {
-                item {
-                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        Text("Kriterlere uygun işlem bulunamadı.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
                 }
             }
         }
     }
+
     if (showPdfExportDialog) {
         PdfExportDialog(
             onDismiss = { showPdfExportDialog = false },
@@ -465,21 +653,25 @@ fun HistoryScreen(transactions: List<Transaction>, onEdit: ((Transaction) -> Uni
             }
         )
     }
-
 }
 
 @Composable
-fun SummaryBox(title: String, amount: String, bg: Color, fg: Color, modifier: Modifier = Modifier) {
+fun ModernSummaryBox(
+    title: String,
+    amount: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(bg)
-            .padding(vertical = 8.dp, horizontal = 8.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(color.copy(alpha = 0.08f))
+            .padding(10.dp)
     ) {
         Column {
-            Text(title, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = fg.copy(alpha=0.85f))
+            Text(title, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = color)
             Spacer(modifier = Modifier.height(2.dp))
-            Text(amount, fontSize = 12.sp, fontWeight = FontWeight.Black, color = fg, maxLines = 1)
+            Text(amount, fontSize = 12.sp, fontWeight = FontWeight.Black, color = color, maxLines = 1)
         }
     }
 }

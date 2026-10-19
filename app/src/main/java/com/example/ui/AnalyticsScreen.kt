@@ -18,14 +18,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.rounded.TrendingUp
 import com.example.data.Transaction
 import com.example.data.TransactionType
 import java.text.NumberFormat
@@ -66,26 +71,61 @@ fun AnalyticsScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column {
-                    Text("Analiz ve Raporlar", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
-                    Text("FİNANSAL DURUM VE GEÇMİŞ DÖNEM ANALİZLERİ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp)
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
             Row(
-                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(24.dp)),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(modifier = Modifier.weight(1f).clickable { selectedTab = 0 }.background(if (selectedTab == 0) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(24.dp)).padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
-                    Text("GENEL", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (selectedTab == 0) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                Column {
+                    Text("Analiz & Raporlar", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
+                    Text("FİNANSAL PERFORMANS VE TREND ANALİZLERİ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp)
                 }
-                Box(modifier = Modifier.weight(1f).clickable { selectedTab = 1 }.background(if (selectedTab == 1) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(24.dp)).padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
-                    Text("KİŞİ", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (selectedTab == 1) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Box(modifier = Modifier.weight(1f).clickable { selectedTab = 2 }.background(if (selectedTab == 2) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(24.dp)).padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
-                    Text("TREND", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (selectedTab == 2) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .padding(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                val tabs = listOf(
+                    Triple(0, "Genel", Icons.Default.PieChart),
+                    Triple(1, "Kişi", Icons.Default.Person),
+                    Triple(2, "Trend", Icons.Rounded.TrendingUp)
+                )
+                tabs.forEach { (index, title, icon) ->
+                    val isSelected = selectedTab == index
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                            .clickable { selectedTab = index }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                icon,
+                                contentDescription = null,
+                                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                title,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
         }
