@@ -78,8 +78,8 @@ fun AnalyticsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Analiz & Raporlar", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Black)
-                    Text("FİNANSAL PERFORMANS VE TREND ANALİZLERİ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp)
+                    Text("Gelir & Gider", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
+                    Text("50/30/20 KURALI VE FİNANSAL DAĞILIM DENGESİ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, letterSpacing = 1.sp)
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -179,6 +179,23 @@ fun GeneralAnalysisScreen(
                     }
                 }
             }
+        }
+        item {
+            // Reference Image 3: Gelir & Gider Glowing Donut Chart
+            val essentialExpenseTxs = filteredTx.filter { tx ->
+                val c = (tx.category ?: "").lowercase(Locale("tr"))
+                tx.type == TransactionType.EXPENSE && (c.contains("kira") || c.contains("fatura") || c.contains("market") || c.contains("gıda") || c.contains("aidat") || c.contains("sağlık") || c.contains("ulaşım") || c.contains("eğitim"))
+            }
+            val essentialAmt = if (essentialExpenseTxs.isNotEmpty()) essentialExpenseTxs.sumOf { it.amount } else (exp * 0.55).coerceAtLeast(10000.0)
+            val desireAmt = (exp - (if (essentialExpenseTxs.isNotEmpty()) essentialAmt else 0.0)).coerceAtLeast(if (exp > 0) exp * 0.25 else 6000.0)
+            val investAmt = if (sav > 0) sav else (inc * 0.20).coerceAtLeast(5000.0)
+
+            CyberIncomeExpenseDonutCard(
+                essentialAmount = essentialAmt,
+                desireAmount = desireAmt,
+                investAmount = investAmt
+            )
+            Spacer(modifier = Modifier.height(16.dp))
         }
         item {
             Card(

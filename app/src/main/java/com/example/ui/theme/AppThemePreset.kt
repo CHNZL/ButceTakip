@@ -38,11 +38,20 @@ enum class AppThemePreset(
     val previewColors: List<Color>,
     val previewGradient: List<Color>
 ) {
+    CYBER_NEO(
+        id = "CYBER_NEO",
+        displayName = "Cyber Obsidyen & Neon Işıltı",
+        subtitle = "Ultra karanlık zemin, neon yeşil dalgalar ve parıltılı grafikler",
+        badgeText = "REFERANS TEMA",
+        iconColor = Color(0xFF00E5A3),
+        previewColors = listOf(Color(0xFF090D16), Color(0xFF131826), Color(0xFF00E5A3), Color(0xFF8B5CF6)),
+        previewGradient = listOf(Color(0xFF090D16), Color(0xFF131826), Color(0xFF00E5A3))
+    ),
     EMERALD(
         id = "EMERALD",
         displayName = "Kraliyet Zümrütü",
         subtitle = "Zengin zümrüt yeşili & şampanya altını zarafeti",
-        badgeText = "YENİ TEMA",
+        badgeText = "PREMİUM",
         iconColor = Color(0xFF10B981),
         previewColors = listOf(Color(0xFF041611), Color(0xFF0A231C), Color(0xFF10B981), Color(0xFFF59E0B)),
         previewGradient = listOf(Color(0xFF032219), Color(0xFF064E3B), Color(0xFF10B981))
@@ -86,7 +95,7 @@ enum class AppThemePreset(
 
     companion object {
         fun fromId(id: String?): AppThemePreset {
-            return entries.find { it.id.equals(id, ignoreCase = true) } ?: EMERALD
+            return entries.find { it.id.equals(id, ignoreCase = true) } ?: CYBER_NEO
         }
     }
 }

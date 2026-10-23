@@ -35,11 +35,11 @@ class PreferenceManager(context: Context) {
         set(value) = prefs.edit().putInt("update_interval_hours", value).apply()
 
     var darkThemeEnabled: Boolean
-        get() = prefs.getBoolean("dark_theme", false)
+        get() = prefs.getBoolean("dark_theme", true)
         set(value) = prefs.edit().putBoolean("dark_theme", value).apply()
 
     var appThemePreset: String
-        get() = prefs.getString("app_theme_preset", "EMERALD") ?: "EMERALD"
+        get() = prefs.getString("app_theme_preset", "CYBER_NEO") ?: "CYBER_NEO"
         set(value) = prefs.edit().putString("app_theme_preset", value).apply()
 
     var layoutStyle: String

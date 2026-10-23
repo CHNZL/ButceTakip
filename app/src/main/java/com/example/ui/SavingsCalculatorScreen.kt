@@ -2,6 +2,7 @@ package com.example.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,6 +30,7 @@ import kotlin.math.ceil
 fun SavingsCalculatorScreen() {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val appThemeColors = LocalAppThemeColors.current
+    var selectedSimTab by remember { mutableIntStateOf(0) } // 0: Bileşik Getiri (Image 2), 1: Tasarruf Finansmanı
 
     var targetAmountText by remember { mutableStateOf("1000000") }
     var downPaymentText by remember { mutableStateOf("200000") }
@@ -54,28 +56,90 @@ fun SavingsCalculatorScreen() {
         contentPadding = PaddingValues(top = 10.dp, bottom = 80.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // --- 1. HEADER ---
+        // --- 0. SIMULATOR MODE TABS ---
         item {
-            Column {
-                Text(
-                    "Tasarruf Finansmanı Hesaplayıcı",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    "BDDK UYUMLU FAİZSİZ EV / ARAÇ FİNANSMAN SİMÜLASYONU",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = 1.sp
-                )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(if (isDark) Color(0xFF131826) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                listOf(
+                    Pair(0, "Bileşik Getiri Simülatörü"),
+                    Pair(1, "Tasarruf Finansmanı")
+                ).forEach { (idx, label) ->
+                    val isSel = selectedSimTab == idx
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isSel) Color(0xFF00E5A3) else Color.Transparent)
+                            .clickable { selectedSimTab = idx }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSel) Color(0xFF021B13) else Color(0xFF8F9CAE)
+                        )
+                    }
+                }
             }
         }
 
-        // --- 2. INPUT CARD ---
-        item {
-            Card(
+        if (selectedSimTab == 0) {
+            // --- REFERENCE IMAGE 2: BİLEŞİK GETİRİ SİMÜLATÖRÜ ---
+            item {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Gelecek Tahmini",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF8F9CAE),
+                        letterSpacing = 0.5.sp
+                    )
+                    Text(
+                        text = "Bileşik Getiri Simülatörü",
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White
+                    )
+                }
+            }
+
+            item {
+                CyberCompoundSimulatorCard()
+            }
+        } else {
+            // --- 1. HEADER BDDK ---
+            item {
+                Column {
+                    Text(
+                        "Tasarruf Finansmanı Hesaplayıcı",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        "BDDK UYUMLU FAİZSİZ EV / ARAÇ FİNANSMAN SİMÜLASYONU",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        letterSpacing = 1.sp
+                    )
+                }
+            }
+
+            // --- 2. INPUT CARD ---
+            item {
+                Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = if (isDark) MaterialTheme.colorScheme.surface else Color.White),
@@ -276,3 +340,5 @@ fun SavingsCalculatorScreen() {
         }
     }
 }
+}
+
