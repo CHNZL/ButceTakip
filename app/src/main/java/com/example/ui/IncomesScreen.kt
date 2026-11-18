@@ -2,6 +2,7 @@ package com.example.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,13 +18,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +44,20 @@ private enum class IncomeSortOption(val label: String) {
     LOWEST("En Düşük")
 }
 
+private fun isRegularIncome(tx: Transaction): Boolean {
+    val haystack = "${tx.category} ${tx.title}".lowercase(Locale("tr", "TR"))
+    return haystack.contains("maaş") ||
+        haystack.contains("maas") ||
+        haystack.contains("kira") ||
+        haystack.contains("emekli") ||
+        haystack.contains("sabit") ||
+        haystack.contains("düzenli") ||
+        haystack.contains("duzenli") ||
+        haystack.contains("burs") ||
+        haystack.contains("nafaka") ||
+        (tx.installments != null && tx.installments > 1)
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun IncomesScreen(
@@ -55,15 +68,19 @@ fun IncomesScreen(
     onRepeatIncome: ((Transaction) -> Unit)? = null
 ) {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val mintAccent = if (isDark) CyberNeonMint else Color(0xFF059669)
-    val cyanAccent = if (isDark) CyberNeonCyan else Color(0xFF0284C7)
-    val coralAccent = if (isDark) CyberNeonCoral else Color(0xFFDC2626)
+    val mint = if (isDark) CyberNeonMint else Color(0xFF059669)
+    val sky = if (isDark) CyberNeonCyan else Color(0xFF0284C7)
+    val coral = if (isDark) CyberNeonCoral else Color(0xFFE11D48)
+    val amber = if (isDark) CyberNeonOrange else Color(0xFFD97706)
+    val indigo = if (isDark) CyberNeonPurple else Color(0xFF6366F1)
+    val dividerColor = if (isDark) Color(0xFF1F293D) else Color(0xFFE2E8F0)
 
     val format = remember {
         com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 }
     }
     val sdf = remember { SimpleDateFormat("dd MMM yyyy", Locale("tr", "TR")) }
     val monthYearSdf = remember { SimpleDateFormat("MMMM yyyy", Locale("tr", "TR")) }
+    val shortMonthSdf = remember { SimpleDateFormat("MMM", Locale("tr", "TR")) }
     val currentMonthName = remember { monthYearSdf.format(Date()).uppercase(Locale("tr", "TR")) }
 
     val timeBounds = remember {
@@ -75,22 +92,9 @@ fun IncomesScreen(
             set(Calendar.MILLISECOND, 0)
         }
         val thisStart = calThisStart.timeInMillis
-
-        val calThisEnd = (calThisStart.clone() as Calendar).apply {
-            add(Calendar.MONTH, 1)
-        }
-        val thisEnd = calThisEnd.timeInMillis
-
-        val calPrevStart = (calThisStart.clone() as Calendar).apply {
-            add(Calendar.MONTH, -1)
-        }
-        val prevStart = calPrevStart.timeInMillis
-
-        val cal3MStart = (calThisStart.clone() as Calendar).apply {
-            add(Calendar.MONTH, -2)
-        }
-        val threeMStart = cal3MStart.timeInMillis
-
+        val thisEnd = (calThisStart.clone() as Calendar).apply { add(Calendar.MONTH, 1) }.timeInMillis
+        val prevStart = (calThisStart.clone() as Calendar).apply { add(Calendar.MONTH, -1) }.timeInMillis
+        val threeMStart = (calThisStart.clone() as Calendar).apply { add(Calendar.MONTH, -2) }.timeInMillis
         listOf(thisStart, thisEnd, prevStart, threeMStart)
     }
     val thisMonthStart = timeBounds[0]
@@ -115,6 +119,24 @@ fun IncomesScreen(
         if (totalPrevMonth > 0.0) ((totalThisMonth - totalPrevMonth) / totalPrevMonth) * 100.0 else null
     }
 
+    // 6-Month Income Trend Series
+    val sixMonthSeries = remember(incomeTx) {
+        (5 downTo 0).map { offset ->
+            val c = Calendar.getInstance().apply {
+                add(Calendar.MONTH, -offset)
+                set(Calendar.DAY_OF_MONTH, 1)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val start = c.timeInMillis
+            val end = (c.clone() as Calendar).apply { add(Calendar.MONTH, 1) }.timeInMillis
+            val sum = incomeTx.filter { it.timestamp in start until end }.sumOf { it.amount }
+            shortMonthSdf.format(Date(start)) to sum
+        }
+    }
+
     var isBalanceHidden by remember { mutableStateOf(false) }
     var selectedPeriod by remember { mutableStateOf("Bu Ay") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
@@ -122,13 +144,13 @@ fun IncomesScreen(
     var searchQuery by remember { mutableStateOf("") }
     var sortOption by remember { mutableStateOf(IncomeSortOption.NEWEST) }
     var showSortMenu by remember { mutableStateOf(false) }
-    var showSourceBreakdown by remember { mutableStateOf(true) }
+    var showBreakdownDetails by remember { mutableStateOf(true) }
 
     val periodIncomes = remember(incomeTx, selectedPeriod, thisMonthStart, thisMonthEnd, prevMonthStart, threeMonthsStart) {
         when (selectedPeriod) {
             "Bu Ay" -> incomeTx.filter { it.timestamp in thisMonthStart until thisMonthEnd }
             "Önceki Ay" -> incomeTx.filter { it.timestamp in prevMonthStart until thisMonthStart }
-            "Son 3 Ay" -> incomeTx.filter { it.timestamp in threeMonthsStart until thisMonthEnd }
+            "3 Ay" -> incomeTx.filter { it.timestamp in threeMonthsStart until thisMonthEnd }
             else -> incomeTx
         }
     }
@@ -140,7 +162,6 @@ fun IncomesScreen(
         periodIncomes.mapNotNull { it.person?.takeIf { p -> p.isNotBlank() } }.distinct().sorted()
     }
 
-    // Category distribution computed over the chosen period (before single-category filter so bars stay clickable!)
     val categoryBreakdown = remember(periodIncomes) {
         val total = periodIncomes.sumOf { it.amount }.coerceAtLeast(1.0)
         periodIncomes
@@ -148,6 +169,18 @@ fun IncomesScreen(
             .map { (cat, list) ->
                 val sum = list.sumOf { it.amount }
                 Triple(cat, sum, (sum / total).toFloat().coerceIn(0f, 1f))
+            }
+            .sortedByDescending { it.second }
+    }
+
+    val personBreakdown = remember(periodIncomes) {
+        val total = periodIncomes.sumOf { it.amount }.coerceAtLeast(1.0)
+        periodIncomes
+            .filter { !it.person.isNullOrBlank() }
+            .groupBy { it.person!!.trim() }
+            .map { (person, list) ->
+                val sum = list.sumOf { it.amount }
+                Triple(person, sum, (sum / total).toFloat().coerceIn(0f, 1f))
             }
             .sortedByDescending { it.second }
     }
@@ -171,6 +204,10 @@ fun IncomesScreen(
     }
 
     val displayedTotal = remember(displayedIncomes) { displayedIncomes.sumOf { it.amount } }
+    val regularTotal = remember(displayedIncomes) {
+        displayedIncomes.filter { isRegularIncome(it) }.sumOf { it.amount }
+    }
+    val extraTotal = (displayedTotal - regularTotal).coerceAtLeast(0.0)
     val avgDisplayed = if (displayedIncomes.isNotEmpty()) displayedTotal / displayedIncomes.size else 0.0
     val maxDisplayedTx = remember(displayedIncomes) { displayedIncomes.maxByOrNull { it.amount } }
 
@@ -181,233 +218,426 @@ fun IncomesScreen(
         contentPadding = PaddingValues(top = 6.dp, bottom = 92.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // --- 1. FLAGSHIP INCOME HERO COMMAND CARD ---
+        // --- 1. PERIOD SELECTOR SEGMENTED CAPSULE ---
         item {
-            val tileBg = if (isDark) Color(0xFF111827).copy(alpha = 0.85f) else Color(0xFFF8FAFC)
-            val tileBorder = if (isDark) Color(0xFF243047) else Color(0xFFE2E8F0)
-
-            CyberCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(26.dp),
-                borderColor = if (isDark) CyberBorderGlow else mintAccent.copy(alpha = 0.28f),
-                contentPadding = PaddingValues(0.dp)
+            val periods = listOf("Bu Ay", "Önceki Ay", "3 Ay", "Tümü")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(if (isDark) CyberDarkSurface else Color(0xFFEAEFF5))
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .drawBehind {
-                            val w = size.width
-                            val h = size.height
-                            drawCircle(
-                                brush = Brush.radialGradient(
-                                    colors = listOf(
-                                        mintAccent.copy(alpha = if (isDark) 0.16f else 0.10f),
-                                        Color.Transparent
-                                    ),
-                                    center = Offset(w * 0.88f, h * 0.14f),
-                                    radius = w * 0.55f
-                                ),
-                                center = Offset(w * 0.88f, h * 0.14f),
-                                radius = w * 0.55f
+                periods.forEach { period ->
+                    val selected = selectedPeriod == period
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                if (selected) {
+                                    if (isDark) CyberDarkSurfaceVariant else Color.White
+                                } else Color.Transparent
                             )
-                            val wave = Path().apply {
-                                moveTo(0f, h * 0.58f)
-                                cubicTo(w * 0.30f, h * 0.45f, w * 0.62f, h * 0.68f, w, h * 0.34f)
+                            .clickable {
+                                selectedPeriod = period
+                                selectedCategory = null
+                                selectedPerson = null
                             }
-                            drawPath(
-                                path = wave,
-                                color = mintAccent.copy(alpha = if (isDark) 0.18f else 0.10f),
-                                style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
-                            )
-                        }
-                        .padding(18.dp)
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(mintAccent)
-                                )
-                                Text(
-                                    text = "GELİR ÖZETİ",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    letterSpacing = 1.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    softWrap = false,
-                                    maxLines = 1
-                                )
-                                Surface(
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Text(
-                                        text = if (selectedPeriod == "Bu Ay") currentMonthName else selectedPeriod.uppercase(Locale("tr", "TR")),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        softWrap = false,
-                                        maxLines = 1,
-                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                if (momPct != null && selectedPeriod == "Bu Ay") {
-                                    val isUp = momPct >= 0.0
-                                    val badgeColor = if (isUp) mintAccent else coralAccent
-                                    Surface(
-                                        color = badgeColor.copy(alpha = 0.14f),
-                                        shape = RoundedCornerShape(10.dp),
-                                        border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.35f))
-                                    ) {
-                                        Text(
-                                            text = String.format(Locale("tr"), "%s%.1f%%", if (isUp) "+" else "", momPct),
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = badgeColor,
-                                            softWrap = false,
-                                            maxLines = 1,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
-                                    }
-                                }
-                                IconButton(
-                                    onClick = { isBalanceHidden = !isBalanceHidden },
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .testTag("incomes_visibility_toggle")
-                                ) {
-                                    Icon(
-                                        imageVector = if (isBalanceHidden) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
-                                        contentDescription = "Gelirleri Gizle veya Göster",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
-                            text = if (isBalanceHidden) "•••••••• ₺" else format.format(displayedTotal),
-                            fontSize = 33.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = (-0.8).sp,
-                            color = mintAccent,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            text = period,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                            softWrap = false,
+                            maxLines = 1
                         )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = "${displayedIncomes.size} kayıt • Ort. ${if (isBalanceHidden) "••••" else format.format(avgDisplayed)}",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            IncomeHeroKpiTile(
-                                label = "BU AY",
-                                value = if (isBalanceHidden) "••••" else format.format(totalThisMonth),
-                                accent = mintAccent,
-                                bgColor = tileBg,
-                                borderColor = tileBorder,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IncomeHeroKpiTile(
-                                label = "GEÇEN AY",
-                                value = if (isBalanceHidden) "••••" else format.format(totalPrevMonth),
-                                accent = cyanAccent,
-                                bgColor = tileBg,
-                                borderColor = tileBorder,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IncomeHeroKpiTile(
-                                label = "EN YÜKSEK",
-                                value = if (isBalanceHidden) "••••" else if (maxDisplayedTx != null) format.format(maxDisplayedTx.amount) else "0 ₺",
-                                accent = MaterialTheme.colorScheme.onSurface,
-                                bgColor = tileBg,
-                                borderColor = tileBorder,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
                     }
                 }
             }
         }
 
-        // --- 2. PERIOD SELECTOR CAPSULE + SEARCH & SORT BAR ---
+        // --- 2. EXECUTIVE INCOME HERO CARD (Predictability + MoM Growth + 3-Col Ledger Footer) ---
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                val periods = listOf("Bu Ay", "Önceki Ay", "Son 3 Ay", "Tümü")
+            val regularRatio = if (displayedTotal > 0.0) (regularTotal / displayedTotal).toFloat().coerceIn(0f, 1f) else 0f
+            val regularPct = (regularRatio * 100).toInt()
+            val extraPct = (100 - regularPct).coerceAtLeast(0)
+            val trackBg = if (isDark) Color(0xFF1B2436) else Color(0xFFE8EEF5)
+
+            CyberCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                contentPadding = PaddingValues(20.dp)
+            ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(if (isDark) CyberDarkSurface else Color(0xFFF1F5F9))
-                        .padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    periods.forEach { period ->
-                        val selected = selectedPeriod == period
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(
-                                    when {
-                                        selected -> MaterialTheme.colorScheme.primary
-                                        else -> Color.Transparent
-                                    }
-                                )
-                                .clickable {
-                                    selectedPeriod = period
-                                    selectedCategory = null
-                                    selectedPerson = null
-                                }
-                                .padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = "TOPLAM GELİR",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            softWrap = false,
+                            maxLines = 1
+                        )
+                        Surface(
+                            color = if (isDark) CyberDarkSurfaceVariant else CyberLightSurfaceVariant,
+                            shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = period,
-                                fontSize = 11.sp,
-                                fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold,
-                                color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                text = if (selectedPeriod == "Bu Ay") currentMonthName else selectedPeriod.uppercase(Locale("tr", "TR")),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 softWrap = false,
+                                maxLines = 1,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (momPct != null && selectedPeriod == "Bu Ay") {
+                            val isUp = momPct >= 0.0
+                            val badgeColor = if (isUp) mint else coral
+                            Surface(
+                                color = badgeColor.copy(alpha = 0.13f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = String.format(Locale("tr"), "%s%.1f%%", if (isUp) "↗ +" else "↘ ", momPct),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = badgeColor,
+                                    softWrap = false,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                        IconButton(
+                            onClick = { isBalanceHidden = !isBalanceHidden },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .testTag("incomes_visibility_toggle")
+                        ) {
+                            Icon(
+                                imageVector = if (isBalanceHidden) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                                contentDescription = "Gelirleri Gizle veya Göster",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = if (isBalanceHidden) "•••••••• ₺" else format.format(displayedTotal),
+                    style = TabularHeroStyle,
+                    fontSize = 36.sp,
+                    color = mint,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "${displayedIncomes.size} gelir kaydı • Ortalama ${if (isBalanceHidden) "••••" else format.format(avgDisplayed)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                // Predictability Split Bar (Düzenli Maaş vs Ek Gelir)
+                if (displayedTotal > 0.0) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(CircleShape)
+                            .background(trackBg)
+                    ) {
+                        if (regularRatio > 0f) {
+                            Box(modifier = Modifier.weight(regularRatio.coerceAtLeast(0.01f)).fillMaxHeight().background(mint))
+                        }
+                        if (regularRatio < 1f) {
+                            Box(modifier = Modifier.weight((1f - regularRatio).coerceAtLeast(0.01f)).fillMaxHeight().background(sky))
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(7.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(mint))
+                            Text(
+                                text = "Düzenli %$regularPct (${if (isBalanceHidden) "••••" else format.format(regularTotal)})",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(sky))
+                            Text(
+                                text = "Ek %$extraPct (${if (isBalanceHidden) "••••" else format.format(extraTotal)})",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1
                             )
                         }
                     }
                 }
 
-                // Search & Sort row (shown when period has records or search is active)
-                if (periodIncomes.size >= 2 || searchQuery.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(thickness = 0.7.dp, color = dividerColor)
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IncomeFooterCol(
+                        label = "Bu Ay",
+                        value = if (isBalanceHidden) "••••" else format.format(totalThisMonth),
+                        accentColor = mint,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Box(modifier = Modifier.width(0.8.dp).height(30.dp).background(dividerColor))
+                    IncomeFooterCol(
+                        label = "Geçen Ay",
+                        value = if (isBalanceHidden) "••••" else format.format(totalPrevMonth),
+                        accentColor = sky,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Box(modifier = Modifier.width(0.8.dp).height(30.dp).background(dividerColor))
+                    IncomeFooterCol(
+                        label = "En Yüksek",
+                        value = if (isBalanceHidden) "••••" else if (maxDisplayedTx != null) format.format(maxDisplayedTx.amount) else "0 ₺",
+                        accentColor = amber,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
+        // --- 3. INTERACTIVE 6-MONTH INCOME TREND CHART ---
+        if (sixMonthSeries.any { it.second > 0.0 }) {
+            item {
+                IncomeSixMonthTrendCard(
+                    series = sixMonthSeries,
+                    isBalanceHidden = isBalanceHidden,
+                    mint = mint,
+                    isDark = isDark,
+                    format = format
+                )
+            }
+        }
+
+        // --- 4. FAMILY CONTRIBUTION & INCOME SOURCES INSIGHTS CARD ---
+        if (personBreakdown.size >= 2 || categoryBreakdown.size >= 2) {
+            item {
+                val trackColor = if (isDark) Color(0xFF1B2436) else Color(0xFFE8EEF5)
+                val palette = listOf(mint, sky, indigo, amber, coral)
+
+                CyberCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showBreakdownDetails = !showBreakdownDetails },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (personBreakdown.size >= 2) "Aile Katkısı & Kaynaklar" else "Kaynak Dağılımı",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Icon(
+                            imageVector = if (showBreakdownDetails) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                            contentDescription = if (showBreakdownDetails) "Daralt" else "Genişlet",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    AnimatedVisibility(visible = showBreakdownDetails) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            // Family Member Proportional Bar (when 2+ contributors exist)
+                            if (personBreakdown.size >= 2) {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        text = "KİŞİ KATKISI",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.6.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(8.dp)
+                                            .clip(CircleShape)
+                                            .background(trackColor),
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        personBreakdown.forEachIndexed { idx, (_, _, ratio) ->
+                                            val c = palette[idx % palette.size]
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(ratio.coerceAtLeast(0.02f))
+                                                    .fillMaxHeight()
+                                                    .background(c)
+                                            )
+                                        }
+                                    }
+                                    FlowRow(
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        personBreakdown.forEachIndexed { idx, (person, sum, ratio) ->
+                                            val c = palette[idx % palette.size]
+                                            val isSelected = selectedPerson == person
+                                            Row(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clickable {
+                                                        selectedPerson = if (isSelected) null else person
+                                                    }
+                                                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                            ) {
+                                                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(c))
+                                                Text(
+                                                    text = "$person %${(ratio * 100).toInt()} (${if (isBalanceHidden) "••••" else format.format(sum)})",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                                    softWrap = false,
+                                                    maxLines = 1
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                if (categoryBreakdown.size >= 2) {
+                                    HorizontalDivider(thickness = 0.6.dp, color = dividerColor)
+                                }
+                            }
+
+                            // Interactive Category Source Breakdown
+                            if (categoryBreakdown.size >= 2) {
+                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    if (personBreakdown.size >= 2) {
+                                        Text(
+                                            text = "KAYNAK DAĞILIMI (FİLTRELEMEK İÇİN DOKUN)",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 0.6.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    categoryBreakdown.take(5).forEachIndexed { idx, (cat, amount, ratio) ->
+                                        val color = palette[idx % palette.size]
+                                        val isCatSelected = selectedCategory == cat
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .clickable {
+                                                    selectedCategory = if (isCatSelected) null else cat
+                                                }
+                                                .padding(vertical = 2.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                                                    modifier = Modifier.weight(1f)
+                                                ) {
+                                                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(color))
+                                                    Text(
+                                                        text = cat,
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        fontWeight = if (isCatSelected) FontWeight.Bold else FontWeight.Medium,
+                                                        color = if (isCatSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                                Text(
+                                                    text = "%${(ratio * 100).toInt()} • ${if (isBalanceHidden) "••••" else format.format(amount)}",
+                                                    style = TabularAmountStyle,
+                                                    fontSize = 12.sp,
+                                                    color = color,
+                                                    softWrap = false,
+                                                    maxLines = 1
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(5.dp))
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(5.dp)
+                                                    .clip(CircleShape)
+                                                    .background(trackColor)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxHeight()
+                                                        .fillMaxWidth(ratio.coerceAtLeast(0.03f))
+                                                        .clip(CircleShape)
+                                                        .background(color)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- 5. COMPACT SEARCH, SORT & FILTER BAR ---
+        if (periodIncomes.isNotEmpty() || searchQuery.isNotEmpty()) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -416,22 +646,14 @@ fun IncomesScreen(
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            placeholder = { Text("Gelir ara...", fontSize = 13.sp) },
+                            placeholder = { Text("Gelirlerde ara...", style = MaterialTheme.typography.bodyMedium) },
                             leadingIcon = {
-                                Icon(
-                                    Icons.Rounded.Search,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                                Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(18.dp))
                             },
                             trailingIcon = {
                                 if (searchQuery.isNotEmpty()) {
                                     IconButton(onClick = { searchQuery = "" }) {
-                                        Icon(
-                                            Icons.Rounded.Close,
-                                            contentDescription = "Aramayı Temizle",
-                                            modifier = Modifier.size(16.dp)
-                                        )
+                                        Icon(Icons.Rounded.Close, contentDescription = "Temizle", modifier = Modifier.size(16.dp))
                                     }
                                 }
                             },
@@ -451,7 +673,7 @@ fun IncomesScreen(
                                 onClick = { showSortMenu = true },
                                 shape = RoundedCornerShape(14.dp),
                                 color = if (isDark) CyberDarkSurface else Color.White,
-                                border = BorderStroke(1.dp, if (isDark) CyberBorderStroke else Color(0xFFE2E8F0)),
+                                border = BorderStroke(0.8.dp, if (isDark) CyberBorderStroke else Color(0xFFE2E8F0)),
                                 modifier = Modifier.height(52.dp)
                             ) {
                                 Row(
@@ -467,8 +689,7 @@ fun IncomesScreen(
                                     )
                                     Text(
                                         text = sortOption.label,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.labelLarge,
                                         softWrap = false,
                                         maxLines = 1,
                                         color = MaterialTheme.colorScheme.onSurface
@@ -496,180 +717,44 @@ fun IncomesScreen(
                             }
                         }
                     }
-                }
 
-                // Category Filter Chips
-                if (uniqueCategories.size > 1) {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        item {
-                            FilterChip(
-                                selected = selectedCategory == null,
-                                onClick = { selectedCategory = null },
-                                label = { Text("Tüm Kaynaklar", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                        }
-                        items(uniqueCategories) { cat ->
-                            FilterChip(
-                                selected = selectedCategory == cat,
-                                onClick = { selectedCategory = if (selectedCategory == cat) null else cat },
-                                label = { Text(cat, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                        }
-                    }
-                }
-
-                // Person Filter Chips (when multiple persons exist)
-                if (uniquePersons.size > 1) {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        item {
-                            FilterChip(
-                                selected = selectedPerson == null,
-                                onClick = { selectedPerson = null },
-                                label = { Text("Tüm Kişiler", fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-                                leadingIcon = { Icon(Icons.Rounded.Person, contentDescription = null, modifier = Modifier.size(14.dp)) },
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                        }
-                        items(uniquePersons) { person ->
-                            FilterChip(
-                                selected = selectedPerson == person,
-                                onClick = { selectedPerson = if (selectedPerson == person) null else person },
-                                label = { Text(person, fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // --- 3. INCOME SOURCE BREAKDOWN SMART CARD ---
-        if (categoryBreakdown.size >= 2) {
-            item {
-                val trackColor = if (isDark) Color(0xFF1B2338) else Color(0xFFE2E8F0)
-                val barPalette = listOf(mintAccent, cyanAccent, CyberNeonPurple, CyberNeonOrange)
-
-                CyberCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    contentPadding = PaddingValues(14.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showSourceBreakdown = !showSourceBreakdown },
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    if (uniqueCategories.size > 1 || uniquePersons.size > 1) {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(mintAccent.copy(alpha = 0.14f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Rounded.DonutLarge,
-                                    contentDescription = null,
-                                    tint = mintAccent,
-                                    modifier = Modifier.size(16.dp)
-                                )
+                            if (selectedCategory != null || selectedPerson != null) {
+                                item {
+                                    AssistChip(
+                                        onClick = {
+                                            selectedCategory = null
+                                            selectedPerson = null
+                                        },
+                                        label = { Text("Filtreyi Sıfırla", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                                        leadingIcon = { Icon(Icons.Rounded.ClearAll, contentDescription = null, modifier = Modifier.size(14.dp)) },
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                }
                             }
-                            Text(
-                                text = "Kaynak Dağılımı",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        Icon(
-                            imageVector = if (showSourceBreakdown) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
-                            contentDescription = if (showSourceBreakdown) "Daralt" else "Genişlet",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    AnimatedVisibility(visible = showSourceBreakdown) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            categoryBreakdown.take(5).forEachIndexed { idx, (cat, amount, ratio) ->
-                                val color = barPalette[idx % barPalette.size]
-                                val isCatSelected = selectedCategory == cat
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable {
-                                            selectedCategory = if (isCatSelected) null else cat
-                                        }
-                                        .padding(vertical = 2.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(8.dp)
-                                                    .clip(CircleShape)
-                                                    .background(color)
-                                            )
-                                            Text(
-                                                text = cat,
-                                                fontSize = 12.sp,
-                                                fontWeight = if (isCatSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
-                                                color = if (isCatSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                        Text(
-                                            text = "%${(ratio * 100).toInt()} • ${if (isBalanceHidden) "••••" else format.format(amount)}",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = color,
-                                            softWrap = false,
-                                            maxLines = 1
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(5.dp))
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(6.dp)
-                                            .clip(CircleShape)
-                                            .background(trackColor)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxHeight()
-                                                .fillMaxWidth(ratio.coerceAtLeast(0.03f))
-                                                .clip(CircleShape)
-                                                .background(color)
-                                        )
-                                    }
+                            if (uniqueCategories.size > 1) {
+                                items(uniqueCategories) { cat ->
+                                    FilterChip(
+                                        selected = selectedCategory == cat,
+                                        onClick = { selectedCategory = if (selectedCategory == cat) null else cat },
+                                        label = { Text(cat, fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                }
+                            }
+                            if (uniquePersons.size > 1) {
+                                items(uniquePersons) { person ->
+                                    FilterChip(
+                                        selected = selectedPerson == person,
+                                        onClick = { selectedPerson = if (selectedPerson == person) null else person },
+                                        label = { Text(person, fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
+                                        leadingIcon = { Icon(Icons.Rounded.Person, contentDescription = null, modifier = Modifier.size(14.dp)) },
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
                                 }
                             }
                         }
@@ -678,46 +763,12 @@ fun IncomesScreen(
             }
         }
 
-        // --- 4. SECTION HEADER ---
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 2.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Gelir Kayıtları (${displayedIncomes.size})",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                if (displayedIncomes.isNotEmpty()) {
-                    Surface(
-                        color = mintAccent.copy(alpha = 0.14f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = if (isBalanceHidden) "••••" else "+${format.format(displayedTotal)}",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = mintAccent,
-                            softWrap = false,
-                            maxLines = 1,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // --- 5. INCOME LIST OR EMPTY STATE ---
+        // --- 6. BANK LEDGER GROUPED INCOME LIST ---
         if (displayedIncomes.isEmpty()) {
             item {
                 CyberCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(22.dp),
                     contentPadding = PaddingValues(28.dp)
                 ) {
                     Column(
@@ -727,16 +778,16 @@ fun IncomesScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(54.dp)
+                                .size(52.dp)
                                 .clip(CircleShape)
-                                .background(mintAccent.copy(alpha = 0.14f)),
+                                .background(mint.copy(alpha = 0.13f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Rounded.TrendingUp,
                                 contentDescription = null,
-                                tint = mintAccent,
-                                modifier = Modifier.size(28.dp)
+                                tint = mint,
+                                modifier = Modifier.size(26.dp)
                             )
                         }
                         Text(
@@ -745,14 +796,13 @@ fun IncomesScreen(
                             } else {
                                 "Bu dönem için gelir kaydı yok."
                             },
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
+                            style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center
                         )
                         Text(
-                            text = "Maaş, ek gelir veya iade eklemek için '+' butonuna dokunabilirsiniz.",
-                            fontSize = 12.sp,
+                            text = "Maaş, kira veya ek gelir ekleyerek aile nakit akışını canlı takip edebilirsiniz.",
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
@@ -772,51 +822,34 @@ fun IncomesScreen(
                 }
             }
         } else {
-            val groupByMonth = (selectedPeriod == "Son 3 Ay" || selectedPeriod == "Tümü") && sortOption == IncomeSortOption.NEWEST
-            if (groupByMonth) {
-                val grouped = displayedIncomes.groupBy { tx ->
-                    val c = Calendar.getInstance().apply {
-                        timeInMillis = tx.timestamp
-                        set(Calendar.DAY_OF_MONTH, 1)
-                        set(Calendar.HOUR_OF_DAY, 0)
-                        set(Calendar.MINUTE, 0)
-                        set(Calendar.SECOND, 0)
-                        set(Calendar.MILLISECOND, 0)
-                    }
-                    c.timeInMillis
+            val groupedByMonth = displayedIncomes.groupBy { tx ->
+                val c = Calendar.getInstance().apply {
+                    timeInMillis = tx.timestamp
+                    set(Calendar.DAY_OF_MONTH, 1)
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
                 }
-                grouped.forEach { (monthMs, monthList) ->
+                c.timeInMillis
+            }
+
+            if (sortOption == IncomeSortOption.NEWEST) {
+                groupedByMonth.forEach { (monthMs, monthList) ->
                     val monthTitle = monthYearSdf.format(Date(monthMs)).uppercase(Locale("tr", "TR"))
                     val monthSum = monthList.sumOf { it.amount }
-                    item(key = "hdr_$monthMs") {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = monthTitle,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = 0.8.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = if (isBalanceHidden) "••••" else "+${format.format(monthSum)}",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = mintAccent
-                            )
-                        }
-                    }
-                    items(monthList, key = { it.id }) { tx ->
-                        IncomeRowCard(
-                            tx = tx,
-                            dateText = sdf.format(Date(tx.timestamp)),
-                            amountText = if (isBalanceHidden) "••••" else "+${format.format(tx.amount)}",
-                            mintAccent = mintAccent,
+                    item(key = "ledger_$monthMs") {
+                        IncomeMonthLedgerCard(
+                            headerTitle = monthTitle,
+                            headerCountText = "${monthList.size} kayıt",
+                            headerTotalText = if (isBalanceHidden) "••••" else "+${format.format(monthSum)}",
+                            transactions = monthList,
+                            sdf = sdf,
+                            format = format,
+                            isBalanceHidden = isBalanceHidden,
+                            mint = mint,
+                            dividerColor = dividerColor,
+                            isDark = isDark,
                             onEdit = onEditIncome,
                             onDelete = onDeleteIncome,
                             onRepeat = onRepeatIncome
@@ -824,12 +857,18 @@ fun IncomesScreen(
                     }
                 }
             } else {
-                items(displayedIncomes, key = { it.id }) { tx ->
-                    IncomeRowCard(
-                        tx = tx,
-                        dateText = sdf.format(Date(tx.timestamp)),
-                        amountText = if (isBalanceHidden) "••••" else "+${format.format(tx.amount)}",
-                        mintAccent = mintAccent,
+                item(key = "ledger_sorted") {
+                    IncomeMonthLedgerCard(
+                        headerTitle = "GELİR DEFTERİ",
+                        headerCountText = "${displayedIncomes.size} kayıt",
+                        headerTotalText = if (isBalanceHidden) "••••" else "+${format.format(displayedTotal)}",
+                        transactions = displayedIncomes,
+                        sdf = sdf,
+                        format = format,
+                        isBalanceHidden = isBalanceHidden,
+                        mint = mint,
+                        dividerColor = dividerColor,
+                        isDark = isDark,
                         onEdit = onEditIncome,
                         onDelete = onDeleteIncome,
                         onRepeat = onRepeatIncome
@@ -841,51 +880,259 @@ fun IncomesScreen(
 }
 
 @Composable
-private fun IncomeHeroKpiTile(
+private fun IncomeFooterCol(
     label: String,
     value: String,
-    accent: Color,
-    bgColor: Color,
-    borderColor: Color,
+    accentColor: Color,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
-        color = bgColor,
-        border = BorderStroke(1.dp, borderColor)
+    Column(
+        modifier = modifier.padding(horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(accentColor))
             Text(
                 text = label,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 0.5.sp,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 softWrap = false,
                 maxLines = 1
             )
-            Spacer(modifier = Modifier.height(3.dp))
-            Text(
-                text = value,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Black,
-                color = accent,
-                softWrap = false,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+        }
+        Spacer(modifier = Modifier.height(3.dp))
+        Text(
+            text = value,
+            style = TabularAmountStyle,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+            softWrap = false,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/**
+ * Interactive 6-Month Income Bar Chart with Dashed Average Benchmark Line.
+ */
+@Composable
+private fun IncomeSixMonthTrendCard(
+    series: List<Pair<String, Double>>,
+    isBalanceHidden: Boolean,
+    mint: Color,
+    isDark: Boolean,
+    format: java.text.NumberFormat
+) {
+    var selectedIdx by remember(series.size) { mutableIntStateOf((series.size - 1).coerceAtLeast(0)) }
+    val nonZeroAvg = remember(series) {
+        val active = series.map { it.second }.filter { it > 0.0 }
+        if (active.isNotEmpty()) active.average() else 0.0
+    }
+    val maxVal = remember(series, nonZeroAvg) {
+        maxOf(series.maxOfOrNull { it.second } ?: 1.0, nonZeroAvg).coerceAtLeast(1.0)
+    }
+    val avgLineColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+
+    CyberCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        contentPadding = PaddingValues(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "6 Aylık Gelir Trendi",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                val (selLabel, selVal) = series[selectedIdx.coerceIn(0, series.lastIndex)]
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = if (isBalanceHidden) {
+                        "$selLabel ayı seçili • 6 ay ort. gizli"
+                    } else {
+                        "$selLabel: ${format.format(selVal)}  •  Ort: ${format.format(nonZeroAvg)}"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = mint,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Surface(
+                color = if (isDark) CyberDarkSurfaceVariant else CyberLightSurfaceVariant,
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = "6 Ay Ort.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(92.dp)
+        ) {
+            val w = size.width
+            val h = size.height
+            val bottomPad = 4.dp.toPx()
+            val usableH = h - bottomPad - 8.dp.toPx()
+            val count = series.size.coerceAtLeast(1)
+            val colW = w / count
+            val barW = (colW * 0.42f).coerceAtMost(24.dp.toPx())
+
+            series.forEachIndexed { i, (_, value) ->
+                val x = i * colW + (colW - barW) / 2f
+                val isSel = i == selectedIdx
+                val barH = ((value / maxVal) * usableH).toFloat().coerceAtLeast(if (value > 0) 4.dp.toPx() else 2.dp.toPx())
+                drawRoundRect(
+                    color = when {
+                        value <= 0.0 -> avgLineColor.copy(alpha = 0.25f)
+                        isSel -> mint
+                        else -> mint.copy(alpha = 0.48f)
+                    },
+                    topLeft = Offset(x, h - bottomPad - barH),
+                    size = Size(barW, barH),
+                    cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx())
+                )
+            }
+
+            if (nonZeroAvg > 0.0) {
+                val avgY = h - bottomPad - ((nonZeroAvg / maxVal) * usableH).toFloat()
+                drawLine(
+                    color = avgLineColor,
+                    start = Offset(0f, avgY),
+                    end = Offset(w, avgY),
+                    strokeWidth = 1.2.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f), 0f)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Row(modifier = Modifier.fillMaxWidth()) {
+            series.forEachIndexed { idx, (lbl, _) ->
+                val isSel = idx == selectedIdx
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { selectedIdx = idx }
+                        .padding(vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = lbl,
+                        fontSize = 11.sp,
+                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSel) mint else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+            }
         }
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * Clean Bank Statement Ledger Card grouping income rows with 0.6.dp hairline dividers.
+ */
 @Composable
-private fun IncomeRowCard(
+private fun IncomeMonthLedgerCard(
+    headerTitle: String,
+    headerCountText: String,
+    headerTotalText: String,
+    transactions: List<Transaction>,
+    sdf: SimpleDateFormat,
+    format: java.text.NumberFormat,
+    isBalanceHidden: Boolean,
+    mint: Color,
+    dividerColor: Color,
+    isDark: Boolean,
+    onEdit: ((Transaction) -> Unit)?,
+    onDelete: ((Transaction) -> Unit)?,
+    onRepeat: ((Transaction) -> Unit)?
+) {
+    CyberCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        contentPadding = PaddingValues(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = headerTitle,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.7.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "• $headerCountText",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = headerTotalText,
+                style = TabularAmountStyle,
+                fontSize = 13.sp,
+                color = mint,
+                softWrap = false,
+                maxLines = 1
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+        HorizontalDivider(thickness = 0.8.dp, color = dividerColor)
+
+        transactions.forEachIndexed { idx, tx ->
+            IncomeLedgerRow(
+                tx = tx,
+                dateText = sdf.format(Date(tx.timestamp)),
+                amountText = if (isBalanceHidden) "••••" else "+${format.format(tx.amount)}",
+                mint = mint,
+                isDark = isDark,
+                onEdit = onEdit,
+                onDelete = onDelete,
+                onRepeat = onRepeat
+            )
+            if (idx < transactions.lastIndex) {
+                HorizontalDivider(thickness = 0.6.dp, color = dividerColor)
+            }
+        }
+    }
+}
+
+@Composable
+private fun IncomeLedgerRow(
     tx: Transaction,
     dateText: String,
     amountText: String,
-    mintAccent: Color,
+    mint: Color,
+    isDark: Boolean,
     onEdit: ((Transaction) -> Unit)?,
     onDelete: ((Transaction) -> Unit)?,
     onRepeat: ((Transaction) -> Unit)?
@@ -901,149 +1148,126 @@ private fun IncomeRowCard(
         else -> Icons.Rounded.TrendingUp
     }
 
-    CyberCard(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = hasMenuActions) { expandedMenu = true },
-        shape = RoundedCornerShape(16.dp),
-        contentPadding = PaddingValues(13.dp)
+            .clickable(enabled = hasMenuActions) { expandedMenu = true }
+            .padding(vertical = 11.dp)
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(mint.copy(alpha = if (isDark) 0.14f else 0.10f)),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(mintAccent.copy(alpha = 0.14f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = mintAccent,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = tx.title,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        if (tx.category.isNotBlank() && !tx.category.equals(tx.title, ignoreCase = true)) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-                                shape = RoundedCornerShape(6.dp)
-                            ) {
-                                Text(
-                                    text = tx.category,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    softWrap = false,
-                                    maxLines = 1,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                        if (!tx.person.isNullOrBlank()) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                                shape = RoundedCornerShape(6.dp)
-                            ) {
-                                Text(
-                                    text = tx.person,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    softWrap = false,
-                                    maxLines = 1,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(3.dp)
-                        ) {
-                            Icon(
-                                Icons.Rounded.CalendarToday,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(11.dp)
-                            )
-                            Text(
-                                text = dateText,
-                                fontSize = 10.sp,
-                                softWrap = false,
-                                maxLines = 1,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Text(
-                    text = amountText,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 15.sp,
-                    softWrap = false,
-                    maxLines = 1,
-                    color = mintAccent
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = mint,
+                    modifier = Modifier.size(19.dp)
                 )
             }
 
-            if (hasMenuActions) {
-                DropdownMenu(
-                    expanded = expandedMenu,
-                    onDismissRequest = { expandedMenu = false }
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    if (onEdit != null) {
-                        DropdownMenuItem(
-                            leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                            text = { Text("Düzenle") },
-                            onClick = {
-                                expandedMenu = false
-                                onEdit(tx)
-                            }
-                        )
+                    Text(
+                        text = tx.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (!tx.person.isNullOrBlank()) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.11f),
+                            shape = RoundedCornerShape(5.dp)
+                        ) {
+                            Text(
+                                text = tx.person,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                softWrap = false,
+                                maxLines = 1,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                            )
+                        }
                     }
-                    if (onRepeat != null) {
-                        DropdownMenuItem(
-                            leadingIcon = { Icon(Icons.Rounded.Replay, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) },
-                            text = { Text("Bugüne Tekrarla") },
-                            onClick = {
-                                expandedMenu = false
-                                onRepeat(tx)
-                            }
-                        )
+                }
+                Spacer(modifier = Modifier.height(2.dp))
+                val meta = buildString {
+                    if (tx.category.isNotBlank() && !tx.category.equals(tx.title, ignoreCase = true)) {
+                        append(tx.category)
+                        append(" • ")
                     }
-                    if (onDelete != null) {
-                        DropdownMenuItem(
-                            leadingIcon = { Icon(Icons.Rounded.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp)) },
-                            text = { Text("Sil", color = MaterialTheme.colorScheme.error) },
-                            onClick = {
-                                expandedMenu = false
-                                onDelete(tx)
-                            }
-                        )
-                    }
+                    append(dateText)
+                }
+                Text(
+                    text = meta,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = amountText,
+                style = TabularAmountStyle,
+                fontSize = 14.sp,
+                color = mint,
+                softWrap = false,
+                maxLines = 1
+            )
+        }
+
+        if (hasMenuActions) {
+            DropdownMenu(
+                expanded = expandedMenu,
+                onDismissRequest = { expandedMenu = false }
+            ) {
+                if (onEdit != null) {
+                    DropdownMenuItem(
+                        leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                        text = { Text("Düzenle") },
+                        onClick = {
+                            expandedMenu = false
+                            onEdit(tx)
+                        }
+                    )
+                }
+                if (onRepeat != null) {
+                    DropdownMenuItem(
+                        leadingIcon = { Icon(Icons.Rounded.Replay, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) },
+                        text = { Text("Bugüne Tekrarla") },
+                        onClick = {
+                            expandedMenu = false
+                            onRepeat(tx)
+                        }
+                    )
+                }
+                if (onDelete != null) {
+                    DropdownMenuItem(
+                        leadingIcon = { Icon(Icons.Rounded.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp)) },
+                        text = { Text("Sil", color = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            expandedMenu = false
+                            onDelete(tx)
+                        }
+                    )
                 }
             }
         }

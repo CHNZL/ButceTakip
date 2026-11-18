@@ -1,12 +1,18 @@
 package com.example.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,8 +25,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -28,729 +35,167 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.BankRate
 import com.example.data.GoldPrice
+import com.example.data.Transaction
+import com.example.data.TransactionType
 import com.example.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.math.abs
 
 /**
- * Flagship Executive Hero Card for Anasayfa.
- * Shows net monthly position, live cashflow allocation bar, privacy toggle,
- * and interactive Income / Expense / Saving breakdown tiles.
+ * Compact 1-line live market ticker strip shown cleanly at the top of Anasayfa.
+ * Tapping opens the full interactive Market Bottom Sheet without wasting scroll space.
  */
 @Composable
-fun HomeHeroCommandCard(
-    monthLabel: String,
-    balance: Double,
-    income: Double,
-    expense: Double,
-    saving: Double,
-    isBalanceHidden: Boolean,
-    onToggleVisibility: () -> Unit,
-    onOpenIncomes: () -> Unit,
-    onOpenPayments: () -> Unit,
-    onOpenSavings: () -> Unit,
+fun HomeLiveTickerStrip(
+    goldPrices: List<GoldPrice>,
+    bankRates: List<BankRate>,
+    ziraatRates: List<BankRate>,
+    isFetching: Boolean,
+    onOpenMarketSheet: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val format = remember {
-        com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 }
+    val surfaceBg = if (isDark) CyberDarkSurface else Color.White
+    val borderColor = if (isDark) CyberBorderStroke else Color(0xFFE2E8F0)
+    val amber = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+    val mint = if (isDark) CyberNeonMint else Color(0xFF059669)
+
+    val gramGold = remember(goldPrices) {
+        goldPrices.firstOrNull { it.name.contains("gram", ignoreCase = true) } ?: goldPrices.firstOrNull()
+    }
+    val ceyrekGold = remember(goldPrices) {
+        goldPrices.firstOrNull {
+            it.name.contains("çeyrek", ignoreCase = true) || it.name.contains("ceyrek", ignoreCase = true)
+        }
+    }
+    val usdRate = remember(bankRates, ziraatRates) {
+        bankRates.firstOrNull { it.code.equals("USD", ignoreCase = true) }
+            ?: ziraatRates.firstOrNull { it.code.equals("USD", ignoreCase = true) }
+    }
+    val eurRate = remember(bankRates, ziraatRates) {
+        bankRates.firstOrNull { it.code.equals("EUR", ignoreCase = true) }
+            ?: ziraatRates.firstOrNull { it.code.equals("EUR", ignoreCase = true) }
     }
 
-    val incomeColor = if (isDark) CyberNeonMint else Color(0xFF059669)
-    val expenseColor = if (isDark) CyberNeonCoral else Color(0xFFDC2626)
-    val savingColor = if (isDark) CyberNeonCyan else Color(0xFF0284C7)
-    val trackBg = if (isDark) Color(0xFF1A2338) else Color(0xFFE2E8F0)
-    val tileBg = if (isDark) Color(0xFF111827).copy(alpha = 0.85f) else Color(0xFFF8FAFC)
-    val tileBorder = if (isDark) Color(0xFF243047) else Color(0xFFE2E8F0)
-
-    val (statusLabel, statusColor) = when {
-        income == 0.0 && expense == 0.0 && saving == 0.0 -> "Yeni Dönem" to MaterialTheme.colorScheme.primary
-        balance >= 0 -> "Kasa Artıda ✓" to incomeColor
-        else -> "Bütçe Ekside" to expenseColor
+    val tickers = remember(gramGold, ceyrekGold, usdRate, eurRate) {
+        buildList {
+            if (gramGold != null) add(Triple("GRAM", gramGold.sell.ifBlank { gramGold.buy }, amber))
+            if (usdRate != null && usdRate.sell != "0,00" && usdRate.sell != "-") add(Triple("USD", usdRate.sell, mint))
+            if (eurRate != null && eurRate.sell != "0,00" && eurRate.sell != "-") add(Triple("EUR", eurRate.sell, mint))
+            if (ceyrekGold != null) add(Triple("ÇEYREK", ceyrekGold.sell.ifBlank { ceyrekGold.buy }, amber))
+        }
     }
 
-    val totalPool = maxOf(income, expense + saving).coerceAtLeast(1.0)
-    val expenseRatio = (expense / totalPool).toFloat().coerceIn(0f, 1f)
-    val savingRatio = (saving / totalPool).toFloat().coerceIn(0f, 1f - expenseRatio)
-    val remainingRatio = (1f - expenseRatio - savingRatio).coerceAtLeast(0f)
-
-    val glowTint = if (balance >= 0) incomeColor else expenseColor
-
-    CyberCard(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(26.dp),
-        borderColor = if (isDark) CyberBorderGlow else MaterialTheme.colorScheme.primary.copy(alpha = 0.24f),
-        contentPadding = PaddingValues(0.dp)
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .clickable { onOpenMarketSheet() }
+            .testTag("home_live_ticker_strip"),
+        shape = RoundedCornerShape(14.dp),
+        color = surfaceBg,
+        border = BorderStroke(0.8.dp, borderColor),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .drawBehind {
-                    val w = size.width
-                    val h = size.height
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                glowTint.copy(alpha = if (isDark) 0.16f else 0.10f),
-                                Color.Transparent
-                            ),
-                            center = Offset(w * 0.88f, h * 0.12f),
-                            radius = w * 0.55f
-                        ),
-                        center = Offset(w * 0.88f, h * 0.12f),
-                        radius = w * 0.55f
-                    )
-                    val wave = Path().apply {
-                        moveTo(0f, h * 0.52f)
-                        cubicTo(w * 0.30f, h * 0.44f, w * 0.58f, h * 0.62f, w, h * 0.36f)
-                    }
-                    drawPath(
-                        path = wave,
-                        color = CyberNeonPurple.copy(alpha = if (isDark) 0.14f else 0.08f),
-                        style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
-                    )
-                }
-                .padding(18.dp)
+                .padding(horizontal = 12.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                // Header Row: Live Period Pill + Status Badge + Eye Toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(statusColor)
-                        )
-                        Text(
-                            text = "NET BÜTÇE",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 1.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            softWrap = false
-                        )
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = monthLabel,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                softWrap = false,
-                                maxLines = 1,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
+            Box(
+                modifier = Modifier
+                    .size(7.dp)
+                    .clip(CircleShape)
+                    .background(if (isFetching) amber else mint)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Surface(
-                            color = statusColor.copy(alpha = 0.14f),
-                            shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(1.dp, statusColor.copy(alpha = 0.35f))
-                        ) {
-                            Text(
-                                text = statusLabel,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = statusColor,
-                                softWrap = false,
-                                maxLines = 1,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-                        IconButton(
-                            onClick = onToggleVisibility,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .testTag("hero_visibility_toggle")
-                        ) {
-                            Icon(
-                                imageVector = if (isBalanceHidden) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
-                                contentDescription = "Bakiyeyi Gizle veya Göster",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // Main Net Figure
+            if (tickers.isEmpty()) {
                 Text(
-                    text = if (isBalanceHidden) "•••••••• ₺" else format.format(balance),
-                    fontSize = 34.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = (-0.8).sp,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    text = if (isFetching) "Canlı piyasa verileri güncelleniyor..." else "Canlı Piyasa Masası",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Cashflow Allocation Bar
+            } else {
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(7.dp)
-                        .clip(CircleShape)
-                        .background(trackBg)
+                        .weight(1f)
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (income == 0.0 && expense == 0.0 && saving == 0.0) {
-                        // Subtle empty bar
-                    } else {
-                        if (expenseRatio > 0f) {
-                            Box(
-                                modifier = Modifier
-                                    .weight(expenseRatio)
-                                    .fillMaxHeight()
-                                    .background(expenseColor)
+                    tickers.forEachIndexed { idx, (code, price, dotColor) ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Text(
+                                text = code,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = dotColor,
+                                softWrap = false,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = price,
+                                fontFamily = JetBrainsMonoFamily,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                softWrap = false,
+                                maxLines = 1
                             )
                         }
-                        if (savingRatio > 0f) {
+                        if (idx < tickers.lastIndex) {
                             Box(
                                 modifier = Modifier
-                                    .weight(savingRatio)
-                                    .fillMaxHeight()
-                                    .background(savingColor)
-                            )
-                        }
-                        if (remainingRatio > 0f) {
-                            Box(
-                                modifier = Modifier
-                                    .weight(remainingRatio)
-                                    .fillMaxHeight()
-                                    .background(incomeColor)
+                                    .width(1.dp)
+                                    .height(12.dp)
+                                    .background(borderColor)
                             )
                         }
                     }
                 }
-
-                if (income > 0.0) {
-                    val expPct = ((expense / income) * 100).toInt().coerceAtLeast(0)
-                    val savPct = ((saving / income) * 100).toInt().coerceAtLeast(0)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Gelirin %$expPct'si gider • %$savPct'i birikime yönlendirildi",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Interactive 3-Column Metrics Dock
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    HeroMetricMiniTile(
-                        label = "GELİR",
-                        value = if (isBalanceHidden) "••••" else format.format(income),
-                        icon = Icons.Rounded.NorthEast,
-                        accent = incomeColor,
-                        bgColor = tileBg,
-                        borderColor = tileBorder,
-                        onClick = onOpenIncomes,
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("hero_income_tile")
-                    )
-                    HeroMetricMiniTile(
-                        label = "GİDER",
-                        value = if (isBalanceHidden) "••••" else format.format(expense),
-                        icon = Icons.Rounded.SouthWest,
-                        accent = expenseColor,
-                        bgColor = tileBg,
-                        borderColor = tileBorder,
-                        onClick = onOpenPayments,
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("hero_expense_tile")
-                    )
-                    HeroMetricMiniTile(
-                        label = "BİRİKİM",
-                        value = if (isBalanceHidden) "••••" else format.format(saving),
-                        icon = Icons.Rounded.Savings,
-                        accent = savingColor,
-                        bgColor = tileBg,
-                        borderColor = tileBorder,
-                        onClick = onOpenSavings,
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("hero_saving_tile")
-                    )
-                }
             }
-        }
-    }
-}
 
-@Composable
-private fun HeroMetricMiniTile(
-    label: String,
-    value: String,
-    icon: ImageVector,
-    accent: Color,
-    bgColor: Color,
-    borderColor: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .clickable { onClick() },
-        shape = RoundedCornerShape(14.dp),
-        color = bgColor,
-        border = BorderStroke(1.dp, borderColor)
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(12.dp)
-                )
-                Text(
-                    text = label,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 0.5.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    softWrap = false,
-                    maxLines = 1
-                )
-            }
-            Spacer(modifier = Modifier.height(3.dp))
-            Text(
-                text = value,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Black,
-                color = accent,
-                softWrap = false,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-/**
- * 4-Tile Quick Command Bar cleanly aligned below Hero.
- */
-@Composable
-fun HomeQuickActionDock(
-    onAddIncome: () -> Unit,
-    onAddExpense: () -> Unit,
-    onAddSaving: () -> Unit,
-    onOpenAnalytics: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val incTint = if (isDark) CyberNeonMint else Color(0xFF059669)
-    val expTint = if (isDark) CyberNeonCoral else Color(0xFFDC2626)
-    val savTint = if (isDark) CyberNeonCyan else Color(0xFF0284C7)
-    val anaTint = if (isDark) CyberNeonPurple else Color(0xFF7C3AED)
-
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        HomeCommandTile(
-            label = "Gelir",
-            icon = Icons.Default.Add,
-            tint = incTint,
-            isDark = isDark,
-            onClick = onAddIncome,
-            modifier = Modifier
-                .weight(1f)
-                .testTag("quick_add_income")
-        )
-        HomeCommandTile(
-            label = "Gider",
-            icon = Icons.Rounded.Remove,
-            tint = expTint,
-            isDark = isDark,
-            onClick = onAddExpense,
-            modifier = Modifier
-                .weight(1f)
-                .testTag("quick_add_expense")
-        )
-        HomeCommandTile(
-            label = "Birikim",
-            icon = Icons.Rounded.Savings,
-            tint = savTint,
-            isDark = isDark,
-            onClick = onAddSaving,
-            modifier = Modifier
-                .weight(1f)
-                .testTag("quick_add_saving")
-        )
-        HomeCommandTile(
-            label = "Analiz",
-            icon = Icons.Rounded.Insights,
-            tint = anaTint,
-            isDark = isDark,
-            onClick = onOpenAnalytics,
-            modifier = Modifier
-                .weight(1f)
-                .testTag("quick_open_analytics")
-        )
-    }
-}
-
-@Composable
-private fun HomeCommandTile(
-    label: String,
-    icon: ImageVector,
-    tint: Color,
-    isDark: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val cardBg = if (isDark) CyberDarkSurface else Color.White
-    val border = if (isDark) CyberBorderStroke else Color(0xFFE2E8F0)
-
-    Surface(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        color = cardBg,
-        border = BorderStroke(1.dp, border),
-        shadowElevation = if (isDark) 0.dp else 1.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 11.dp, horizontal = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(5.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(tint.copy(alpha = if (isDark) 0.16f else 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    tint = tint,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            Text(
-                text = label,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                softWrap = false,
-                maxLines = 1
-            )
-        }
-    }
-}
-
-/**
- * Dual Executive Insights Strip:
- * 1) Daily Remaining Budget Pace
- * 2) Pending & Overdue Bills Radar
- */
-@Composable
-fun HomeDailyRadarRow(
-    remainingBalance: Double,
-    remainingDaysInMonth: Int,
-    overdueCount: Int,
-    overdueTotal: Double,
-    pendingThisMonthCount: Int,
-    pendingThisMonthTotal: Double,
-    isBalanceHidden: Boolean,
-    onOpenPayments: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val format = remember {
-        com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 }
-    }
-    val mint = if (isDark) CyberNeonMint else Color(0xFF059669)
-    val coral = if (isDark) CyberNeonCoral else Color(0xFFDC2626)
-    val amber = if (isDark) CyberNeonOrange else Color(0xFFD97706)
-
-    val safeDays = remainingDaysInMonth.coerceAtLeast(1)
-    val dailyAllowance = if (remainingBalance > 0.0) remainingBalance / safeDays else 0.0
-
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        // Daily Allowance Card
-        CyberCard(
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(18.dp),
-            contentPadding = PaddingValues(14.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Speed,
-                    contentDescription = null,
-                    tint = if (remainingBalance >= 0) mint else coral,
-                    modifier = Modifier.size(16.dp)
-                )
-                Text(
-                    text = "Günlük Limit",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = when {
-                    isBalanceHidden -> "•••• ₺"
-                    remainingBalance > 0.0 -> "${format.format(dailyAllowance)}/gün"
-                    else -> "Limit Aşıldı"
-                },
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Black,
-                color = if (remainingBalance > 0.0) MaterialTheme.colorScheme.onSurface else coral,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = "Ay sonuna $safeDays gün",
-                fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
-            )
-        }
-
-        // Payment Radar Card
-        val radarCount = overdueCount + pendingThisMonthCount
-        val radarAmount = overdueTotal + pendingThisMonthTotal
-        val radarColor = when {
-            overdueCount > 0 -> coral
-            pendingThisMonthCount > 0 -> amber
-            else -> mint
-        }
-
-        CyberCard(
-            modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(18.dp))
-                .clickable { onOpenPayments() },
-            shape = RoundedCornerShape(18.dp),
-            borderColor = if (overdueCount > 0) coral.copy(alpha = 0.55f) else null,
-            contentPadding = PaddingValues(14.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(
-                    imageVector = if (overdueCount > 0) Icons.Rounded.WarningAmber else Icons.Rounded.EventNote,
-                    contentDescription = null,
-                    tint = radarColor,
-                    modifier = Modifier.size(16.dp)
-                )
-                Text(
-                    text = "Ödeme Radarı",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = when {
-                    isBalanceHidden && radarCount > 0 -> "$radarCount Ödeme"
-                    radarCount > 0 -> format.format(radarAmount)
-                    else -> "Borç Yok ✓"
-                },
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Black,
-                color = if (radarCount > 0) radarColor else mint,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = when {
-                    overdueCount > 0 -> "$overdueCount geciken • $radarCount toplam"
-                    pendingThisMonthCount > 0 -> "$pendingThisMonthCount fatura bekliyor"
-                    else -> "Bu ay tümü ödendi"
-                },
-                fontSize = 10.sp,
-                color = if (overdueCount > 0) coral else MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-/**
- * Live Portfolio Card paired beside Savings Rate Gauge on Home Screen.
- */
-@Composable
-fun HomePortfolioSpotlightCard(
-    portfolioValue: Double,
-    portfolioCost: Double,
-    besTotal: Double,
-    isBalanceHidden: Boolean,
-    onOpenSavings: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val format = remember {
-        com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 }
-    }
-    val grandTotal = portfolioValue + besTotal
-    val netProfit = portfolioValue - portfolioCost
-    val profitPct = if (portfolioCost > 0.0) ((netProfit / portfolioCost) * 100) else 0.0
-    val isProfit = netProfit >= 0.0
-    val mint = if (isDark) CyberNeonMint else Color(0xFF059669)
-    val coral = if (isDark) CyberNeonCoral else Color(0xFFDC2626)
-    val cyan = if (isDark) CyberNeonCyan else Color(0xFF0284C7)
-
-    CyberCard(
-        modifier = modifier
-            .clip(RoundedCornerShape(22.dp))
-            .clickable { onOpenSavings() }
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Portföy",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1
-            )
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(cyan.copy(alpha = 0.14f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.AccountBalanceWallet,
-                    contentDescription = null,
-                    tint = cyan,
-                    modifier = Modifier.size(15.dp)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Text(
-            text = if (isBalanceHidden) "•••••• ₺" else format.format(grandTotal),
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Black,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (portfolioCost > 0.0) {
-            Surface(
-                color = (if (isProfit) mint else coral).copy(alpha = 0.14f),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text(
-                    text = String.format(
-                        java.util.Locale("tr"),
-                        "%s%.1f%% Net Getiri",
-                        if (isProfit) "+" else "",
-                        profitPct
-                    ),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = if (isProfit) mint else coral,
-                    softWrap = false,
-                    maxLines = 1,
-                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
-                )
-            }
-        } else {
-            Text(
-                text = if (besTotal > 0) "BES birikimi dahil" else "Altın, Döviz & BES",
-                fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(3.dp)
-        ) {
-            Text(
-                text = "Detayı Gör",
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Spacer(modifier = Modifier.width(8.dp))
             Icon(
-                imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(12.dp)
+                imageVector = Icons.Rounded.ChevronRight,
+                contentDescription = "Tüm Piyasaları Aç",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
             )
         }
     }
 }
 
 /**
- * Clean, Compact Collapsible Market Ticker Hub for Anasayfa.
- * Shows top 4 live rates by default and expands on demand to keep the Home screen airy.
+ * Full Live Market Drawer / Sheet opened on tapping the Home Ticker Strip.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeCompactMarketCard(
+fun HomeMarketBottomSheet(
     goldPrices: List<GoldPrice>,
     isFetchingGold: Boolean,
     lastGoldUpdate: String?,
@@ -763,12 +208,10 @@ fun HomeCompactMarketCard(
     isFetchingZiraat: Boolean,
     lastZiraatUpdate: String?,
     onRefreshZiraat: () -> Unit,
-    modifier: Modifier = Modifier
+    onDismiss: () -> Unit
 ) {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     var selectedSource by remember { mutableIntStateOf(0) }
-    var isExpanded by remember { mutableStateOf(false) }
-
     val currentFetching = when (selectedSource) {
         0 -> isFetchingGold
         1 -> isFetchingBank
@@ -779,228 +222,1405 @@ fun HomeCompactMarketCard(
         1 -> lastBankUpdate
         else -> lastZiraatUpdate
     }
-    val onRefreshCurrent = {
-        when (selectedSource) {
-            0 -> onRefreshGold()
-            1 -> onRefreshBank()
-            else -> onRefreshZiraat()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp)
+                .padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Canlı Piyasa Masası",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    if (!currentLastUpdate.isNullOrBlank()) {
+                        Text(
+                            text = "Son güncelleme: $currentLastUpdate",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                IconButton(
+                    onClick = {
+                        when (selectedSource) {
+                            0 -> onRefreshGold()
+                            1 -> onRefreshBank()
+                            else -> onRefreshZiraat()
+                        }
+                    },
+                    modifier = Modifier.minimumInteractiveComponentSize()
+                ) {
+                    if (currentFetching) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Yenile",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isDark) CyberDarkSurfaceVariant else CyberLightSurfaceVariant)
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                MarketTabPill("Altın (Sivas)", selectedSource == 0, Modifier.weight(1f)) { selectedSource = 0 }
+                MarketTabPill("Yapı Kredi", selectedSource == 1, Modifier.weight(1f)) { selectedSource = 1 }
+                MarketTabPill("Ziraat", selectedSource == 2, Modifier.weight(1f)) { selectedSource = 2 }
+            }
+
+            val items = when (selectedSource) {
+                0 -> goldPrices.map { Triple(it.name, "Altın", it.buy to it.sell) }
+                1 -> bankRates.map { Triple(it.code, it.name, it.buy to it.sell) }
+                else -> ziraatRates.map { Triple(it.code, it.name, it.buy to it.sell) }
+            }
+
+            if (items.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 28.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (currentFetching) "Piyasa kurları alınıyor..." else "Veri alınamadı, yenilemeyi deneyin.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(if (isDark) CyberDarkSurfaceVariant.copy(alpha = 0.55f) else Color(0xFFF8FAFC))
+                ) {
+                    items.forEachIndexed { idx, (title, sub, prices) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 11.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = sub,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("Alış", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        text = prices.first,
+                                        fontFamily = JetBrainsMonoFamily,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("Satış", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        text = prices.second,
+                                        fontFamily = JetBrainsMonoFamily,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                        if (idx < items.lastIndex) {
+                            HorizontalDivider(
+                                thickness = 0.6.dp,
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                modifier = Modifier.padding(horizontal = 14.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
+}
 
-    val totalCount = when (selectedSource) {
-        0 -> goldPrices.size
-        1 -> bankRates.size
-        else -> ziraatRates.size
+/**
+ * Private Wealth Family CFO Hero Card.
+ * Replaces cluttered mini-boxes with authoritative typography, daily spending allowance,
+ * month pace insight, proportional cashflow waterfall bar, and tappable 3-column footer.
+ */
+@Composable
+fun HomeWealthHeroCard(
+    monthLabel: String,
+    balance: Double,
+    income: Double,
+    expense: Double,
+    saving: Double,
+    elapsedMonthFraction: Float,
+    remainingDaysInMonth: Int,
+    isBalanceHidden: Boolean,
+    onToggleVisibility: () -> Unit,
+    onOpenIncomes: () -> Unit,
+    onOpenPayments: () -> Unit,
+    onOpenSavings: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val format = remember {
+        com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 }
     }
+
+    val mint = if (isDark) CyberNeonMint else Color(0xFF059669)
+    val coral = if (isDark) CyberNeonCoral else Color(0xFFE11D48)
+    val sky = if (isDark) CyberNeonCyan else Color(0xFF0284C7)
+    val amber = if (isDark) CyberNeonOrange else Color(0xFFD97706)
+
+    val safePool = maxOf(income, expense + saving).coerceAtLeast(1.0)
+    val expenseRatio by animateFloatAsState(
+        targetValue = (expense / safePool).toFloat().coerceIn(0f, 1f),
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "heroExpenseRatio"
+    )
+    val savingRatio by animateFloatAsState(
+        targetValue = (saving / safePool).toFloat().coerceIn(0f, 1f - expenseRatio),
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "heroSavingRatio"
+    )
+    val remainingRatio = (1f - expenseRatio - savingRatio).coerceAtLeast(0f)
+
+    // Budget Pace intelligence (Financial Expert logic)
+    val spentFraction = if (income > 0.0) (expense / income).toFloat() else 0f
+    val (paceLabel, paceColor) = when {
+        income == 0.0 && expense == 0.0 && saving == 0.0 -> "Yeni Dönem" to MaterialTheme.colorScheme.primary
+        balance < 0.0 -> "Kasa Ekside" to coral
+        income > 0.0 && spentFraction > elapsedMonthFraction + 0.15f -> "Harcama Hızlı" to amber
+        income > 0.0 && (saving / income) >= 0.20 -> "Tasarruf Güçlü" to mint
+        else -> "Tempo Dengeli" to mint
+    }
+
+    val dailyAllowance = if (balance > 0.0) balance / remainingDaysInMonth.coerceAtLeast(1) else 0.0
+    val dividerColor = if (isDark) Color(0xFF1F293D) else Color(0xFFE2E8F0)
+    val trackBg = if (isDark) Color(0xFF1B2436) else Color(0xFFE8EEF5)
 
     CyberCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        contentPadding = PaddingValues(14.dp)
+        shape = RoundedCornerShape(24.dp),
+        borderColor = if (isDark) CyberBorderStroke else Color(0xFFE2E8F0),
+        contentPadding = PaddingValues(20.dp)
     ) {
+        // 1. Header Strip: Label + Month + Pace Pill + Eye Toggle
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(30.dp)
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(Color(0xFFF59E0B).copy(alpha = 0.16f)),
-                    contentAlignment = Alignment.Center
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "SERBEST NAKİT",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.8.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    softWrap = false,
+                    maxLines = 1
+                )
+                Surface(
+                    color = if (isDark) CyberDarkSurfaceVariant else CyberLightSurfaceVariant,
+                    shape = RoundedCornerShape(6.dp)
                 ) {
-                    Icon(
-                        Icons.Rounded.ShowChart,
-                        contentDescription = null,
-                        tint = Color(0xFFF59E0B),
-                        modifier = Modifier.size(17.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
                     Text(
-                        text = "Canlı Piyasa",
-                        fontSize = 15.sp,
+                        text = monthLabel,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        softWrap = false,
+                        maxLines = 1,
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
                     )
-                    if (!currentLastUpdate.isNullOrBlank()) {
-                        Text(
-                            text = "Güncelleme: $currentLastUpdate",
-                            fontSize = 9.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (totalCount > 4) {
-                    TextButton(
-                        onClick = { isExpanded = !isExpanded },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                        modifier = Modifier.height(30.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Surface(
+                    color = paceColor.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(paceColor)
+                        )
                         Text(
-                            text = if (isExpanded) "Daralt" else "Tümü ($totalCount)",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
+                            text = paceLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = paceColor,
+                            softWrap = false,
+                            maxLines = 1
                         )
                     }
                 }
                 IconButton(
-                    onClick = onRefreshCurrent,
-                    modifier = Modifier.size(32.dp)
+                    onClick = onToggleVisibility,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .testTag("hero_visibility_toggle")
                 ) {
-                    if (currentFetching) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(15.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Piyasa Verilerini Yenile",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(17.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = if (isBalanceHidden) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                        contentDescription = "Bakiyeyi Gizle veya Göster",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
+        // 2. Giant Tabular Net Balance
+        Text(
+            text = if (isBalanceHidden) "•••••••• ₺" else format.format(balance),
+            style = TabularHeroStyle,
+            fontSize = 38.sp,
+            color = if (balance < 0.0 && !isBalanceHidden) coral else MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // 3. Calm CFO Pace Insight
+        Text(
+            text = buildAnnotatedString {
+                when {
+                    isBalanceHidden -> {
+                        append("Gizlilik modu aktif • Ay sonuna $remainingDaysInMonth gün")
+                    }
+                    income == 0.0 && expense == 0.0 && saving == 0.0 -> {
+                        append("Bu ay henüz kayıt yok • İlk işlemi ekleyerek başlayın")
+                    }
+                    balance > 0.0 -> {
+                        append("Ay sonuna $remainingDaysInMonth gün • Günde ")
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = mint)) {
+                            append(format.format(dailyAllowance))
+                        }
+                        append(" serbest bütçe")
+                    }
+                    else -> {
+                        append("Bu ay harcama ve birikim geliri ")
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = coral)) {
+                            append(format.format(abs(balance)))
+                        }
+                        append(" aştı")
+                    }
+                }
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 4. Clean Proportional Allocation Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(if (isDark) Color(0xFF141B2D) else Color(0xFFF1F5F9))
-                .padding(3.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                .height(6.dp)
+                .clip(CircleShape)
+                .background(trackBg)
         ) {
-            MarketTabPill(
-                title = "Altın (Sivas)",
-                isSelected = selectedSource == 0,
-                modifier = Modifier.weight(1f),
-                onClick = { selectedSource = 0 }
-            )
-            MarketTabPill(
-                title = "Yapı Kredi",
-                isSelected = selectedSource == 1,
-                modifier = Modifier.weight(1f),
-                onClick = { selectedSource = 1 }
-            )
-            MarketTabPill(
-                title = "Ziraat",
-                isSelected = selectedSource == 2,
-                modifier = Modifier.weight(1f),
-                onClick = { selectedSource = 2 }
+            if (income > 0.0 || expense > 0.0 || saving > 0.0) {
+                if (expenseRatio > 0f) {
+                    Box(modifier = Modifier.weight(expenseRatio.coerceAtLeast(0.01f)).fillMaxHeight().background(coral))
+                }
+                if (savingRatio > 0f) {
+                    Box(modifier = Modifier.weight(savingRatio.coerceAtLeast(0.01f)).fillMaxHeight().background(sky))
+                }
+                if (remainingRatio > 0f) {
+                    Box(modifier = Modifier.weight(remainingRatio.coerceAtLeast(0.01f)).fillMaxHeight().background(mint))
+                }
+            }
+        }
+
+        if (income > 0.0) {
+            val expPct = ((expense / income) * 100).toInt().coerceAtLeast(0)
+            val savPct = ((saving / income) * 100).toInt().coerceAtLeast(0)
+            val remPct = (100 - expPct - savPct).coerceAtLeast(0)
+            Spacer(modifier = Modifier.height(7.dp))
+            Text(
+                text = "Gelir dağılımı: %$expPct gider • %$savPct birikim • %$remPct kalan",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+        HorizontalDivider(thickness = 0.7.dp, color = dividerColor)
+        Spacer(modifier = Modifier.height(14.dp))
 
-        when (selectedSource) {
-            0 -> MarketRateGridBody(
-                items = goldPrices.map { Triple(it.name, "ALTIN", it.buy to it.sell) },
-                isFetching = isFetchingGold,
-                isExpanded = isExpanded,
-                isDark = isDark
+        // 5. Clean 3-Column Typographic Ledger Footer (No nested boxes!)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            HeroLedgerColumn(
+                label = "Gelir",
+                value = if (isBalanceHidden) "••••" else format.format(income),
+                accentColor = mint,
+                onClick = onOpenIncomes,
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("hero_income_tile")
             )
-            1 -> MarketRateGridBody(
-                items = bankRates.map { Triple(it.code, it.name, it.buy to it.sell) },
-                isFetching = isFetchingBank,
-                isExpanded = isExpanded,
-                isDark = isDark
+            Box(
+                modifier = Modifier
+                    .width(0.8.dp)
+                    .height(34.dp)
+                    .background(dividerColor)
             )
-            else -> MarketRateGridBody(
-                items = ziraatRates.map { Triple(it.code, it.name, it.buy to it.sell) },
-                isFetching = isFetchingZiraat,
-                isExpanded = isExpanded,
-                isDark = isDark
+            HeroLedgerColumn(
+                label = "Gider",
+                value = if (isBalanceHidden) "••••" else format.format(expense),
+                accentColor = coral,
+                onClick = onOpenPayments,
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("hero_expense_tile")
+            )
+            Box(
+                modifier = Modifier
+                    .width(0.8.dp)
+                    .height(34.dp)
+                    .background(dividerColor)
+            )
+            HeroLedgerColumn(
+                label = "Birikim",
+                value = if (isBalanceHidden) "••••" else format.format(saving),
+                accentColor = sky,
+                onClick = onOpenSavings,
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("hero_saving_tile")
             )
         }
     }
 }
 
 @Composable
-private fun MarketRateGridBody(
-    items: List<Triple<String, String, Pair<String, String>>>,
-    isFetching: Boolean,
-    isExpanded: Boolean,
-    isDark: Boolean
+private fun HeroLedgerColumn(
+    label: String,
+    value: String,
+    accentColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    if (items.isEmpty()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp),
-            contentAlignment = Alignment.Center
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(accentColor)
+            )
             Text(
-                text = if (isFetching) "Canlı kurlar alınıyor..." else "Veri alınamadı, yenilemeyi deneyin.",
-                fontSize = 11.sp,
-                color = if (isFetching) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                softWrap = false,
+                maxLines = 1
             )
         }
-        return
+        Spacer(modifier = Modifier.height(3.dp))
+        Text(
+            text = value,
+            style = TabularAmountStyle,
+            fontSize = 15.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+            softWrap = false,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/**
+ * Tactile 4-Pill Quick Command Row with haptic feedback.
+ */
+@Composable
+fun HomeQuickCommandRow(
+    onAddIncome: () -> Unit,
+    onAddExpense: () -> Unit,
+    onAddSaving: () -> Unit,
+    onOpenAnalytics: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val haptic = LocalHapticFeedback.current
+    val mint = if (isDark) CyberNeonMint else Color(0xFF059669)
+    val coral = if (isDark) CyberNeonCoral else Color(0xFFE11D48)
+    val sky = if (isDark) CyberNeonCyan else Color(0xFF0284C7)
+    val indigo = if (isDark) CyberNeonPurple else Color(0xFF6366F1)
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        QuickCommandPill(
+            label = "Gelir",
+            icon = Icons.Default.Add,
+            accent = mint,
+            isDark = isDark,
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onAddIncome()
+            },
+            modifier = Modifier.weight(1f).testTag("quick_add_income")
+        )
+        QuickCommandPill(
+            label = "Gider",
+            icon = Icons.Rounded.Remove,
+            accent = coral,
+            isDark = isDark,
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onAddExpense()
+            },
+            modifier = Modifier.weight(1f).testTag("quick_add_expense")
+        )
+        QuickCommandPill(
+            label = "Birikim",
+            icon = Icons.Rounded.Savings,
+            accent = sky,
+            isDark = isDark,
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onAddSaving()
+            },
+            modifier = Modifier.weight(1f).testTag("quick_add_saving")
+        )
+        QuickCommandPill(
+            label = "Analiz",
+            icon = Icons.Rounded.Insights,
+            accent = indigo,
+            isDark = isDark,
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onOpenAnalytics()
+            },
+            modifier = Modifier.weight(1f).testTag("quick_open_analytics")
+        )
+    }
+}
+
+@Composable
+private fun QuickCommandPill(
+    label: String,
+    icon: ImageVector,
+    accent: Color,
+    isDark: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val bg = if (isDark) CyberDarkSurface else Color.White
+    val border = if (isDark) CyberBorderStroke else Color(0xFFE2E8F0)
+
+    Surface(
+        modifier = modifier
+            .minimumInteractiveComponentSize()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        color = bg,
+        border = BorderStroke(0.8.dp, border),
+        shadowElevation = if (isDark) 0.dp else 1.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = if (isDark) 0.16f else 0.11f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = accent,
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                softWrap = false,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+/**
+ * Interactive "Yaklaşan Ödemeler" Unified Ledger Card with 1-Tap Pay button.
+ */
+@Composable
+fun HomeActionBillsCard(
+    upcomingBills: List<Transaction>,
+    todayStartMillis: Long,
+    isBalanceHidden: Boolean,
+    onTogglePaid: (Transaction, Boolean) -> Unit,
+    onOpenAllPayments: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val haptic = LocalHapticFeedback.current
+    val format = remember {
+        com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 }
+    }
+    val dateSdf = remember { SimpleDateFormat("dd MMM", Locale("tr", "TR")) }
+    val mint = if (isDark) CyberNeonMint else Color(0xFF059669)
+    val coral = if (isDark) CyberNeonCoral else Color(0xFFE11D48)
+    val amber = if (isDark) CyberNeonOrange else Color(0xFFD97706)
+    val dividerColor = if (isDark) Color(0xFF1F293D) else Color(0xFFE2E8F0)
+
+    val totalUpcoming = remember(upcomingBills) { upcomingBills.sumOf { it.amount } }
+    val hasOverdue = remember(upcomingBills, todayStartMillis) {
+        upcomingBills.any { it.timestamp < todayStartMillis }
     }
 
-    val previewRows = items.take(4).chunked(2)
-    val extraRows = if (items.size > 4) items.drop(4).chunked(2) else emptyList()
+    CyberCard(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        borderColor = if (hasOverdue) coral.copy(alpha = 0.40f) else null,
+        contentPadding = PaddingValues(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "Yaklaşan Ödemeler",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (upcomingBills.isNotEmpty()) {
+                    Surface(
+                        color = (if (hasOverdue) coral else amber).copy(alpha = 0.14f),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = if (isBalanceHidden) "${upcomingBills.size} fatura" else format.format(totalUpcoming),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (hasOverdue) coral else amber,
+                            softWrap = false,
+                            maxLines = 1,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+            }
 
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        previewRows.forEach { row ->
+            TextButton(
+                onClick = onOpenAllPayments,
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                modifier = Modifier.height(32.dp)
+            ) {
+                Text("Tümü", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(2.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
+        if (upcomingBills.isEmpty()) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(mint.copy(alpha = if (isDark) 0.10f else 0.08f))
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = null,
+                    tint = mint,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = "Tüm faturalar ödendi • Bu ay bekleyen ödeme yok",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        } else {
+            Spacer(modifier = Modifier.height(10.dp))
+            Column(modifier = Modifier.fillMaxWidth()) {
+                upcomingBills.forEachIndexed { idx, tx ->
+                    val isOverdue = tx.timestamp < todayStartMillis
+                    val badgeColor = if (isOverdue) coral else amber
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(11.dp))
+                                .background(badgeColor.copy(alpha = if (isDark) 0.15f else 0.10f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isOverdue) Icons.Rounded.PriorityHigh else Icons.Rounded.ReceiptLong,
+                                contentDescription = null,
+                                tint = badgeColor,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = tx.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = dateSdf.format(Date(tx.timestamp)),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    softWrap = false,
+                                    maxLines = 1
+                                )
+                                if (isOverdue) {
+                                    Surface(
+                                        color = coral.copy(alpha = 0.14f),
+                                        shape = RoundedCornerShape(5.dp)
+                                    ) {
+                                        Text(
+                                            text = "Gecikti",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = coral,
+                                            softWrap = false,
+                                            maxLines = 1,
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                        )
+                                    }
+                                }
+                                if (!tx.person.isNullOrBlank()) {
+                                    Text(
+                                        text = "• ${tx.person}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = if (isBalanceHidden) "••••" else format.format(tx.amount),
+                                style = TabularAmountStyle,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                softWrap = false,
+                                maxLines = 1
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Surface(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        onTogglePaid(tx, true)
+                                    },
+                                color = mint.copy(alpha = if (isDark) 0.18f else 0.12f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Check,
+                                        contentDescription = "${tx.title} öde",
+                                        tint = mint,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Text(
+                                        text = "Öde",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = mint,
+                                        softWrap = false,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (idx < upcomingBills.lastIndex) {
+                        HorizontalDivider(thickness = 0.6.dp, color = dividerColor)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Side-by-side Family Health Strip: Savings Discipline Ring + Live Portfolio Net Worth.
+ */
+@Composable
+fun HomeFamilyHealthRow(
+    savingRatioPct: Int,
+    monthlySavingAmount: Double,
+    portfolioValue: Double,
+    portfolioCost: Double,
+    besTotal: Double,
+    isBalanceHidden: Boolean,
+    onOpenSavings: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val format = remember {
+        com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 }
+    }
+    val mint = if (isDark) CyberNeonMint else Color(0xFF059669)
+    val sky = if (isDark) CyberNeonCyan else Color(0xFF0284C7)
+    val coral = if (isDark) CyberNeonCoral else Color(0xFFE11D48)
+    val trackColor = if (isDark) Color(0xFF1B2436) else Color(0xFFE2E8F0)
+
+    val clampedPct = savingRatioPct.coerceIn(0, 100)
+    val sweepAnim by animateFloatAsState(
+        targetValue = (clampedPct / 100f) * 360f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "savingRingSweep"
+    )
+
+    val grandPortfolio = portfolioValue + besTotal
+    val netProfit = portfolioValue - portfolioCost
+    val profitPct = if (portfolioCost > 0.0) (netProfit / portfolioCost) * 100.0 else 0.0
+    val isProfit = netProfit >= 0.0
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // Card 1: Tasarruf Disiplini
+        CyberCard(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(22.dp))
+                .clickable { onOpenSavings() },
+            shape = RoundedCornerShape(22.dp),
+            contentPadding = PaddingValues(16.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                row.forEach { (title, sub, prices) ->
-                    ModernRateItemCard(
-                        title = title,
-                        subtitle = sub,
-                        buyPrice = prices.first,
-                        sellPrice = prices.second,
-                        isDark = isDark,
-                        modifier = Modifier.weight(1f)
+                Text(
+                    text = "Tasarruf Gücü",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
+                )
+                Surface(
+                    color = (if (clampedPct >= 20) mint else sky).copy(alpha = 0.14f),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = if (clampedPct >= 20) "Hedef ✓" else "Hedef %20",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (clampedPct >= 20) mint else sky,
+                        softWrap = false,
+                        maxLines = 1,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
-                if (row.size == 1) {
-                    Spacer(modifier = Modifier.weight(1f))
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier.size(56.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val strokeW = 6.dp.toPx()
+                        drawCircle(
+                            color = trackColor,
+                            style = Stroke(width = strokeW)
+                        )
+                        if (sweepAnim > 0f) {
+                            drawArc(
+                                brush = Brush.sweepGradient(listOf(sky, mint)),
+                                startAngle = -90f,
+                                sweepAngle = sweepAnim,
+                                useCenter = false,
+                                style = Stroke(width = strokeW, cap = StrokeCap.Round)
+                            )
+                        }
+                    }
+                    Text(
+                        text = "%$clampedPct",
+                        style = TabularAmountStyle,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (isBalanceHidden) "•••• ₺" else format.format(monthlySavingAmount),
+                        style = TabularAmountStyle,
+                        fontSize = 15.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "Bu ay biriken",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
                 }
             }
         }
 
-        AnimatedVisibility(
-            visible = isExpanded && extraRows.isNotEmpty(),
-            enter = expandVertically(),
-            exit = shrinkVertically()
+        // Card 2: Toplam Portföy
+        CyberCard(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(22.dp))
+                .clickable { onOpenSavings() },
+            shape = RoundedCornerShape(22.dp),
+            contentPadding = PaddingValues(16.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                extraRows.forEach { row ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        row.forEach { (title, sub, prices) ->
-                            ModernRateItemCard(
-                                title = title,
-                                subtitle = sub,
-                                buyPrice = prices.first,
-                                sellPrice = prices.second,
-                                isDark = isDark,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        if (row.size == 1) {
-                            Spacer(modifier = Modifier.weight(1f))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Portföy",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                    contentDescription = "Portföy Detayı",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = if (isBalanceHidden) "•••••• ₺" else format.format(grandPortfolio),
+                style = TabularAmountStyle,
+                fontSize = 19.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            if (portfolioCost > 0.0) {
+                Surface(
+                    color = (if (isProfit) mint else coral).copy(alpha = 0.13f),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = String.format(
+                            Locale("tr"),
+                            "%s%.1f%% Net Getiri",
+                            if (isProfit) "+" else "",
+                            profitPct
+                        ),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isProfit) mint else coral,
+                        softWrap = false,
+                        maxLines = 1,
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                    )
+                }
+            } else {
+                Text(
+                    text = if (besTotal > 0) "BES birikimi dahil" else "Altın, Döviz & BES",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Interactive 6-Month Cashflow Chart:
+ * Side-by-side Income & Expense bars + smooth Net Cash trend line.
+ * Tapping any month column shows exact Gelir / Gider / Net breakdown in the header.
+ */
+@Composable
+fun HomeInteractiveCashflowChart(
+    labels: List<String>,
+    incomes: List<Double>,
+    expenses: List<Double>,
+    isBalanceHidden: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val format = remember {
+        com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 }
+    }
+    val mint = if (isDark) CyberNeonMint else Color(0xFF059669)
+    val coral = if (isDark) CyberNeonCoral else Color(0xFFE11D48)
+    val sky = if (isDark) CyberNeonCyan else Color(0xFF0284C7)
+    val gridColor = if (isDark) Color(0xFF1F293D) else Color(0xFFE2E8F0)
+
+    val count = minOf(labels.size, minOf(incomes.size, expenses.size))
+    var selectedIdx by remember(count) { mutableIntStateOf((count - 1).coerceAtLeast(0)) }
+    val hasData = remember(incomes, expenses) { incomes.any { it > 0.0 } || expenses.any { it > 0.0 } }
+
+    CyberCard(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        contentPadding = PaddingValues(18.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "6 Aylık Nakit Akışı",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (hasData && count > 0) {
+                    val idx = selectedIdx.coerceIn(0, count - 1)
+                    val selInc = incomes[idx]
+                    val selExp = expenses[idx]
+                    val selNet = selInc - selExp
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = if (isBalanceHidden) {
+                            "${labels[idx]} ayı seçili • Tutarlar gizli"
+                        } else {
+                            "${labels[idx]}: +${format.format(selInc)}  •  -${format.format(selExp)}  •  Net ${format.format(selNet)}"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (selNet >= 0) mint else coral,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                LegendDotLabel("Gelir", mint)
+                LegendDotLabel("Gider", coral)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (!hasData || count == 0) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Son 6 aya ait gelir veya gider hareketi henüz bulunmuyor.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        } else {
+            val maxVal = remember(incomes, expenses) {
+                maxOf(incomes.maxOrNull() ?: 1.0, expenses.maxOrNull() ?: 1.0).coerceAtLeast(1.0)
+            }
+
+            val selectedColumnTint = MaterialTheme.colorScheme.primary.copy(alpha = if (isDark) 0.10f else 0.07f)
+
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(118.dp)
+            ) {
+                val w = size.width
+                val h = size.height
+                val bottomPad = 6.dp.toPx()
+                val usableH = h - bottomPad - 10.dp.toPx()
+
+                // Horizontal reference grid lines
+                listOf(0.25f, 0.55f, 0.85f).forEach { lvl ->
+                    val y = h - bottomPad - usableH * lvl
+                    drawLine(
+                        color = gridColor.copy(alpha = 0.7f),
+                        start = Offset(0f, y),
+                        end = Offset(w, y),
+                        strokeWidth = 0.8.dp.toPx()
+                    )
+                }
+
+                val colW = w / count
+                val barW = (colW * 0.24f).coerceAtMost(14.dp.toPx())
+                val gap = 4.dp.toPx()
+                val netPoints = mutableListOf<Offset>()
+
+                for (i in 0 until count) {
+                    val inc = incomes[i]
+                    val exp = expenses[i]
+                    val centerX = i * colW + colW / 2f
+                    val isSel = i == selectedIdx
+
+                    if (isSel) {
+                        drawRoundRect(
+                            color = selectedColumnTint,
+                            topLeft = Offset(i * colW + 4.dp.toPx(), 0f),
+                            size = Size(colW - 8.dp.toPx(), h),
+                            cornerRadius = CornerRadius(10.dp.toPx(), 10.dp.toPx())
+                        )
+                    }
+
+                    val incH = ((inc / maxVal) * usableH).toFloat().coerceAtLeast(if (inc > 0) 4.dp.toPx() else 0f)
+                    if (incH > 0f) {
+                        drawRoundRect(
+                            color = if (isSel) mint else mint.copy(alpha = 0.65f),
+                            topLeft = Offset(centerX - barW - gap / 2f, h - bottomPad - incH),
+                            size = Size(barW, incH),
+                            cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                        )
+                    }
+
+                    val expH = ((exp / maxVal) * usableH).toFloat().coerceAtLeast(if (exp > 0) 4.dp.toPx() else 0f)
+                    if (expH > 0f) {
+                        drawRoundRect(
+                            color = if (isSel) coral else coral.copy(alpha = 0.65f),
+                            topLeft = Offset(centerX + gap / 2f, h - bottomPad - expH),
+                            size = Size(barW, expH),
+                            cornerRadius = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                        )
+                    }
+
+                    val netVal = (inc - exp).coerceAtLeast(0.0)
+                    val netY = h - bottomPad - ((netVal / maxVal) * usableH).toFloat()
+                    netPoints.add(Offset(centerX, netY))
+                }
+
+                // Draw net trend line overlay
+                if (netPoints.size >= 2) {
+                    val path = Path().apply {
+                        moveTo(netPoints.first().x, netPoints.first().y)
+                        for (i in 1 until netPoints.size) {
+                            val p0 = netPoints[i - 1]
+                            val p1 = netPoints[i]
+                            val midX = (p0.x + p1.x) / 2f
+                            cubicTo(midX, p0.y, midX, p1.y, p1.x, p1.y)
                         }
                     }
+                    drawPath(
+                        path = path,
+                        color = sky,
+                        style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+                    )
+                    netPoints.forEachIndexed { idx, pt ->
+                        drawCircle(
+                            color = if (idx == selectedIdx) sky else sky.copy(alpha = 0.8f),
+                            radius = if (idx == selectedIdx) 4.5.dp.toPx() else 3.dp.toPx(),
+                            center = pt
+                        )
+                    }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Interactive Month Tap Selector Row
+            Row(modifier = Modifier.fillMaxWidth()) {
+                for (i in 0 until count) {
+                    val isSel = i == selectedIdx
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { selectedIdx = i }
+                            .padding(vertical = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = labels[i],
+                            fontSize = 11.sp,
+                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LegendDotLabel(label: String, color: Color) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(7.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/**
+ * Unified Banking Ledger Card for Recent Activity on Anasayfa.
+ */
+@Composable
+fun HomeRecentLedgerCard(
+    transactions: List<Transaction>,
+    isBalanceHidden: Boolean,
+    onOpenHistory: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val format = remember {
+        com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 }
+    }
+    val dateSdf = remember { SimpleDateFormat("dd MMM", Locale("tr", "TR")) }
+    val mint = if (isDark) CyberNeonMint else Color(0xFF059669)
+    val coral = if (isDark) CyberNeonCoral else Color(0xFFE11D48)
+    val sky = if (isDark) CyberNeonCyan else Color(0xFF0284C7)
+    val dividerColor = if (isDark) Color(0xFF1F293D) else Color(0xFFE2E8F0)
+
+    CyberCard(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        contentPadding = PaddingValues(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Son Hareketler",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            TextButton(
+                onClick = onOpenHistory,
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                modifier = Modifier.height(32.dp)
+            ) {
+                Text("Tüm Geçmiş", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(2.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        transactions.forEachIndexed { idx, tx ->
+            val (accent, prefix, icon) = when (tx.type) {
+                TransactionType.INCOME -> Triple(mint, "+", Icons.Rounded.NorthEast)
+                TransactionType.EXPENSE -> Triple(coral, "-", Icons.Rounded.SouthWest)
+                TransactionType.SAVING -> Triple(sky, "", Icons.Rounded.Savings)
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(accent.copy(alpha = if (isDark) 0.14f else 0.10f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = tx.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    val meta = buildString {
+                        if (tx.category.isNotBlank() && !tx.category.equals(tx.title, ignoreCase = true)) {
+                            append(tx.category)
+                            append(" • ")
+                        }
+                        append(dateSdf.format(Date(tx.timestamp)))
+                        if (!tx.person.isNullOrBlank()) {
+                            append(" • ")
+                            append(tx.person)
+                        }
+                    }
+                    Text(
+                        text = meta,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Text(
+                    text = if (isBalanceHidden) "••••" else "$prefix${format.format(tx.amount)}",
+                    style = TabularAmountStyle,
+                    fontSize = 14.sp,
+                    color = accent,
+                    softWrap = false,
+                    maxLines = 1
+                )
+            }
+
+            if (idx < transactions.lastIndex) {
+                HorizontalDivider(thickness = 0.6.dp, color = dividerColor)
             }
         }
     }

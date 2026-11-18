@@ -42,7 +42,7 @@ fun CyberCard(
     shape: Shape = RoundedCornerShape(22.dp),
     backgroundColor: Color? = null,
     borderColor: Color? = null,
-    borderWidth: Dp = 1.dp,
+    borderWidth: Dp = 0.8.dp,
     contentPadding: PaddingValues = PaddingValues(18.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -55,7 +55,7 @@ fun CyberCard(
         shape = shape,
         color = resolvedBg,
         border = BorderStroke(borderWidth, resolvedBorder),
-        shadowElevation = if (isDark) 0.dp else 2.dp
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
         Column(
             modifier = Modifier.padding(contentPadding),

@@ -12,44 +12,46 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-// --- 0. CYBER OBSIDIAN & NEON GLOW (Flagship Reference Theme) ---
+// --- 0. PRIVATE WEALTH OBSIDIAN & PEARL LIGHT (Flagship Theme) ---
 private val CyberDarkColorScheme = darkColorScheme(
     primary = CyberNeonMint,
     onPrimary = Color(0xFF021B13),
-    primaryContainer = Color(0xFF0E2E23),
+    primaryContainer = Color(0xFF0D2B22),
     onPrimaryContainer = Color(0xFFA7F3D0),
-    secondary = CyberNeonPurple,
-    onSecondary = Color(0xFF1E0A3C),
-    secondaryContainer = Color(0xFF261D45),
-    onSecondaryContainer = Color(0xFFE9D5FF),
+    secondary = CyberNeonCyan,
+    onSecondary = Color(0xFF082F49),
+    secondaryContainer = Color(0xFF17253B),
+    onSecondaryContainer = Color(0xFFBAE6FD),
     tertiary = CyberNeonOrange,
     background = CyberDarkBackground,
     onBackground = Color(0xFFF8FAFC),
     surface = CyberDarkSurface,
-    onSurface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFFF8FAFC),
     surfaceVariant = CyberDarkSurfaceVariant,
-    onSurfaceVariant = Color(0xFF8F9CAE),
+    onSurfaceVariant = Color(0xFF8A99B3),
     outline = CyberBorderStroke,
-    outlineVariant = Color(0xFF1E283E),
+    outlineVariant = Color(0xFF1B2436),
     error = CyberNeonCoral
 )
 
 private val CyberLightColorScheme = lightColorScheme(
-    primary = CyberNeonMint,
+    primary = Color(0xFF059669),
     onPrimary = Color.White,
     primaryContainer = Color(0xFFD1FAE5),
     onPrimaryContainer = Color(0xFF064E3B),
-    secondary = CyberNeonPurple,
+    secondary = Color(0xFF0284C7),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFF3E8FF),
-    onSecondaryContainer = Color(0xFF581C87),
+    secondaryContainer = Color(0xFFE0F2FE),
+    onSecondaryContainer = Color(0xFF0C4A6E),
     background = CyberLightBackground,
     onBackground = Color(0xFF0F172A),
     surface = CyberLightSurface,
     onSurface = Color(0xFF0F172A),
     surfaceVariant = CyberLightSurfaceVariant,
-    onSurfaceVariant = Color(0xFF475569),
-    error = CyberNeonCoral
+    onSurfaceVariant = Color(0xFF64748B),
+    outline = Color(0xFFE2E8F0),
+    outlineVariant = Color(0xFFE2E8F0),
+    error = Color(0xFFE11D48)
 )
 
 // --- 1. ROYAL EMERALD COLOR SCHEMES (Alternative Theme) ---
@@ -264,27 +266,27 @@ fun MyApplicationTheme(
             AppThemeColors(
                 preset = preset,
                 isDark = true,
-                heroGradient = listOf(Color(0xFF090D16), Color(0xFF131B2B), Color(0xFF16253B)),
-                navBarContainer = Color(0xFF0A0F1D),
-                navBarIndicator = Color(0xFF00E5A3),
-                navBarSelectedText = Color(0xFF021B13),
+                heroGradient = listOf(Color(0xFF090C12), Color(0xFF111827), Color(0xFF0F1D2E)),
+                navBarContainer = Color(0xFF0D111A),
+                navBarIndicator = Color(0xFF10B981).copy(alpha = 0.20f),
+                navBarSelectedText = Color(0xFF34D399),
                 navBarUnselected = Color(0xFF64748B),
-                accentColor = Color(0xFF00E5A3),
-                cardBorder = Color(0xFF222C3F).copy(alpha = 0.9f),
-                surfaceHighlight = Color(0xFF1B2337)
+                accentColor = Color(0xFF10B981),
+                cardBorder = Color(0xFF1F293D),
+                surfaceHighlight = Color(0xFF182030)
             )
         } else {
             AppThemeColors(
                 preset = preset,
                 isDark = false,
-                heroGradient = listOf(Color(0xFF0A1526), Color(0xFF0284C7)),
+                heroGradient = listOf(Color(0xFF0F172A), Color(0xFF065F46)),
                 navBarContainer = Color(0xFFFFFFFF),
-                navBarIndicator = Color(0xFFBAE6FD),
-                navBarSelectedText = Color(0xFF0369A1),
+                navBarIndicator = Color(0xFFD1FAE5),
+                navBarSelectedText = Color(0xFF059669),
                 navBarUnselected = Color(0xFF64748B),
-                accentColor = Color(0xFF00D2B4),
+                accentColor = Color(0xFF059669),
                 cardBorder = Color(0xFFE2E8F0),
-                surfaceHighlight = Color(0xFFE0F2FE)
+                surfaceHighlight = Color(0xFFEEF2F7)
             )
         }
         AppThemePreset.EMERALD -> if (darkTheme) {

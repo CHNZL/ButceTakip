@@ -262,9 +262,8 @@ fun DashboardScreen(
                         Column {
                             val greetingName = if (savedName != "Gizli Kullanici" && savedName.isNotBlank()) savedName.split(" ").first() else "Cihan"
                             Text(
-                                text = if (selectedTab == 0) "Özet" else when(selectedTab) { 1 -> "Gelirler"; 2 -> "Ödeme Takibi"; 3 -> "Birikim & Portföy"; 4 -> "Geçmiş"; 5 -> "Gelir & Gider"; 7 -> "Hesaplayıcı"; 8 -> "Konut Kredisi"; else -> "Ayarlar" },
-                                fontWeight = FontWeight.Black,
-                                fontSize = 22.sp,
+                                text = if (selectedTab == 0) "Merhaba, $greetingName" else when(selectedTab) { 1 -> "Gelirler"; 2 -> "Ödeme Takibi"; 3 -> "Birikim & Portföy"; 4 -> "Geçmiş"; 5 -> "Gelir & Gider"; 7 -> "Hesaplayıcı"; 8 -> "Konut Kredisi"; else -> "Ayarlar" },
+                                style = MaterialTheme.typography.titleLarge,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -272,10 +271,9 @@ fun DashboardScreen(
                             if (selectedTab == 0) {
                                 val dateFormat = remember { SimpleDateFormat("d MMMM EEEE", Locale("tr", "TR")) }
                                 Text(
-                                    text = "$greetingName • ${dateFormat.format(Date())}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 11.sp
+                                    text = dateFormat.format(Date()),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -283,15 +281,23 @@ fun DashboardScreen(
                 },
                 actions = {
                     val isDarkMode by viewModel.darkThemeEnabled.collectAsStateWithLifecycle()
-                    IconButton(
+                    Surface(
                         onClick = { viewModel.toggleDarkTheme(!isDarkMode) },
-                        modifier = Modifier.testTag("theme_mode_toggle")
+                        shape = CircleShape,
+                        color = if (isDarkMode) Color(0xFF182030) else Color(0xFFEEF2F7),
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .size(40.dp)
+                            .testTag("theme_mode_toggle")
                     ) {
-                        Icon(
-                            imageVector = if (isDarkMode) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
-                            contentDescription = if (isDarkMode) "Açık Temaya Geç" else "Koyu Temaya Geç",
-                            tint = onSecondaryContainerColor
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = if (isDarkMode) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
+                                contentDescription = if (isDarkMode) "Açık Temaya Geç" else "Koyu Temaya Geç",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -390,6 +396,7 @@ fun DashboardScreen(
     ) { innerPadding ->
         if (selectedTab == 0) {
             var isBalanceHidden by remember { mutableStateOf(false) }
+            var showMarketSheet by remember { mutableStateOf(false) }
 
             val monthTitleSdf = remember { SimpleDateFormat("MMMM yyyy", Locale("tr", "TR")) }
             val currentMonthLabel = remember { monthTitleSdf.format(Date()).uppercase(Locale("tr", "TR")) }
@@ -404,7 +411,7 @@ fun DashboardScreen(
                 }
                 val startMs = calStart.timeInMillis
 
-                val maxDay = calStart.getActualMaximum(Calendar.DAY_OF_MONTH)
+                val maxDay = calStart.getActualMaximum(Calendar.DAY_OF_MONTH).coerceAtLeast(1)
                 val todayCal = Calendar.getInstance()
                 val todayDay = todayCal.get(Calendar.DAY_OF_MONTH)
                 val remDays = (maxDay - todayDay + 1).coerceAtLeast(1)
@@ -425,12 +432,13 @@ fun DashboardScreen(
                     set(Calendar.MILLISECOND, 999)
                 }
                 val endMs = calEnd.timeInMillis
-                listOf(startMs, todayStartMs, endMs, remDays.toLong())
+                listOf(startMs, todayStartMs, endMs, remDays.toLong(), todayDay.toLong(), maxDay.toLong())
             }
             val currentMonthStart = timeAnchors[0]
             val todayStart = timeAnchors[1]
             val currentMonthEnd = timeAnchors[2]
             val remainingDaysInMonth = timeAnchors[3].toInt()
+            val elapsedMonthFraction = (timeAnchors[4].toFloat() / timeAnchors[5].toFloat().coerceAtLeast(1f)).coerceIn(0f, 1f)
 
             val thisMonthTxs = remember(uiState.transactions, currentMonthStart, currentMonthEnd) {
                 uiState.transactions.filter { it.timestamp in currentMonthStart..currentMonthEnd }
@@ -440,16 +448,6 @@ fun DashboardScreen(
                     it.timestamp < currentMonthStart && it.type == TransactionType.EXPENSE && !it.isPaid
                 }
             }
-            val overdueExpenses = remember(uiState.transactions, todayStart) {
-                uiState.transactions.filter {
-                    it.type == TransactionType.EXPENSE && !it.isPaid && it.timestamp < todayStart
-                }
-            }
-            val upcomingPendingThisMonth = remember(uiState.transactions, todayStart, currentMonthEnd) {
-                uiState.transactions.filter {
-                    it.type == TransactionType.EXPENSE && !it.isPaid && it.timestamp in todayStart..currentMonthEnd
-                }
-            }
             val upcoming = remember(uiState.transactions, currentMonthEnd) {
                 uiState.transactions
                     .filter { it.type == TransactionType.EXPENSE && !it.isPaid && it.timestamp <= currentMonthEnd }
@@ -457,7 +455,7 @@ fun DashboardScreen(
                     .take(4)
             }
             val recentActivity = remember(uiState.transactions) {
-                uiState.transactions.sortedByDescending { it.timestamp }.take(3)
+                uiState.transactions.sortedByDescending { it.timestamp }.take(4)
             }
 
             val cmIncome = remember(thisMonthTxs) {
@@ -536,14 +534,28 @@ fun DashboardScreen(
                 contentPadding = PaddingValues(top = 6.dp, bottom = 92.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // 1. Flagship Executive Net Budget Hero
+                // 1. Compact Live Market Ticker Strip (tap to open full Market Sheet)
                 item {
-                    HomeHeroCommandCard(
+                    HomeLiveTickerStrip(
+                        goldPrices = goldPrices,
+                        bankRates = bankRates,
+                        ziraatRates = ziraatRates,
+                        isFetching = isFetchingGold || isFetchingBank || isFetchingZiraat,
+                        onOpenMarketSheet = { showMarketSheet = true },
+                        modifier = Modifier.padding(horizontal = 14.dp)
+                    )
+                }
+
+                // 2. Private Wealth Executive Hero Card
+                item {
+                    HomeWealthHeroCard(
                         monthLabel = currentMonthLabel,
                         balance = cmBalance,
                         income = cmIncome,
                         expense = cmExpense,
                         saving = cmSaving,
+                        elapsedMonthFraction = elapsedMonthFraction,
+                        remainingDaysInMonth = remainingDaysInMonth,
                         isBalanceHidden = isBalanceHidden,
                         onToggleVisibility = { isBalanceHidden = !isBalanceHidden },
                         onOpenIncomes = { selectedTab = 1 },
@@ -553,9 +565,9 @@ fun DashboardScreen(
                     )
                 }
 
-                // 2. Quick Command Dock
+                // 3. Tactile Quick Command Row
                 item {
-                    HomeQuickActionDock(
+                    HomeQuickCommandRow(
                         onAddIncome = {
                             editingTransaction = null
                             initialQuickType = TransactionType.INCOME
@@ -576,210 +588,72 @@ fun DashboardScreen(
                     )
                 }
 
-                // 3. Daily Budget Limit & Payment Radar
+                // 4. Unified Action Bills Ledger with 1-Tap Pay
                 item {
-                    HomeDailyRadarRow(
-                        remainingBalance = cmBalance,
-                        remainingDaysInMonth = remainingDaysInMonth,
-                        overdueCount = overdueExpenses.size,
-                        overdueTotal = overdueExpenses.sumOf { it.amount },
-                        pendingThisMonthCount = upcomingPendingThisMonth.size,
-                        pendingThisMonthTotal = upcomingPendingThisMonth.sumOf { it.amount },
+                    HomeActionBillsCard(
+                        upcomingBills = upcoming,
+                        todayStartMillis = todayStart,
                         isBalanceHidden = isBalanceHidden,
-                        onOpenPayments = { selectedTab = 2 },
+                        onTogglePaid = { tx, isPaid -> viewModel.toggleTransactionPaid(tx, isPaid) },
+                        onOpenAllPayments = { selectedTab = 2 },
                         modifier = Modifier.padding(horizontal = 14.dp)
                     )
                 }
 
-                // 4. Urgent & Upcoming Payments Section
+                // 5. Family Financial Health: Savings Discipline & Live Portfolio
                 item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp)
-                            .padding(top = 2.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "Yaklaşan Ödemeler",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            if (upcoming.isNotEmpty()) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Surface(
-                                    color = if (isDark) Color(0xFF450A0A) else Color(0xFFFEE2E2),
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Text(
-                                        text = "${upcoming.size} Bekliyor",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        softWrap = false,
-                                        maxLines = 1,
-                                        color = if (isDark) Color(0xFFFCA5A5) else Color(0xFFDC2626),
-                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-                        }
-                        TextButton(
-                            onClick = { selectedTab = 2 },
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text("Tümünü Gör", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
+                    HomeFamilyHealthRow(
+                        savingRatioPct = investRatio,
+                        monthlySavingAmount = cmSaving,
+                        portfolioValue = portfolioValue,
+                        portfolioCost = portfolioCost,
+                        besTotal = besTotal,
+                        isBalanceHidden = isBalanceHidden,
+                        onOpenSavings = { selectedTab = 3 },
+                        modifier = Modifier.padding(horizontal = 14.dp)
+                    )
                 }
 
-                if (upcoming.isNotEmpty()) {
-                    items(upcoming, key = { "up_${it.id}" }) { transaction ->
-                        ModernTransactionItem(
-                            transaction = transaction,
-                            onDelete = { viewModel.deleteTransaction(transaction.id) },
-                            onTogglePaid = { isPaid -> viewModel.toggleTransactionPaid(transaction, isPaid) },
-                            isDark = isDark
-                        )
-                    }
-                } else {
-                    item {
-                        CyberCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp),
-                            shape = RoundedCornerShape(18.dp),
-                            contentPadding = PaddingValues(16.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(if (isDark) Color(0xFF064E3B) else Color(0xFFD1FAE5)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.CheckCircle,
-                                        contentDescription = null,
-                                        tint = Color(0xFF10B981),
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Bekleyen ödeme yok",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "Bu ay için tüm faturalarınız güncel.",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 5. Tasarruf Oranı & Canlı Portföy
+                // 6. Interactive 6-Month Cashflow Chart
                 item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        CyberInvestmentGaugeCard(
-                            percentage = investRatio,
-                            title = "Tasarruf Oranı",
-                            subtitle = if (cmIncome > 0) "Bu ayki gelirden" else "Gelir bekleniyor",
-                            modifier = Modifier.weight(1f)
-                        )
-                        HomePortfolioSpotlightCard(
-                            portfolioValue = portfolioValue,
-                            portfolioCost = portfolioCost,
-                            besTotal = besTotal,
-                            isBalanceHidden = isBalanceHidden,
-                            onOpenSavings = { selectedTab = 3 },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                // 6. 6 Aylık Gelir & Gider Dengesi
-                item {
-                    CyberIncomeExpenseBalanceCard(
+                    HomeInteractiveCashflowChart(
+                        labels = recentLabels,
                         incomes = recentIncomes,
                         expenses = recentExpenses,
-                        labels = recentLabels,
-                        title = "Son 6 Ay Nakit Akışı",
+                        isBalanceHidden = isBalanceHidden,
                         modifier = Modifier.padding(horizontal = 14.dp)
                     )
                 }
 
-                // 7. Compact Collapsible Live Market Card
-                item {
-                    HomeCompactMarketCard(
-                        goldPrices = goldPrices,
-                        isFetchingGold = isFetchingGold,
-                        lastGoldUpdate = lastGoldUpdate,
-                        onRefreshGold = { viewModel.fetchGoldPrices() },
-                        bankRates = bankRates,
-                        isFetchingBank = isFetchingBank,
-                        lastBankUpdate = lastBankUpdate,
-                        onRefreshBank = { viewModel.fetchBankRates() },
-                        ziraatRates = ziraatRates,
-                        isFetchingZiraat = isFetchingZiraat,
-                        lastZiraatUpdate = lastZiraatUpdate,
-                        onRefreshZiraat = { viewModel.fetchZiraatRates() },
-                        modifier = Modifier.padding(horizontal = 14.dp)
-                    )
-                }
-
-                // 8. Son İşlemler
+                // 7. Unified Recent Transactions Ledger
                 if (recentActivity.isNotEmpty()) {
                     item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Son Hareketler",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            TextButton(
-                                onClick = { selectedTab = 4 },
-                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text("Tüm Geçmiş", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                    items(recentActivity, key = { "rec_${it.id}" }) { transaction ->
-                        ModernTransactionItem(
-                            transaction = transaction,
-                            onDelete = { viewModel.deleteTransaction(transaction.id) },
-                            onTogglePaid = if (transaction.type == TransactionType.EXPENSE) {
-                                { isPaid -> viewModel.toggleTransactionPaid(transaction, isPaid) }
-                            } else null,
-                            isDark = isDark
+                        HomeRecentLedgerCard(
+                            transactions = recentActivity,
+                            isBalanceHidden = isBalanceHidden,
+                            onOpenHistory = { selectedTab = 4 },
+                            modifier = Modifier.padding(horizontal = 14.dp)
                         )
                     }
                 }
+            }
+
+            if (showMarketSheet) {
+                HomeMarketBottomSheet(
+                    goldPrices = goldPrices,
+                    isFetchingGold = isFetchingGold,
+                    lastGoldUpdate = lastGoldUpdate,
+                    onRefreshGold = { viewModel.fetchGoldPrices() },
+                    bankRates = bankRates,
+                    isFetchingBank = isFetchingBank,
+                    lastBankUpdate = lastBankUpdate,
+                    onRefreshBank = { viewModel.fetchBankRates() },
+                    ziraatRates = ziraatRates,
+                    isFetchingZiraat = isFetchingZiraat,
+                    lastZiraatUpdate = lastZiraatUpdate,
+                    onRefreshZiraat = { viewModel.fetchZiraatRates() },
+                    onDismiss = { showMarketSheet = false }
+                )
             }
         } else if (selectedTab == 1) {
             Box(
