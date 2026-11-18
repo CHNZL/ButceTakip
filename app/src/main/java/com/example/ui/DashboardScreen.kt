@@ -787,7 +787,31 @@ fun DashboardScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                IncomesScreen(uiState.transactions)
+                IncomesScreen(
+                    transactions = uiState.transactions,
+                    onAddIncome = {
+                        editingTransaction = null
+                        initialQuickType = TransactionType.INCOME
+                        showAddDialog = true
+                    },
+                    onEditIncome = { tx ->
+                        editingTransaction = tx
+                        showAddDialog = true
+                    },
+                    onDeleteIncome = { tx ->
+                        viewModel.deleteTransaction(tx.id)
+                    },
+                    onRepeatIncome = { tx ->
+                        val repeated = tx.copy(
+                            id = 0,
+                            timestamp = System.currentTimeMillis(),
+                            isPaid = true,
+                            installments = 1
+                        )
+                        viewModel.addTransactionWithInstallments(repeated, repeatUntilYearEnd = false)
+                        Toast.makeText(context, "\"${tx.title}\" bugüne tekrarlandı", Toast.LENGTH_SHORT).show()
+                    }
+                )
             }
         } else if (selectedTab == 2) {
             Box(
