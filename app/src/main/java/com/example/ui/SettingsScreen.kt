@@ -28,14 +28,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.LightMode
-import com.example.ui.theme.AppThemePreset
-import com.example.ui.theme.LayoutStyle
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.ViewAgenda
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -103,9 +97,6 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
     var isCheckingUpdate by remember { mutableStateOf(false) }
 
     val isDarkTheme by viewModel.darkThemeEnabled.collectAsStateWithLifecycle()
-    val currentThemePreset by viewModel.themePreset.collectAsStateWithLifecycle()
-    val currentLayoutStyleString by viewModel.layoutStyle.collectAsStateWithLifecycle()
-    val currentLayoutStyle = LayoutStyle.fromId(currentLayoutStyleString)
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -113,7 +104,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
 
-        // --- GÖRÜNÜM VE TEMA SEÇENEKLERİ ---
+        // --- GÖRÜNÜM (SADECE AÇIK / KOYU MOD) ---
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -124,176 +115,50 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Palette,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Görünüm & Tema Seçenekleri",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Yeni akıcı tasarımı keşfedin veya dilediğiniz an klasik görünüme dönün",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Tasarım Düzeni Seçimi
-                    Text(
-                        text = "GÖRÜNÜM DÜZENİ",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        LayoutStyle.entries.forEach { style ->
-                            val isSelected = currentLayoutStyle == style
-                            Surface(
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { viewModel.setLayoutStyle(style.id) },
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(32.dp)
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = if (style == LayoutStyle.MODERN) Icons.Default.Bolt else Icons.Default.ViewAgenda,
-                                                contentDescription = null,
-                                                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Column {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(style.displayName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Surface(
-                                                    color = if (style == LayoutStyle.MODERN) Color(0xFF10B981) else Color(0xFF64748B),
-                                                    shape = RoundedCornerShape(6.dp)
-                                                ) {
-                                                    Text(style.badgeText, fontSize = 7.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
-                                                }
-                                            }
-                                            Text(style.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
-                                        }
-                                    }
-                                    if (isSelected) {
-                                        Icon(Icons.Default.CheckCircle, contentDescription = "Seçili", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Koyu / Açık Mod Switch
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = if (isDarkTheme) Icons.Rounded.DarkMode else Icons.Rounded.LightMode,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text(
-                                        text = if (isDarkTheme) "Koyu Mod Aktif" else "Açık Mod Aktif",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Text(
-                                        text = if (isDarkTheme) "Karanlık tema renk paleti uygulanıyor" else "Aydınlık tema renk paleti uygulanıyor",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
                             }
-                            Switch(
-                                checked = isDarkTheme,
-                                onCheckedChange = { viewModel.toggleDarkTheme(it) },
-                                thumbContent = {
-                                    Icon(
-                                        imageVector = if (isDarkTheme) Icons.Rounded.DarkMode else Icons.Rounded.LightMode,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                }
-                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = if (isDarkTheme) "Koyu Tema" else "Açık Tema",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (isDarkTheme) "Karanlık mod aktif" else "Aydınlık mod aktif",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Text(
-                        text = "TEMA PALETLERİ",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        AppThemePreset.entries.forEach { preset ->
-                            ThemePresetCard(
-                                preset = preset,
-                                isSelected = currentThemePreset == preset,
-                                onClick = { viewModel.setThemePreset(preset) }
-                            )
-                        }
+                        Switch(
+                            checked = isDarkTheme,
+                            onCheckedChange = { viewModel.toggleDarkTheme(it) },
+                            thumbContent = {
+                                Icon(
+                                    imageVector = if (isDarkTheme) Icons.Rounded.DarkMode else Icons.Rounded.LightMode,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        )
                     }
                 }
             }

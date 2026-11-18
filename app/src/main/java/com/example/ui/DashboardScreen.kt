@@ -50,12 +50,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Calculate
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.foundation.BorderStroke
-import com.example.ui.theme.AppThemePreset
-import com.example.ui.theme.LayoutStyle
 import com.example.ui.theme.LocalAppThemeColors
 import coil.compose.AsyncImage
 import com.example.viewmodel.AuthViewModel
@@ -73,7 +68,14 @@ fun DashboardScreen(
     val goldPrices by viewModel.goldPrices.collectAsStateWithLifecycle()
     val bankRates by viewModel.bankRates.collectAsStateWithLifecycle()
     val ziraatRates by viewModel.ziraatRates.collectAsStateWithLifecycle()
+    val isFetchingGold by viewModel.isFetchingGold.collectAsStateWithLifecycle()
+    val lastGoldUpdate by viewModel.lastGoldUpdate.collectAsStateWithLifecycle()
+    val isFetchingBank by viewModel.isFetchingBankRates.collectAsStateWithLifecycle()
+    val lastBankUpdate by viewModel.lastBankRateUpdate.collectAsStateWithLifecycle()
+    val isFetchingZiraat by viewModel.isFetchingZiraatRates.collectAsStateWithLifecycle()
+    val lastZiraatUpdate by viewModel.lastZiraatRateUpdate.collectAsStateWithLifecycle()
     val customPricesTrigger by viewModel.customPricesRefreshTrigger.collectAsStateWithLifecycle()
+
     var showAddDialog by remember { mutableStateOf(false) }
     var initialSavingCategory by remember { mutableStateOf<String?>(null) }
     var initialQuickType by remember { mutableStateOf<TransactionType?>(null) }
@@ -81,15 +83,11 @@ fun DashboardScreen(
     var showAddGoalDialog by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableIntStateOf(0) }
     var showProfileMenu by remember { mutableStateOf(false) }
-    var showThemeDialog by remember { mutableStateOf(false) }
 
     BackHandler(enabled = selectedTab != 0) {
         selectedTab = 0
     }
     val appThemeColors = LocalAppThemeColors.current
-    val currentThemePreset by viewModel.themePreset.collectAsStateWithLifecycle()
-    val currentLayoutStyleString by viewModel.layoutStyle.collectAsStateWithLifecycle()
-    val currentLayoutStyle = LayoutStyle.fromId(currentLayoutStyleString)
 
     LaunchedEffect(authState) {
         if (authState is com.example.viewmodel.AuthState.Authenticated) {
@@ -232,14 +230,6 @@ fun DashboardScreen(
                                     leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Tema & Görünüm") },
-                                    onClick = {
-                                        showProfileMenu = false
-                                        showThemeDialog = true
-                                    },
-                                    leadingIcon = { Icon(Icons.Default.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
-                                )
-                                DropdownMenuItem(
                                     text = { Text("Ayarlar") },
                                     onClick = {
                                         selectedTab = 6
@@ -292,48 +282,14 @@ fun DashboardScreen(
                     }
                 },
                 actions = {
-                    val isDark by viewModel.darkThemeEnabled.collectAsStateWithLifecycle()
-                    Surface(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .clickable {
-                                val nextStyle = if (currentLayoutStyle == LayoutStyle.MODERN) LayoutStyle.CLASSIC else LayoutStyle.MODERN
-                                viewModel.setLayoutStyle(nextStyle.id)
-                            },
-                        color = if (currentLayoutStyle == LayoutStyle.MODERN) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(1.dp, if (currentLayoutStyle == LayoutStyle.MODERN) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else Color.Transparent)
+                    val isDarkMode by viewModel.darkThemeEnabled.collectAsStateWithLifecycle()
+                    IconButton(
+                        onClick = { viewModel.toggleDarkTheme(!isDarkMode) },
+                        modifier = Modifier.testTag("theme_mode_toggle")
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = if (currentLayoutStyle == LayoutStyle.MODERN) Icons.Default.Bolt else Icons.Default.ViewAgenda,
-                                contentDescription = null,
-                                tint = if (currentLayoutStyle == LayoutStyle.MODERN) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = if (currentLayoutStyle == LayoutStyle.MODERN) "Modern" else "Klasik",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = if (currentLayoutStyle == LayoutStyle.MODERN) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    IconButton(onClick = { showThemeDialog = true }) {
                         Icon(
-                            imageVector = Icons.Default.Palette,
-                            contentDescription = "Görünüm ve Tema Seçimi",
-                            tint = onSecondaryContainerColor
-                        )
-                    }
-                    IconButton(onClick = { viewModel.toggleDarkTheme(!isDark) }) {
-                        Icon(
-                            imageVector = if (isDark) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
-                            contentDescription = "Gece / Gündüz Modu",
+                            imageVector = if (isDarkMode) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
+                            contentDescription = if (isDarkMode) "Açık Temaya Geç" else "Koyu Temaya Geç",
                             tint = onSecondaryContainerColor
                         )
                     }
@@ -433,387 +389,395 @@ fun DashboardScreen(
         }
     ) { innerPadding ->
         if (selectedTab == 0) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 80.dp)
-                ) {
-                    val upcoming = uiState.transactions.filter { it.type == TransactionType.EXPENSE && !it.isPaid && it.timestamp <= Calendar.getInstance().apply {
-                        set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
-                        set(Calendar.HOUR_OF_DAY, 23)
-                        set(Calendar.MINUTE, 59)
-                        set(Calendar.SECOND, 59)
-                        set(Calendar.MILLISECOND, 999)
-                    }.timeInMillis }.sortedBy { it.timestamp }.take(5)
-                    
-                    val currentMonthStart = Calendar.getInstance().apply {
+            var isBalanceHidden by remember { mutableStateOf(false) }
+
+            val monthTitleSdf = remember { SimpleDateFormat("MMMM yyyy", Locale("tr", "TR")) }
+            val currentMonthLabel = remember { monthTitleSdf.format(Date()).uppercase(Locale("tr", "TR")) }
+
+            val timeAnchors = remember {
+                val calStart = Calendar.getInstance().apply {
+                    set(Calendar.DAY_OF_MONTH, 1)
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                val startMs = calStart.timeInMillis
+
+                val maxDay = calStart.getActualMaximum(Calendar.DAY_OF_MONTH)
+                val todayCal = Calendar.getInstance()
+                val todayDay = todayCal.get(Calendar.DAY_OF_MONTH)
+                val remDays = (maxDay - todayDay + 1).coerceAtLeast(1)
+
+                todayCal.apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                val todayStartMs = todayCal.timeInMillis
+
+                val calEnd = Calendar.getInstance().apply {
+                    set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
+                    set(Calendar.HOUR_OF_DAY, 23)
+                    set(Calendar.MINUTE, 59)
+                    set(Calendar.SECOND, 59)
+                    set(Calendar.MILLISECOND, 999)
+                }
+                val endMs = calEnd.timeInMillis
+                listOf(startMs, todayStartMs, endMs, remDays.toLong())
+            }
+            val currentMonthStart = timeAnchors[0]
+            val todayStart = timeAnchors[1]
+            val currentMonthEnd = timeAnchors[2]
+            val remainingDaysInMonth = timeAnchors[3].toInt()
+
+            val thisMonthTxs = remember(uiState.transactions, currentMonthStart, currentMonthEnd) {
+                uiState.transactions.filter { it.timestamp in currentMonthStart..currentMonthEnd }
+            }
+            val pastUnpaidTxs = remember(uiState.transactions, currentMonthStart) {
+                uiState.transactions.filter {
+                    it.timestamp < currentMonthStart && it.type == TransactionType.EXPENSE && !it.isPaid
+                }
+            }
+            val overdueExpenses = remember(uiState.transactions, todayStart) {
+                uiState.transactions.filter {
+                    it.type == TransactionType.EXPENSE && !it.isPaid && it.timestamp < todayStart
+                }
+            }
+            val upcomingPendingThisMonth = remember(uiState.transactions, todayStart, currentMonthEnd) {
+                uiState.transactions.filter {
+                    it.type == TransactionType.EXPENSE && !it.isPaid && it.timestamp in todayStart..currentMonthEnd
+                }
+            }
+            val upcoming = remember(uiState.transactions, currentMonthEnd) {
+                uiState.transactions
+                    .filter { it.type == TransactionType.EXPENSE && !it.isPaid && it.timestamp <= currentMonthEnd }
+                    .sortedBy { it.timestamp }
+                    .take(4)
+            }
+            val recentActivity = remember(uiState.transactions) {
+                uiState.transactions.sortedByDescending { it.timestamp }.take(3)
+            }
+
+            val cmIncome = remember(thisMonthTxs) {
+                thisMonthTxs.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+            }
+            val cmExpense = remember(thisMonthTxs, pastUnpaidTxs) {
+                thisMonthTxs.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount } +
+                    pastUnpaidTxs.sumOf { it.amount }
+            }
+            val cmSaving = remember(thisMonthTxs) {
+                thisMonthTxs.filter { it.type == TransactionType.SAVING }.sumOf { it.amount }
+            }
+            val cmBalance = cmIncome - cmExpense - cmSaving
+
+            val mSdf = remember { SimpleDateFormat("MMM", Locale("tr", "TR")) }
+            val (recentLabels, recentIncomes, recentExpenses) = remember(uiState.transactions) {
+                val lbls = mutableListOf<String>()
+                val incs = mutableListOf<Double>()
+                val exps = mutableListOf<Double>()
+                for (i in 5 downTo 0) {
+                    val c = Calendar.getInstance().apply { add(Calendar.MONTH, -i) }
+                    val st = c.apply {
                         set(Calendar.DAY_OF_MONTH, 1)
                         set(Calendar.HOUR_OF_DAY, 0)
                         set(Calendar.MINUTE, 0)
                         set(Calendar.SECOND, 0)
                         set(Calendar.MILLISECOND, 0)
                     }.timeInMillis
-                    
-                    val currentMonthEnd = Calendar.getInstance().apply {
+                    val en = c.apply {
                         set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
                         set(Calendar.HOUR_OF_DAY, 23)
                         set(Calendar.MINUTE, 59)
                         set(Calendar.SECOND, 59)
                         set(Calendar.MILLISECOND, 999)
                     }.timeInMillis
+                    val txs = uiState.transactions.filter { it.timestamp in st..en }
+                    lbls.add(mSdf.format(Date(st)))
+                    incs.add(txs.filter { it.type == TransactionType.INCOME }.sumOf { it.amount })
+                    exps.add(txs.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount })
+                }
+                Triple(lbls, incs, exps)
+            }
 
-                    val thisMonthTxs = uiState.transactions.filter { it.timestamp in currentMonthStart..currentMonthEnd }
-                    val pastUnpaidTxs = uiState.transactions.filter { it.timestamp < currentMonthStart && it.type == TransactionType.EXPENSE && !it.isPaid }
+            val (portfolioValue, portfolioCost, besTotal) = remember(
+                uiState.transactions,
+                uiState.besPortfolios,
+                goldPrices,
+                bankRates,
+                ziraatRates,
+                customPricesTrigger
+            ) {
+                val savingTxs = uiState.transactions.filter { it.type == TransactionType.SAVING }
+                val besSum = uiState.besPortfolios.sumOf {
+                    it.investment + it.investmentReturn + it.stateContribution + it.stateContributionReturn
+                }
+                val totalCost = savingTxs.sumOf { it.amount }
+                val groupedVal = savingTxs.groupBy { it.category }.entries.sumOf { (cat, list) ->
+                    val qty = list.sumOf { it.quantity ?: 0.0 }
+                    val livePrice = resolveCurrentUnitPrice(
+                        category = cat,
+                        goldPrices = goldPrices,
+                        bankRates = bankRates,
+                        preferenceManager = viewModel.preferenceManager,
+                        ziraatRates = ziraatRates
+                    )
+                    if (livePrice != null && qty > 0.0) qty * livePrice else list.sumOf { it.amount }
+                }
+                Triple(groupedVal, totalCost, besSum)
+            }
+            val investRatio = if (cmIncome > 0) ((cmSaving / cmIncome) * 100).toInt().coerceIn(0, 100) else 0
 
-                    val cmIncome = thisMonthTxs.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-                    val cmExpense = thisMonthTxs.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount } + pastUnpaidTxs.sumOf { it.amount }
-                    val cmSaving = thisMonthTxs.filter { it.type == TransactionType.SAVING }.sumOf { it.amount }
-                    val cmBalance = cmIncome - cmExpense - cmSaving
-                    
-                    if (currentLayoutStyle == LayoutStyle.MODERN) {
-                        item {
-                            var isBalHidden by remember { mutableStateOf(false) }
-                            
-                            // 1. Top Card: Bu Ay Net Varlık with Dual Waves
-                            val balFmt = remember { com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 } }
-                            CyberNetWorthWaveCard(
-                                title = "Bu Ay Net Kasa",
-                                subtitle = "Gelir ${balFmt.format(cmIncome)} • Gider ${balFmt.format(cmExpense)}",
-                                balance = cmBalance,
-                                isBalanceHidden = isBalHidden,
-                                onToggleVisibility = { isBalHidden = !isBalHidden },
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)
-                            )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentPadding = PaddingValues(top = 6.dp, bottom = 92.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // 1. Flagship Executive Net Budget Hero
+                item {
+                    HomeHeroCommandCard(
+                        monthLabel = currentMonthLabel,
+                        balance = cmBalance,
+                        income = cmIncome,
+                        expense = cmExpense,
+                        saving = cmSaving,
+                        isBalanceHidden = isBalanceHidden,
+                        onToggleVisibility = { isBalanceHidden = !isBalanceHidden },
+                        onOpenIncomes = { selectedTab = 1 },
+                        onOpenPayments = { selectedTab = 2 },
+                        onOpenSavings = { selectedTab = 3 },
+                        modifier = Modifier.padding(horizontal = 14.dp)
+                    )
+                }
 
-                            // Quick Actions Row (theme-aware & pre-selects transaction type!)
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 6.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                val incColor = if (isDark) Color(0xFF00E5A3) else Color(0xFF059669)
-                                val expColor = if (isDark) Color(0xFFFF5E5E) else Color(0xFFDC2626)
-                                val savColor = if (isDark) Color(0xFF00D2B4) else Color(0xFF0284C7)
+                // 2. Quick Command Dock
+                item {
+                    HomeQuickActionDock(
+                        onAddIncome = {
+                            editingTransaction = null
+                            initialQuickType = TransactionType.INCOME
+                            showAddDialog = true
+                        },
+                        onAddExpense = {
+                            editingTransaction = null
+                            initialQuickType = TransactionType.EXPENSE
+                            showAddDialog = true
+                        },
+                        onAddSaving = {
+                            editingTransaction = null
+                            initialQuickType = TransactionType.SAVING
+                            showAddDialog = true
+                        },
+                        onOpenAnalytics = { selectedTab = 5 },
+                        modifier = Modifier.padding(horizontal = 14.dp)
+                    )
+                }
 
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .clickable {
-                                            editingTransaction = null
-                                            initialQuickType = TransactionType.INCOME
-                                            showAddDialog = true
-                                        },
-                                    color = if (isDark) Color(0xFF0F2E23) else Color(0xFFECFDF5),
-                                    shape = RoundedCornerShape(14.dp),
-                                    border = BorderStroke(1.dp, incColor.copy(alpha = 0.45f))
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(vertical = 11.dp),
-                                        horizontalArrangement = Arrangement.Center,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(Icons.Default.Add, contentDescription = null, tint = incColor, modifier = Modifier.size(16.dp))
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Gelir", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = incColor)
-                                    }
-                                }
+                // 3. Daily Budget Limit & Payment Radar
+                item {
+                    HomeDailyRadarRow(
+                        remainingBalance = cmBalance,
+                        remainingDaysInMonth = remainingDaysInMonth,
+                        overdueCount = overdueExpenses.size,
+                        overdueTotal = overdueExpenses.sumOf { it.amount },
+                        pendingThisMonthCount = upcomingPendingThisMonth.size,
+                        pendingThisMonthTotal = upcomingPendingThisMonth.sumOf { it.amount },
+                        isBalanceHidden = isBalanceHidden,
+                        onOpenPayments = { selectedTab = 2 },
+                        modifier = Modifier.padding(horizontal = 14.dp)
+                    )
+                }
 
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .clickable {
-                                            editingTransaction = null
-                                            initialQuickType = TransactionType.EXPENSE
-                                            showAddDialog = true
-                                        },
-                                    color = if (isDark) Color(0xFF38151D) else Color(0xFFFEF2F2),
-                                    shape = RoundedCornerShape(14.dp),
-                                    border = BorderStroke(1.dp, expColor.copy(alpha = 0.45f))
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(vertical = 11.dp),
-                                        horizontalArrangement = Arrangement.Center,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(Icons.Rounded.Remove, contentDescription = null, tint = expColor, modifier = Modifier.size(16.dp))
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Gider", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = expColor)
-                                    }
-                                }
-
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .clickable {
-                                            editingTransaction = null
-                                            initialQuickType = TransactionType.SAVING
-                                            showAddDialog = true
-                                        },
-                                    color = if (isDark) Color(0xFF14243B) else Color(0xFFF0F9FF),
-                                    shape = RoundedCornerShape(14.dp),
-                                    border = BorderStroke(1.dp, savColor.copy(alpha = 0.45f))
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(vertical = 11.dp),
-                                        horizontalArrangement = Arrangement.Center,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(Icons.Rounded.Savings, contentDescription = null, tint = savColor, modifier = Modifier.size(15.dp))
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Birikim", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = savColor)
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            // 2. Second Card: Real 6-Month Gelir & Gider Dengesi
-                            val mSdf = remember { SimpleDateFormat("MMM", Locale("tr", "TR")) }
-                            val (recentLabels, recentIncomes, recentExpenses) = remember(uiState.transactions) {
-                                val lbls = mutableListOf<String>()
-                                val incs = mutableListOf<Double>()
-                                val exps = mutableListOf<Double>()
-                                for (i in 5 downTo 0) {
-                                    val c = Calendar.getInstance().apply { add(Calendar.MONTH, -i) }
-                                    val st = c.apply {
-                                        set(Calendar.DAY_OF_MONTH, 1)
-                                        set(Calendar.HOUR_OF_DAY, 0)
-                                        set(Calendar.MINUTE, 0)
-                                        set(Calendar.SECOND, 0)
-                                        set(Calendar.MILLISECOND, 0)
-                                    }.timeInMillis
-                                    val en = c.apply {
-                                        set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
-                                        set(Calendar.HOUR_OF_DAY, 23)
-                                        set(Calendar.MINUTE, 59)
-                                        set(Calendar.SECOND, 59)
-                                    }.timeInMillis
-                                    val txs = uiState.transactions.filter { it.timestamp in st..en }
-                                    lbls.add(mSdf.format(Date(st)))
-                                    incs.add(txs.filter { it.type == TransactionType.INCOME }.sumOf { it.amount })
-                                    exps.add(txs.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount })
-                                }
-                                Triple(lbls, incs, exps)
-                            }
-
-                            CyberIncomeExpenseBalanceCard(
-                                incomes = recentIncomes,
-                                expenses = recentExpenses,
-                                labels = recentLabels,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)
-                            )
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            // 3. Row of 2 Cards: Tasarruf Gücü & Yedek Güvence (100% real data)
-                            val totalAccumulatedSavings = remember(uiState.transactions) {
-                                uiState.transactions.filter { it.type == TransactionType.SAVING }.sumOf { it.amount }
-                            }
-                            val investRatio = if (cmIncome > 0) ((cmSaving / cmIncome) * 100).toInt().coerceIn(0, 100) else 0
-                            val emergencyTarget = if (cmExpense > 0) cmExpense * 3.0 else 0.0
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                CyberInvestmentGaugeCard(
-                                    percentage = investRatio,
-                                    title = "Tasarruf Oranı",
-                                    subtitle = if (cmIncome > 0) "Bu ayki gelirden" else "Gelir eklenmedi",
-                                    modifier = Modifier.weight(1f)
-                                )
-
-                                CyberEmergencyFundCard(
-                                    currentAmount = totalAccumulatedSavings,
-                                    targetAmount = emergencyTarget,
-                                    title = "Acil Durum Fonu",
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            // 4. Piyasa Merkezi
-                            ModernMarketRatesHub(
-                                goldPrices = viewModel.goldPrices.collectAsStateWithLifecycle().value,
-                                isFetchingGold = viewModel.isFetchingGold.collectAsStateWithLifecycle().value,
-                                lastGoldUpdate = viewModel.lastGoldUpdate.collectAsStateWithLifecycle().value,
-                                onRefreshGold = { viewModel.fetchGoldPrices() },
-                                bankRates = viewModel.bankRates.collectAsStateWithLifecycle().value,
-                                isFetchingBank = viewModel.isFetchingBankRates.collectAsStateWithLifecycle().value,
-                                lastBankUpdate = viewModel.lastBankRateUpdate.collectAsStateWithLifecycle().value,
-                                onRefreshBank = { viewModel.fetchBankRates() },
-                                ziraatRates = viewModel.ziraatRates.collectAsStateWithLifecycle().value,
-                                isFetchingZiraat = viewModel.isFetchingZiraatRates.collectAsStateWithLifecycle().value,
-                                lastZiraatUpdate = viewModel.lastZiraatRateUpdate.collectAsStateWithLifecycle().value,
-                                onRefreshZiraat = { viewModel.fetchZiraatRates() },
-                                isDark = isDark
-                            )
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "Yaklaşan Ödemeler",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    if (upcoming.isNotEmpty()) {
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Surface(
-                                            color = if (isDark) Color(0xFF450A0A) else Color(0xFFFEE2E2),
-                                            shape = RoundedCornerShape(6.dp)
-                                        ) {
-                                            Text(
-                                                text = "${upcoming.size} Bekliyor",
-                                                fontSize = 9.sp,
-                                                fontWeight = FontWeight.ExtraBold,
-                                                color = if (isDark) Color(0xFFFCA5A5) else Color(0xFFDC2626),
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                                TextButton(
-                                    onClick = { selectedTab = 2 },
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
-                                ) {
-                                    Text("Tümünü Gör", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-
-                        items(upcoming, key = { it.id }) { transaction ->
-                            ModernTransactionItem(
-                                transaction = transaction,
-                                onDelete = { viewModel.deleteTransaction(transaction.id) },
-                                onTogglePaid = { isPaid -> viewModel.toggleTransactionPaid(transaction, isPaid) },
-                                isDark = isDark
-                            )
-                        }
-
-                        if (upcoming.isEmpty()) {
-                            item {
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 14.dp, vertical = 8.dp),
-                                    shape = RoundedCornerShape(16.dp),
-                                    colors = CardDefaults.cardColors(containerColor = if (isDark) MaterialTheme.colorScheme.surface else Color.White),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(20.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(40.dp)
-                                                .clip(CircleShape)
-                                                .background(if (isDark) Color(0xFF064E3B) else Color(0xFFD1FAE5)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Icon(
-                                                Icons.Rounded.CheckCircle,
-                                                contentDescription = null,
-                                                tint = Color(0xFF10B981),
-                                                modifier = Modifier.size(22.dp)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.height(6.dp))
-                                        Text(
-                                            "Harika! Yaklaşan ödemeniz bulunmuyor.",
-                                            fontWeight = FontWeight.Bold,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            "Bu ay için bekleyen tüm ödemeleriniz güncel.",
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        // CLASSIC LAYOUT
-                        item {
-                            BudgetSummaryCards(cmBalance, cmIncome, cmExpense, cmSaving, isDark)
-                            
-                            // Altin fiyatlari
-                            GoldPricesSection(
-                                goldPrices = viewModel.goldPrices.collectAsStateWithLifecycle().value,
-                                isFetching = viewModel.isFetchingGold.collectAsStateWithLifecycle().value,
-                                lastUpdate = viewModel.lastGoldUpdate.collectAsStateWithLifecycle().value,
-                                onRefresh = { viewModel.fetchGoldPrices() }
-                            )
-
-                            // Banka kurları
-                            BankRatesSection(
-                                bankRates = viewModel.bankRates.collectAsStateWithLifecycle().value,
-                                isFetching = viewModel.isFetchingBankRates.collectAsStateWithLifecycle().value,
-                                lastUpdate = viewModel.lastBankRateUpdate.collectAsStateWithLifecycle().value,
-                                onRefresh = { viewModel.fetchBankRates() }
-                            )
-
-                            // Ziraat kurları
-                            ZiraatRatesSection(
-                                ziraatRates = viewModel.ziraatRates.collectAsStateWithLifecycle().value,
-                                isFetching = viewModel.isFetchingZiraatRates.collectAsStateWithLifecycle().value,
-                                lastUpdate = viewModel.lastZiraatRateUpdate.collectAsStateWithLifecycle().value,
-                                onRefresh = { viewModel.fetchZiraatRates() }
-                            )
-                            
+                // 4. Urgent & Upcoming Payments Section
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp)
+                            .padding(top = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "Yaklaşan Ödemeler",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-                        }
-                        items(upcoming) { transaction ->
-                            TransactionItem(
-                                transaction = transaction,
-                                onDelete = { viewModel.deleteTransaction(transaction.id) },
-                                isDark = isDark
-                            )
-                        }
-                        if (upcoming.isEmpty()) {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(32.dp),
-                                    contentAlignment = Alignment.Center
+                            if (upcoming.isNotEmpty()) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Surface(
+                                    color = if (isDark) Color(0xFF450A0A) else Color(0xFFFEE2E2),
+                                    shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Text(
-                                        "Yaklaşan ödeme bulunmuyor.",
-                                        style = MaterialTheme.typography.bodyLarge,
+                                        text = "${upcoming.size} Bekliyor",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        softWrap = false,
+                                        maxLines = 1,
+                                        color = if (isDark) Color(0xFFFCA5A5) else Color(0xFFDC2626),
+                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                        TextButton(
+                            onClick = { selectedTab = 2 },
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("Tümünü Gör", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                if (upcoming.isNotEmpty()) {
+                    items(upcoming, key = { "up_${it.id}" }) { transaction ->
+                        ModernTransactionItem(
+                            transaction = transaction,
+                            onDelete = { viewModel.deleteTransaction(transaction.id) },
+                            onTogglePaid = { isPaid -> viewModel.toggleTransactionPaid(transaction, isPaid) },
+                            isDark = isDark
+                        )
+                    }
+                } else {
+                    item {
+                        CyberCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            contentPadding = PaddingValues(16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isDark) Color(0xFF064E3B) else Color(0xFFD1FAE5)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.CheckCircle,
+                                        contentDescription = null,
+                                        tint = Color(0xFF10B981),
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Bekleyen ödeme yok",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Bu ay için tüm faturalarınız güncel.",
+                                        fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
                         }
+                    }
+                }
+
+                // 5. Tasarruf Oranı & Canlı Portföy
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        CyberInvestmentGaugeCard(
+                            percentage = investRatio,
+                            title = "Tasarruf Oranı",
+                            subtitle = if (cmIncome > 0) "Bu ayki gelirden" else "Gelir bekleniyor",
+                            modifier = Modifier.weight(1f)
+                        )
+                        HomePortfolioSpotlightCard(
+                            portfolioValue = portfolioValue,
+                            portfolioCost = portfolioCost,
+                            besTotal = besTotal,
+                            isBalanceHidden = isBalanceHidden,
+                            onOpenSavings = { selectedTab = 3 },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                // 6. 6 Aylık Gelir & Gider Dengesi
+                item {
+                    CyberIncomeExpenseBalanceCard(
+                        incomes = recentIncomes,
+                        expenses = recentExpenses,
+                        labels = recentLabels,
+                        title = "Son 6 Ay Nakit Akışı",
+                        modifier = Modifier.padding(horizontal = 14.dp)
+                    )
+                }
+
+                // 7. Compact Collapsible Live Market Card
+                item {
+                    HomeCompactMarketCard(
+                        goldPrices = goldPrices,
+                        isFetchingGold = isFetchingGold,
+                        lastGoldUpdate = lastGoldUpdate,
+                        onRefreshGold = { viewModel.fetchGoldPrices() },
+                        bankRates = bankRates,
+                        isFetchingBank = isFetchingBank,
+                        lastBankUpdate = lastBankUpdate,
+                        onRefreshBank = { viewModel.fetchBankRates() },
+                        ziraatRates = ziraatRates,
+                        isFetchingZiraat = isFetchingZiraat,
+                        lastZiraatUpdate = lastZiraatUpdate,
+                        onRefreshZiraat = { viewModel.fetchZiraatRates() },
+                        modifier = Modifier.padding(horizontal = 14.dp)
+                    )
+                }
+
+                // 8. Son İşlemler
+                if (recentActivity.isNotEmpty()) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Son Hareketler",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            TextButton(
+                                onClick = { selectedTab = 4 },
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text("Tüm Geçmiş", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    items(recentActivity, key = { "rec_${it.id}" }) { transaction ->
+                        ModernTransactionItem(
+                            transaction = transaction,
+                            onDelete = { viewModel.deleteTransaction(transaction.id) },
+                            onTogglePaid = if (transaction.type == TransactionType.EXPENSE) {
+                                { isPaid -> viewModel.toggleTransactionPaid(transaction, isPaid) }
+                            } else null,
+                            isDark = isDark
+                        )
                     }
                 }
             }
@@ -993,538 +957,5 @@ fun DashboardScreen(
                 showAddGoalDialog = false
             }
         )
-    }
-
-    if (showThemeDialog) {
-        ThemeSelectionDialog(
-            onDismiss = { showThemeDialog = false },
-            currentPreset = currentThemePreset,
-            currentLayoutStyle = currentLayoutStyle,
-            isDark = isDark,
-            onSelectPreset = { viewModel.setThemePreset(it) },
-            onSelectLayoutStyle = { viewModel.setLayoutStyle(it.id) },
-            onToggleDarkTheme = { viewModel.toggleDarkTheme(it) }
-        )
-    }
-}
-
-@Composable
-fun BudgetSummaryCards(balance: Double, income: Double, expense: Double, saving: Double, isDark: Boolean = false) {
-    val appThemeColors = LocalAppThemeColors.current
-    val format = com.example.util.FormatUtil.getCurrencyFormat()
-    
-    val cardBg = Color.Transparent
-    val cardText = Color.White
-    val innerCardBg = Color.White.copy(alpha = if (isDark) 0.12f else 0.18f)
-    val incomeText = Color(0xFF4ADE80)
-    val expenseText = Color(0xFFF87171)
-    val labelText = Color.White.copy(alpha=0.85f)
-    val savingText = Color(0xFF38BDF8)
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(12.dp)
-    ) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-            shape = RoundedCornerShape(24.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-        ) {
-            androidx.compose.foundation.layout.Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        androidx.compose.ui.graphics.Brush.linearGradient(
-                            colors = appThemeColors.heroGradient
-                        )
-                    )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp)
-                ) {
-                Text(
-                    text = "MEVCUT AY BAKİYESİ",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = cardText.copy(alpha = 0.7f),
-                    letterSpacing = 1.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                val balanceFormat = com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 }
-                Text(
-                    text = balanceFormat.format(balance),
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = cardText
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    // Gelir Card
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .background(innerCardBg, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 6.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                "GELİR",
-                                style = LocalTextStyle.current.copy(fontSize=8.sp, fontWeight=FontWeight.Bold, color=labelText)
-                            )
-                            Text(
-                                text = balanceFormat.format(income),
-                                style = LocalTextStyle.current.copy(fontSize=14.sp, fontWeight=FontWeight.Bold, color=incomeText)
-                            )
-                        }
-                    }
-
-                    // Gider Card
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .background(innerCardBg, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 6.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                "GİDER",
-                                style = LocalTextStyle.current.copy(fontSize=8.sp, fontWeight=FontWeight.Bold, color=labelText)
-                            )
-                            Text(
-                                text = balanceFormat.format(expense),
-                                style = LocalTextStyle.current.copy(fontSize=14.sp, fontWeight=FontWeight.Bold, color=expenseText)
-                            )
-                        }
-                    }
-                    
-                    // Birikim Card
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .background(innerCardBg, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 6.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                "BİRİKİM",
-                                style = LocalTextStyle.current.copy(fontSize=8.sp, fontWeight=FontWeight.Bold, color=labelText)
-                            )
-                            Text(
-                                text = balanceFormat.format(saving),
-                                style = LocalTextStyle.current.copy(fontSize=14.sp, fontWeight=FontWeight.Bold, color=savingText)
-                            )
-                        }
-                    }
-                }
-            }
-            }
-        }
-    }
-}
-
-@Composable
-fun TransactionItem(transaction: Transaction, onDelete: () -> Unit, isDark: Boolean = false) {
-    val format = remember { com.example.util.FormatUtil.getCurrencyFormat() }
-    val sdf = remember { SimpleDateFormat("dd MMM yyyy", Locale("tr", "TR")) }
-    
-    val amountColor = when (transaction.type) {
-        TransactionType.INCOME -> if (isDark) Color(0xFF4ADE80) else Color(0xFF16A34A)
-        TransactionType.EXPENSE -> if (isDark) Color(0xFFF87171) else Color(0xFFDC2626)
-        TransactionType.SAVING -> if (isDark) Color(0xFFFB923C) else Color(0xFFEA580C)
-    }
-    
-    val prefix = when (transaction.type) {
-        TransactionType.INCOME -> "+"
-        TransactionType.EXPENSE -> "-"
-        TransactionType.SAVING -> "-"
-    }
-
-    val iconColor = when (transaction.type) {
-        TransactionType.INCOME -> if (isDark) Color(0xFF60A5FA) else Color(0xFF2563EB)
-        TransactionType.EXPENSE -> if (isDark) Color(0xFFFB923C) else Color(0xFFEA580C)
-        TransactionType.SAVING -> if (isDark) Color(0xFFC084FC) else Color(0xFF9333EA)
-    }
-    
-    val iconBg = when (transaction.type) {
-        TransactionType.INCOME -> if (isDark) Color(0xFF1E3A8A).copy(alpha = 0.5f) else Color(0xFFDBEAFE)
-        TransactionType.EXPENSE -> if (isDark) Color(0xFF7C2D12).copy(alpha = 0.5f) else Color(0xFFFFEDD5)
-        TransactionType.SAVING -> if (isDark) Color(0xFF581C87).copy(alpha = 0.5f) else Color(0xFFF3E8FF)
-    }
-
-    val cardBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
-    val cardBorder = if (isDark) Color(0xFF334155).copy(alpha = 0.4f) else Color(0xFFF1F5F9)
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = cardBg),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(iconBg),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = transaction.category.firstOrNull()?.toString()?.uppercase() ?: "D",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = iconColor
-                )
-            }
-            
-            Spacer(modifier = Modifier.width(10.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                val subtitle = buildString {
-                    append(transaction.title)
-                    if (transaction.person != null) {
-                        append(" • ${transaction.person}")
-                    }
-                    if (transaction.installments != null) {
-                        append(" (${transaction.installments} Taksit)")
-                    }
-                    if (transaction.quantity != null && transaction.unitPrice != null && transaction.type == TransactionType.SAVING) {
-                        append(" • ${transaction.quantity} x ${format.format(transaction.unitPrice)}")
-                    }
-                }
-                
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isDark) Color(0xFFF8FAFC) else Color(0xFF0F172A),
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                )
-
-                Text(
-                    text = sdf.format(Date(transaction.timestamp)),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 10.sp
-                )
-            }
-            
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text(
-                text = prefix + format.format(transaction.amount),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Black,
-                color = amountColor
-            )
-
-            IconButton(
-                onClick = onDelete, 
-                modifier = Modifier.size(28.dp).padding(start = 4.dp).testTag("delete_btn")
-            ) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Sil",
-                    tint = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8),
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        }
-    }
-}
-
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-@Composable
-fun GoldPricesSection(goldPrices: List<com.example.data.GoldPrice>, isFetching: Boolean, lastUpdate: String?, onRefresh: () -> Unit) {
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val cardBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
-    val cardBorder = if (isDark) Color(0xFF334155).copy(alpha = 0.4f) else Color(0xFFE2E8F0)
-    val innerCardBg = if (isDark) Color(0xFF1E293B).copy(alpha = 0.5f) else Color(0xFFF8FAFC)
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 3.dp),
-        colors = CardDefaults.cardColors(containerColor = cardBg),
-        border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(modifier = Modifier.padding(8.dp).fillMaxWidth()) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Rounded.TrendingUp, contentDescription = null, tint = Color(0xFFD4AF37), modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Column {
-                        Text("Sivas Altın Fiyatları", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                        Text("CANLI PİYASA VERİLERİ", fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                    }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (lastUpdate != null && !isFetching) {
-                        Text("GÜNCEL: $lastUpdate", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    IconButton(onClick = onRefresh, modifier = Modifier.size(26.dp)) {
-                        if (isFetching) {
-                            CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Default.Refresh, contentDescription = "Yenile", modifier = Modifier.size(15.dp))
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            if (goldPrices.isEmpty() && !isFetching) {
-                Text("Veriler şu an alınamıyor, lütfen Yenile butonuna basın.", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    goldPrices.chunked(2).forEach { rowPrices ->
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            rowPrices.forEach { gp ->
-                                Card(
-                                    modifier = Modifier.weight(1f),
-                                    colors = CardDefaults.cardColors(containerColor = innerCardBg),
-                                    shape = RoundedCornerShape(8.dp),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                                ) {
-                                    Column(modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)) {
-                                        Text(gp.name, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                            Column {
-                                                Text("ALIŞ", fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                Text(gp.buy, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(0xFFEF4444))
-                                            }
-                                            Column(horizontalAlignment = Alignment.End) {
-                                                Text("SATIŞ", fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                Text(gp.sell, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(0xFF10B981))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if (rowPrices.size == 1) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-@Composable
-fun BankRatesSection(bankRates: List<com.example.data.BankRate>, isFetching: Boolean, lastUpdate: String?, onRefresh: () -> Unit) {
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val cardBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
-    val cardBorder = if (isDark) Color(0xFF334155).copy(alpha = 0.4f) else Color(0xFFE2E8F0)
-    val innerCardBg = if (isDark) Color(0xFF1E293B).copy(alpha = 0.5f) else Color(0xFFF8FAFC)
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 3.dp),
-        colors = CardDefaults.cardColors(containerColor = cardBg),
-        border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(modifier = Modifier.padding(8.dp).fillMaxWidth()) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-                        shape = RoundedCornerShape(6.dp),
-                        modifier = Modifier.size(22.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(12.dp))
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Column {
-                        Text("Yapı Kredi Altın ve Döviz", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                        Text("BANKA GİŞE FİYATLARI", fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                    }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (lastUpdate != null && !isFetching) {
-                        Text("GÜNCEL: $lastUpdate", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    IconButton(onClick = onRefresh, modifier = Modifier.size(26.dp)) {
-                        if (isFetching) {
-                            CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Default.Refresh, contentDescription = "Yenile", modifier = Modifier.size(15.dp))
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            if (bankRates.isEmpty() && !isFetching) {
-                Text("Veriler şu an alınamıyor, lütfen Yenile butonuna basın.", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    bankRates.chunked(2).forEach { rowRates ->
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            rowRates.forEach { rate ->
-                                Card(
-                                    modifier = Modifier.weight(1f),
-                                    colors = CardDefaults.cardColors(containerColor = innerCardBg),
-                                    shape = RoundedCornerShape(8.dp),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                                ) {
-                                    Column(modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)) {
-                                        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                                            Text(rate.code, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                                            Text(rate.name, fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                                        }
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                            Column {
-                                                Text("ALIŞ", fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                Text(rate.buy, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(0xFFEF4444))
-                                            }
-                                            Column(horizontalAlignment = Alignment.End) {
-                                                Text("SATIŞ", fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                Text(rate.sell, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(0xFF10B981))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if (rowRates.size == 1) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ZiraatRatesSection(ziraatRates: List<com.example.data.BankRate>, isFetching: Boolean, lastUpdate: String?, onRefresh: () -> Unit) {
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val cardBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
-    val cardBorder = if (isDark) Color(0xFF334155).copy(alpha = 0.4f) else Color(0xFFE2E8F0)
-    val innerCardBg = if (isDark) Color(0xFF1E293B).copy(alpha = 0.5f) else Color(0xFFF8FAFC)
-    val ziraatIconBg = if (isDark) Color(0xFF450A0A) else Color(0xFFFFEBEC)
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 3.dp),
-        colors = CardDefaults.cardColors(containerColor = cardBg),
-        border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(modifier = Modifier.padding(8.dp).fillMaxWidth()) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = ziraatIconBg),
-                        shape = RoundedCornerShape(6.dp),
-                        modifier = Modifier.size(22.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                            Icon(
-                                Icons.Default.AccountBalanceWallet,
-                                contentDescription = null, 
-                                tint = Color(0xFFE10514),
-                                modifier = Modifier.size(12.dp)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Column {
-                        Text("Ziraat Bankası Altın ve Döviz", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                        Text("ZİRAAT GİŞE FİYATLARI", fontSize = 8.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                    }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (lastUpdate != null && !isFetching) {
-                        Text("GÜNCEL: $lastUpdate", fontSize = 8.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    IconButton(onClick = onRefresh, modifier = Modifier.size(26.dp)) {
-                        if (isFetching) {
-                            CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp, color = Color(0xFFE10514))
-                        } else {
-                            Icon(Icons.Default.Refresh, contentDescription = "Yenile", modifier = Modifier.size(15.dp))
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            
-            if (ziraatRates.isEmpty() && !isFetching) {
-                Text("Veriler şu an alınamıyor, lütfen Yenile butonuna basın.", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    ziraatRates.chunked(2).forEach { rowRates ->
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            rowRates.forEach { rate ->
-                                Card(
-                                    modifier = Modifier.weight(1f),
-                                    colors = CardDefaults.cardColors(containerColor = innerCardBg),
-                                    shape = RoundedCornerShape(8.dp),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                                ) {
-                                    Column(modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)) {
-                                        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                                            Text(rate.code, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                                            Text(rate.name, fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                                        }
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                            Column {
-                                                Text("ALIŞ", fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                Text(rate.buy, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(0xFFEF4444))
-                                            }
-                                            Column(horizontalAlignment = Alignment.End) {
-                                                Text("SATIŞ", fontSize = 7.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                Text(rate.sell, fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(0xFF10B981))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            if (rowRates.size == 1) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }

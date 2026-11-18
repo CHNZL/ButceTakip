@@ -93,7 +93,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val isDarkTheme by viewModel.darkThemeEnabled.collectAsState()
-            val themePreset by viewModel.themePreset.collectAsState()
             var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
             val trigger by checkUpdateTrigger.collectAsState()
 
@@ -106,7 +105,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            MyApplicationTheme(darkTheme = isDarkTheme, preset = themePreset) {
+            MyApplicationTheme(darkTheme = isDarkTheme) {
                 val navController = rememberNavController()
 
                 updateInfo?.let { info ->
