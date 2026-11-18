@@ -75,80 +75,87 @@ fun MortgageCalculatorScreen() {
         contentPadding = PaddingValues(top = 10.dp, bottom = 80.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // --- 1. HEADER ---
+        // --- 1. QUICK PRESETS & INPUT PARAMETERS CARD ---
         item {
-            Column {
-                Text(
-                    "Konut Kredisi Hesaplayıcı",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface
+            CyberCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
+                Text("Kredi Parametreleri", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // 1-Tap Quick Amount & Term Presets
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf("1.000.000" to "1M ₺", "2.000.000" to "2M ₺", "3.500.000" to "3.5M ₺").forEach { (valStr, lbl) ->
+                        FilterChip(
+                            selected = amountText.replace(".", "") == valStr.replace(".", ""),
+                            onClick = { amountText = valStr },
+                            label = { Text(lbl, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                    }
+                    listOf("60" to "60 Ay", "120" to "120 Ay").forEach { (termStr, lbl) ->
+                        FilterChip(
+                            selected = termMonthsText == termStr,
+                            onClick = { termMonthsText = termStr },
+                            label = { Text(lbl, fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    value = amountText,
+                    onValueChange = { amountText = com.example.util.formatInputAmount(it) },
+                    label = { Text("Kredi Tutarı (TL)") },
+                    leadingIcon = { Icon(Icons.Rounded.AccountBalance, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp)
                 )
-                Text(
-                    "BANKA KONUT VE İHTİYAÇ KREDİSİ ÖDEME PLANI",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = 1.sp
-                )
-            }
-        }
 
-        // --- 2. INPUT PARAMETERS CARD ---
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = if (isDark) MaterialTheme.colorScheme.surface else Color.White),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Kredi Bilgileri", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.height(10.dp))
 
-                    OutlinedTextField(
-                        value = amountText,
-                        onValueChange = { amountText = com.example.util.formatInputAmount(it) },
-                        label = { Text("Kredi Tutarı (TL)") },
-                        leadingIcon = { Icon(Icons.Rounded.AccountBalance, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp)
-                    )
-
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     OutlinedTextField(
                         value = rateText,
                         onValueChange = { rateText = it.filter { c -> c.isDigit() || c == '.' || c == ',' } },
-                        label = { Text("Aylık Faiz Oranı (%)") },
+                        label = { Text("Aylık Faiz (%)") },
                         leadingIcon = { Icon(Icons.Rounded.Percent, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(14.dp)
                     )
 
                     OutlinedTextField(
                         value = termMonthsText,
                         onValueChange = { termMonthsText = it.filter { c -> c.isDigit() } },
-                        label = { Text("Vade Süresi (Ay)") },
+                        label = { Text("Vade (Ay)") },
                         leadingIcon = { Icon(Icons.Rounded.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(14.dp)
                     )
                 }
             }
         }
 
-        // --- 3. RESULT HERO CARD ---
+        // --- 2. RESULT HERO CARD WITH PRINCIPAL VS INTEREST BAR ---
         item {
+            val totalForBar = currentTotalPayment.coerceAtLeast(1.0)
+            val principalRatio = (amount / totalForBar).toFloat().coerceIn(0f, 1f)
+            val interestRatio = (1f - principalRatio).coerceAtLeast(0f)
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = appThemeColors.heroGradient
-                        )
-                    )
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(Brush.linearGradient(colors = appThemeColors.heroGradient))
                     .padding(20.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -184,6 +191,29 @@ fun MortgageCalculatorScreen() {
                         fontWeight = FontWeight.Black,
                         color = Color.White
                     )
+
+                    // Principal vs Interest Ratio Bar
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color.White.copy(alpha = 0.2f))
+                        ) {
+                            if (principalRatio > 0f) {
+                                Box(modifier = Modifier.weight(principalRatio).fillMaxHeight().background(Color(0xFF00E5A3)))
+                            }
+                            if (interestRatio > 0f) {
+                                Box(modifier = Modifier.weight(interestRatio).fillMaxHeight().background(Color(0xFFFBBF24)))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Anapara %${(principalRatio * 100).toInt()}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6EE7B7))
+                            Text("Faiz %${(interestRatio * 100).toInt()}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFEF08A))
+                        }
+                    }
 
                     HorizontalDivider(color = Color.White.copy(alpha = 0.15f))
 

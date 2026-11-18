@@ -816,8 +816,8 @@ fun ModernTransactionItem(
             Triple(Icons.Rounded.AccountBalanceWallet, Color(0xFF64748B), if (isDark) Color(0xFF334155) else Color(0xFFF1F5F9))
     }
 
-    val cardBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
-    val cardBorder = if (isDark) Color(0xFF334155).copy(alpha = 0.45f) else Color(0xFFF1F5F9)
+    val cardBg = if (isDark) com.example.ui.theme.CyberDarkSurface else Color.White
+    val cardBorder = if (isDark) com.example.ui.theme.CyberBorderStroke else Color(0xFFE2E8F0)
 
     Card(
         modifier = Modifier
@@ -825,7 +825,7 @@ fun ModernTransactionItem(
             .padding(horizontal = 14.dp, vertical = 3.dp),
         colors = CardDefaults.cardColors(containerColor = cardBg),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 1.dp),
         border = BorderStroke(1.dp, cardBorder)
     ) {
         Row(
@@ -901,17 +901,24 @@ fun ModernTransactionItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    // Paid / Unpaid tag for expenses
                     if (transaction.type == TransactionType.EXPENSE) {
                         Surface(
-                            color = if (transaction.isPaid) Color(0xFFD1FAE5) else Color(0xFFFEE2E2),
+                            color = if (transaction.isPaid) {
+                                if (isDark) Color(0xFF0F3E2F) else Color(0xFFD1FAE5)
+                            } else {
+                                if (isDark) Color(0xFF4C151F) else Color(0xFFFEE2E2)
+                            },
                             shape = RoundedCornerShape(4.dp)
                         ) {
                             Text(
                                 text = if (transaction.isPaid) "ÖDENDİ" else "BEKLİYOR",
                                 fontSize = 8.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = if (transaction.isPaid) Color(0xFF065F46) else Color(0xFF991B1B),
+                                color = if (transaction.isPaid) {
+                                    if (isDark) Color(0xFF00E5A3) else Color(0xFF065F46)
+                                } else {
+                                    if (isDark) Color(0xFFFF5E5E) else Color(0xFF991B1B)
+                                },
                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                             )
                         }
@@ -930,18 +937,38 @@ fun ModernTransactionItem(
                     color = amountColor
                 )
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    if (onTogglePaid != null && transaction.type == TransactionType.EXPENSE) {
+                        Surface(
+                            color = if (transaction.isPaid) Color(0xFF10B981).copy(alpha = 0.16f) else MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.clickable { onTogglePaid(!transaction.isPaid) }
+                        ) {
+                            Text(
+                                text = if (transaction.isPaid) "Ödendi ✓" else "Öde ✓",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (transaction.isPaid) Color(0xFF10B981) else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
                     IconButton(
                         onClick = onDelete,
                         modifier = Modifier
-                            .size(24.dp)
+                            .size(28.dp)
                             .testTag("delete_btn")
                     ) {
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = "Sil",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            modifier = Modifier.size(15.dp)
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }

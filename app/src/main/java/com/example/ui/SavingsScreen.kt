@@ -382,108 +382,75 @@ fun SavingsScreen(
         contentPadding = PaddingValues(bottom = 80.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // --- 1. PORTFOLIO KEY METRICS HEADER CARD (Image 1: Birikim & Portföy) ---
+        // --- 1. PORTFOLIO KEY METRICS HERO CARD (100% Real Data) ---
         item {
-            Column(
+            var isPortfolioHidden by remember { mutableStateOf(false) }
+            val isProfit = totalProfitLoss >= 0.0
+            val profitBadgeText = if (totalPaidAll > 0.0) {
+                "${if (isProfit) "+" else ""}${String.format(Locale.US, "%.1f", totalProfitLossPercent)}%"
+            } else {
+                "${assetSummaries.size + besPortfolios.size} Varlık"
+            }
+
+            CyberNetWorthWaveCard(
+                title = "Toplam Portföy Değeri",
+                subtitle = "Maliyet: ${currencyFormat.format(totalPaidAll)}",
+                balance = totalCurrentValue,
+                badgeText = profitBadgeText,
+                badgePositive = isProfit,
+                isBalanceHidden = isPortfolioHidden,
+                onToggleVisibility = { isPortfolioHidden = !isPortfolioHidden },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 14.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Top Title & Subtitle matching Image 1
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Birikim & Portföy",
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color.White
-                        )
-                        Text(
-                            text = "GÜNCEL VARLIK DAĞILIMI VE GETİRİLER",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF8F9CAE),
-                            letterSpacing = 1.sp
-                        )
-                    }
-
-                    // Total % Change Badge
-                    val displayProfitPercent = if (totalPaidAll > 0.0) totalProfitLossPercent else 12.4
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFF0F3E2F)
+                footerContent = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = "+${String.format(java.util.Locale.US, "%.1f", displayProfitPercent)}%",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color(0xFF00E5A3),
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                        )
+                        val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                        val pnlColor = if (isProfit) {
+                            if (isDarkTheme) com.example.ui.theme.CyberNeonMint else Color(0xFF059669)
+                        } else {
+                            if (isDarkTheme) com.example.ui.theme.CyberNeonCoral else Color(0xFFDC2626)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isDarkTheme) 0.4f else 0.55f))
+                                .padding(horizontal = 10.dp, vertical = 8.dp)
+                        ) {
+                            Column {
+                                Text("TOPLAM MALİYET", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    text = if (isPortfolioHidden) "••••" else currencyFormat.format(totalPaidAll),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(pnlColor.copy(alpha = if (isDarkTheme) 0.14f else 0.10f))
+                                .padding(horizontal = 10.dp, vertical = 8.dp)
+                        ) {
+                            Column {
+                                Text("NET KÂR / ZARAR", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = pnlColor)
+                                Text(
+                                    text = if (isPortfolioHidden) "••••" else "${if (isProfit) "+" else ""}${currencyFormat.format(totalProfitLoss)}",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = pnlColor
+                                )
+                            }
+                        }
                     }
                 }
-
-                // Dual Wave Header Card
-                CyberNetWorthWaveCard(
-                    title = "Toplam Portföy Değeri",
-                    balance = if (totalCurrentValue > 0) totalCurrentValue else 384250.0,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // 4 Asset Summary Cards matching Image 1
-                val goldAssets = assetSummaries.filter { it.category.lowercase(Locale("tr")).let { c -> c.contains("altın") || c.contains("altin") || c.contains("24") || c.contains("22") || c.contains("bilezik") } }
-                val goldVal = goldAssets.sumOf { it.currentValue }.let { if (it > 0) it else 120000.0 }
-                val goldProfit = if (goldAssets.isNotEmpty() && goldAssets.sumOf { it.totalPaid } > 0) ((goldAssets.sumOf { it.currentValue } - goldAssets.sumOf { it.totalPaid }) / goldAssets.sumOf { it.totalPaid }) * 100.0 else 8.2
-
-                val fxAssets = assetSummaries.filter { it.category.lowercase(Locale("tr")).let { c -> c.contains("dolar") || c.contains("usd") || c.contains("euro") || c.contains("eur") || c.contains("döviz") } }
-                val fxVal = fxAssets.sumOf { it.currentValue }.let { if (it > 0) it else 145000.0 }
-                val fxProfit = if (fxAssets.isNotEmpty() && fxAssets.sumOf { it.totalPaid } > 0) ((fxAssets.sumOf { it.currentValue } - fxAssets.sumOf { it.totalPaid }) / fxAssets.sumOf { it.totalPaid }) * 100.0 else 15.1
-
-                val stockAssets = assetSummaries.filter { it.category.lowercase(Locale("tr")).let { c -> c.contains("hisse") || c.contains("fon") || c.contains("borsa") } }
-                val stockVal = stockAssets.sumOf { it.currentValue }.let { if (it > 0) it else 119250.0 }
-                val stockProfit = if (stockAssets.isNotEmpty() && stockAssets.sumOf { it.totalPaid } > 0) ((stockAssets.sumOf { it.currentValue } - stockAssets.sumOf { it.totalPaid }) / stockAssets.sumOf { it.totalPaid }) * 100.0 else 24.6
-
-                CyberAssetSparklineCard(
-                    title = "Altın",
-                    amount = goldVal,
-                    changePercent = goldProfit,
-                    icon = Icons.Rounded.Savings,
-                    iconColor = Color(0xFFFFB703),
-                    sparklineColor = Color(0xFFFFB703)
-                )
-
-                CyberAssetSparklineCard(
-                    title = "Döviz",
-                    amount = fxVal,
-                    changePercent = fxProfit,
-                    icon = Icons.Rounded.AttachMoney,
-                    iconColor = Color(0xFF00C0FF),
-                    sparklineColor = Color(0xFF00C0FF)
-                )
-
-                CyberAssetSparklineCard(
-                    title = "Hisse & Fon",
-                    amount = stockVal,
-                    changePercent = stockProfit,
-                    icon = Icons.Rounded.ShowChart,
-                    iconColor = Color(0xFF00E5A3),
-                    sparklineColor = Color(0xFF00E5A3)
-                )
-
-                CyberAssetSparklineCard(
-                    title = "BES & Emeklilik",
-                    amount = if (besTotalValue > 0) besTotalValue else 85000.0,
-                    changePercent = 30.0,
-                    icon = Icons.Rounded.Shield,
-                    iconColor = Color(0xFF8B5CF6),
-                    sparklineColor = Color(0xFF8B5CF6)
-                )
-            }
+            )
         }
 
         // --- 2. ASSETS SUMMARY CARDS ---

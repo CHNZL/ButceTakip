@@ -62,12 +62,12 @@ fun SavingsCalculatorScreen() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(if (isDark) Color(0xFF131826) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .background(if (isDark) com.example.ui.theme.CyberDarkSurface else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
                     .padding(4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 listOf(
-                    Pair(0, "Bileşik Getiri Simülatörü"),
+                    Pair(0, "Bileşik Getiri"),
                     Pair(1, "Tasarruf Finansmanı")
                 ).forEach { (idx, label) ->
                     val isSel = selectedSimTab == idx
@@ -75,7 +75,7 @@ fun SavingsCalculatorScreen() {
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isSel) Color(0xFF00E5A3) else Color.Transparent)
+                            .background(if (isSel) MaterialTheme.colorScheme.primary else Color.Transparent)
                             .clickable { selectedSimTab = idx }
                             .padding(vertical = 10.dp),
                         contentAlignment = Alignment.Center
@@ -84,7 +84,7 @@ fun SavingsCalculatorScreen() {
                             text = label,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isSel) Color(0xFF021B13) else Color(0xFF8F9CAE)
+                            color = if (isSel) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -92,49 +92,19 @@ fun SavingsCalculatorScreen() {
         }
 
         if (selectedSimTab == 0) {
-            // --- REFERENCE IMAGE 2: BİLEŞİK GETİRİ SİMÜLATÖRÜ ---
-            item {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Gelecek Tahmini",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF8F9CAE),
-                        letterSpacing = 0.5.sp
-                    )
-                    Text(
-                        text = "Bileşik Getiri Simülatörü",
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White
-                    )
-                }
-            }
-
             item {
                 CyberCompoundSimulatorCard()
             }
         } else {
-            // --- 1. HEADER BDDK ---
+            // --- 1. SUBTITLE CAPTION ---
             item {
-                Column {
-                    Text(
-                        "Tasarruf Finansmanı Hesaplayıcı",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        "BDDK UYUMLU FAİZSİZ EV / ARAÇ FİNANSMAN SİMÜLASYONU",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        letterSpacing = 1.sp
-                    )
-                }
+                Text(
+                    "BDDK UYUMLU FAİZSİZ EV / ARAÇ FİNANSMAN SİMÜLASYONU",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 0.8.sp
+                )
             }
 
             // --- 2. INPUT CARD ---

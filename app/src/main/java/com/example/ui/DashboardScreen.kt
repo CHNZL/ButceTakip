@@ -16,12 +16,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -74,11 +76,16 @@ fun DashboardScreen(
     val customPricesTrigger by viewModel.customPricesRefreshTrigger.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     var initialSavingCategory by remember { mutableStateOf<String?>(null) }
+    var initialQuickType by remember { mutableStateOf<TransactionType?>(null) }
     var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
     var showAddGoalDialog by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableIntStateOf(0) }
     var showProfileMenu by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = selectedTab != 0) {
+        selectedTab = 0
+    }
     val appThemeColors = LocalAppThemeColors.current
     val currentThemePreset by viewModel.themePreset.collectAsStateWithLifecycle()
     val currentLayoutStyleString by viewModel.layoutStyle.collectAsStateWithLifecycle()
@@ -265,9 +272,11 @@ fun DashboardScreen(
                         Column {
                             val greetingName = if (savedName != "Gizli Kullanici" && savedName.isNotBlank()) savedName.split(" ").first() else "Cihan"
                             Text(
-                                text = if (selectedTab == 0) "Özet" else when(selectedTab) { 1 -> "Gelirler"; 2 -> "Ödeme Takibi"; 3 -> "Birikim & Portföy"; 4 -> "Geçmiş"; 5 -> "Gelir & Gider"; 7 -> "Bileşik Getiri"; 8 -> "Konut Kredisi"; else -> "Ayarlar" },
+                                text = if (selectedTab == 0) "Özet" else when(selectedTab) { 1 -> "Gelirler"; 2 -> "Ödeme Takibi"; 3 -> "Birikim & Portföy"; 4 -> "Geçmiş"; 5 -> "Gelir & Gider"; 7 -> "Hesaplayıcı"; 8 -> "Konut Kredisi"; else -> "Ayarlar" },
                                 fontWeight = FontWeight.Black,
-                                fontSize = 24.sp,
+                                fontSize = 22.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             if (selectedTab == 0) {
@@ -340,7 +349,7 @@ fun DashboardScreen(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
                 color = appThemeColors.navBarContainer,
-                border = BorderStroke(1.dp, Color(0xFF1E283E).copy(alpha = 0.7f))
+                border = BorderStroke(1.dp, if (isDark) Color(0xFF1E283E).copy(alpha = 0.7f) else Color(0xFFE2E8F0))
             ) {
                 NavigationBar(
                     containerColor = Color.Transparent,
@@ -357,7 +366,7 @@ fun DashboardScreen(
 
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Home, contentDescription = "Anasayfa") },
-                    label = { Text("Anasayfa", maxLines=1, fontSize=10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) },
+                    label = { Text("Anasayfa", maxLines = 1, softWrap = false, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold) },
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
                     alwaysShowLabel = true,
@@ -365,7 +374,7 @@ fun DashboardScreen(
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Rounded.TrendingUp, contentDescription = "Gelirler") },
-                    label = { Text("Gelirler", maxLines=1, fontSize=10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) },
+                    label = { Text("Gelirler", maxLines = 1, softWrap = false, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold) },
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
                     alwaysShowLabel = true,
@@ -373,7 +382,7 @@ fun DashboardScreen(
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Rounded.CreditCard, contentDescription = "Ödemeler") },
-                    label = { Text("Ödemeler", maxLines=1, fontSize=10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) },
+                    label = { Text("Ödemeler", maxLines = 1, softWrap = false, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold) },
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
                     alwaysShowLabel = true,
@@ -381,7 +390,7 @@ fun DashboardScreen(
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = "Birikim") },
-                    label = { Text("Birikim", maxLines=1, fontSize=10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) },
+                    label = { Text("Birikim", maxLines = 1, softWrap = false, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold) },
                     selected = selectedTab == 3,
                     onClick = { selectedTab = 3 },
                     alwaysShowLabel = true,
@@ -389,7 +398,7 @@ fun DashboardScreen(
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Rounded.History, contentDescription = "Geçmiş") },
-                    label = { Text("Geçmiş", maxLines=1, fontSize=10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) },
+                    label = { Text("Geçmiş", maxLines = 1, softWrap = false, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold) },
                     selected = selectedTab == 4,
                     onClick = { selectedTab = 4 },
                     alwaysShowLabel = true,
@@ -397,7 +406,7 @@ fun DashboardScreen(
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.PieChart, contentDescription = "Analiz") },
-                    label = { Text("Analiz", maxLines=1, fontSize=10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) },
+                    label = { Text("Analiz", maxLines = 1, softWrap = false, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold) },
                     selected = selectedTab == 5,
                     onClick = { selectedTab = 5 },
                     alwaysShowLabel = true,
@@ -469,42 +478,49 @@ fun DashboardScreen(
                         item {
                             var isBalHidden by remember { mutableStateOf(false) }
                             
-                            // 1. Top Card: Toplam Net Varlık with Dual Waves (Image 4)
+                            // 1. Top Card: Bu Ay Net Varlık with Dual Waves
+                            val balFmt = remember { com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 } }
                             CyberNetWorthWaveCard(
-                                title = "Toplam Net Varlık",
+                                title = "Bu Ay Net Kasa",
+                                subtitle = "Gelir ${balFmt.format(cmIncome)} • Gider ${balFmt.format(cmExpense)}",
                                 balance = cmBalance,
                                 isBalanceHidden = isBalHidden,
                                 onToggleVisibility = { isBalHidden = !isBalHidden },
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)
                             )
 
-                            // Quick Actions Row
+                            // Quick Actions Row (theme-aware & pre-selects transaction type!)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 14.dp, vertical = 6.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
+                                val incColor = if (isDark) Color(0xFF00E5A3) else Color(0xFF059669)
+                                val expColor = if (isDark) Color(0xFFFF5E5E) else Color(0xFFDC2626)
+                                val savColor = if (isDark) Color(0xFF00D2B4) else Color(0xFF0284C7)
+
                                 Surface(
                                     modifier = Modifier
                                         .weight(1f)
                                         .clip(RoundedCornerShape(14.dp))
                                         .clickable {
                                             editingTransaction = null
+                                            initialQuickType = TransactionType.INCOME
                                             showAddDialog = true
                                         },
-                                    color = Color(0xFF0F2E23),
+                                    color = if (isDark) Color(0xFF0F2E23) else Color(0xFFECFDF5),
                                     shape = RoundedCornerShape(14.dp),
-                                    border = BorderStroke(1.dp, Color(0xFF00E5A3).copy(alpha = 0.4f))
+                                    border = BorderStroke(1.dp, incColor.copy(alpha = 0.45f))
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(vertical = 10.dp),
+                                        modifier = Modifier.padding(vertical = 11.dp),
                                         horizontalArrangement = Arrangement.Center,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFF00E5A3), modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Default.Add, contentDescription = null, tint = incColor, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Gelir", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00E5A3))
+                                        Text("Gelir", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = incColor)
                                     }
                                 }
 
@@ -514,20 +530,21 @@ fun DashboardScreen(
                                         .clip(RoundedCornerShape(14.dp))
                                         .clickable {
                                             editingTransaction = null
+                                            initialQuickType = TransactionType.EXPENSE
                                             showAddDialog = true
                                         },
-                                    color = Color(0xFF38151D),
+                                    color = if (isDark) Color(0xFF38151D) else Color(0xFFFEF2F2),
                                     shape = RoundedCornerShape(14.dp),
-                                    border = BorderStroke(1.dp, Color(0xFFFF5E5E).copy(alpha = 0.4f))
+                                    border = BorderStroke(1.dp, expColor.copy(alpha = 0.45f))
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(vertical = 10.dp),
+                                        modifier = Modifier.padding(vertical = 11.dp),
                                         horizontalArrangement = Arrangement.Center,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(Icons.Rounded.Remove, contentDescription = null, tint = Color(0xFFFF5E5E), modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Rounded.Remove, contentDescription = null, tint = expColor, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Gider", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF5E5E))
+                                        Text("Gider", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = expColor)
                                     }
                                 }
 
@@ -537,71 +554,71 @@ fun DashboardScreen(
                                         .clip(RoundedCornerShape(14.dp))
                                         .clickable {
                                             editingTransaction = null
+                                            initialQuickType = TransactionType.SAVING
                                             showAddDialog = true
                                         },
-                                    color = Color(0xFF14243B),
+                                    color = if (isDark) Color(0xFF14243B) else Color(0xFFF0F9FF),
                                     shape = RoundedCornerShape(14.dp),
-                                    border = BorderStroke(1.dp, Color(0xFF00D2B4).copy(alpha = 0.4f))
+                                    border = BorderStroke(1.dp, savColor.copy(alpha = 0.45f))
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(vertical = 10.dp),
+                                        modifier = Modifier.padding(vertical = 11.dp),
                                         horizontalArrangement = Arrangement.Center,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text("💎", fontSize = 12.sp)
+                                        Icon(Icons.Rounded.Savings, contentDescription = null, tint = savColor, modifier = Modifier.size(15.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Birikim", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00D2B4))
+                                        Text("Birikim", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = savColor)
                                     }
                                 }
                             }
 
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            // 2. Second Card: Gelir & Gider Dengesi (Bi-Directional Bar Chart - Image 4)
-                            val recentLabels = remember { mutableListOf<String>() }
-                            val recentIncomes = remember { mutableListOf<Double>() }
-                            val recentExpenses = remember { mutableListOf<Double>() }
+                            // 2. Second Card: Real 6-Month Gelir & Gider Dengesi
                             val mSdf = remember { SimpleDateFormat("MMM", Locale("tr", "TR")) }
-
-                            LaunchedEffect(uiState.transactions) {
-                                recentLabels.clear()
-                                recentIncomes.clear()
-                                recentExpenses.clear()
-                                for (i in 4 downTo 0) {
+                            val (recentLabels, recentIncomes, recentExpenses) = remember(uiState.transactions) {
+                                val lbls = mutableListOf<String>()
+                                val incs = mutableListOf<Double>()
+                                val exps = mutableListOf<Double>()
+                                for (i in 5 downTo 0) {
                                     val c = Calendar.getInstance().apply { add(Calendar.MONTH, -i) }
                                     val st = c.apply {
                                         set(Calendar.DAY_OF_MONTH, 1)
                                         set(Calendar.HOUR_OF_DAY, 0)
                                         set(Calendar.MINUTE, 0)
                                         set(Calendar.SECOND, 0)
+                                        set(Calendar.MILLISECOND, 0)
                                     }.timeInMillis
                                     val en = c.apply {
                                         set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
                                         set(Calendar.HOUR_OF_DAY, 23)
                                         set(Calendar.MINUTE, 59)
+                                        set(Calendar.SECOND, 59)
                                     }.timeInMillis
                                     val txs = uiState.transactions.filter { it.timestamp in st..en }
-                                    recentLabels.add(mSdf.format(Date(st)))
-                                    val inc = txs.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-                                    val exp = txs.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
-                                    recentIncomes.add(if (inc > 0) inc else (if (i == 0 && cmIncome > 0) cmIncome else 25000.0 * (1.0 + (4 - i) * 0.1)))
-                                    recentExpenses.add(if (exp > 0) exp else (if (i == 0 && cmExpense > 0) cmExpense else 18000.0 * (1.0 + (4 - i) * 0.08)))
+                                    lbls.add(mSdf.format(Date(st)))
+                                    incs.add(txs.filter { it.type == TransactionType.INCOME }.sumOf { it.amount })
+                                    exps.add(txs.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount })
                                 }
+                                Triple(lbls, incs, exps)
                             }
 
                             CyberIncomeExpenseBalanceCard(
-                                incomes = if (recentIncomes.isEmpty()) listOf(22000.0, 31000.0, 27000.0, 42000.0, 54000.0) else recentIncomes,
-                                expenses = if (recentExpenses.isEmpty()) listOf(14000.0, 23000.0, 29000.0, 18000.0, 26000.0) else recentExpenses,
-                                labels = if (recentLabels.isEmpty()) listOf("Şub", "Mar", "Nis", "May", "Haz") else recentLabels,
+                                incomes = recentIncomes,
+                                expenses = recentExpenses,
+                                labels = recentLabels,
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)
                             )
 
                             Spacer(modifier = Modifier.height(4.dp))
 
-                            // 3. Row of 2 Cards: Yatırım Gücü Oranı & Acil Durum Fonu (Image 4)
-                            val investRatio = if (cmIncome > 0) ((cmSaving / cmIncome) * 100).toInt().coerceIn(10, 95) else 42
-                            val emergencyTarget = (cmExpense * 3.0).coerceAtLeast(60000.0)
-                            val emergencyCurrent = (cmSaving * 2.2).coerceIn(20000.0, emergencyTarget)
+                            // 3. Row of 2 Cards: Tasarruf Gücü & Yedek Güvence (100% real data)
+                            val totalAccumulatedSavings = remember(uiState.transactions) {
+                                uiState.transactions.filter { it.type == TransactionType.SAVING }.sumOf { it.amount }
+                            }
+                            val investRatio = if (cmIncome > 0) ((cmSaving / cmIncome) * 100).toInt().coerceIn(0, 100) else 0
+                            val emergencyTarget = if (cmExpense > 0) cmExpense * 3.0 else 0.0
 
                             Row(
                                 modifier = Modifier
@@ -611,12 +628,13 @@ fun DashboardScreen(
                             ) {
                                 CyberInvestmentGaugeCard(
                                     percentage = investRatio,
-                                    title = "Yatırım Gücü Oranı",
+                                    title = "Tasarruf Oranı",
+                                    subtitle = if (cmIncome > 0) "Bu ayki gelirden" else "Gelir eklenmedi",
                                     modifier = Modifier.weight(1f)
                                 )
 
                                 CyberEmergencyFundCard(
-                                    currentAmount = emergencyCurrent,
+                                    currentAmount = totalAccumulatedSavings,
                                     targetAmount = emergencyTarget,
                                     title = "Acil Durum Fonu",
                                     modifier = Modifier.weight(1f)
@@ -681,10 +699,11 @@ fun DashboardScreen(
                             }
                         }
 
-                        items(upcoming) { transaction ->
+                        items(upcoming, key = { it.id }) { transaction ->
                             ModernTransactionItem(
                                 transaction = transaction,
                                 onDelete = { viewModel.deleteTransaction(transaction.id) },
+                                onTogglePaid = { isPaid -> viewModel.toggleTransactionPaid(transaction, isPaid) },
                                 isDark = isDark
                             )
                         }
@@ -849,7 +868,8 @@ fun DashboardScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                HistoryScreen(isDark = isDark,
+                HistoryScreen(
+                    isDark = isDark,
                     transactions = uiState.transactions,
                     onEdit = { tx ->
                         editingTransaction = tx
@@ -857,6 +877,19 @@ fun DashboardScreen(
                     },
                     onDelete = { tx ->
                         viewModel.deleteTransaction(tx.id)
+                    },
+                    onTogglePaid = { tx, isPaid ->
+                        viewModel.toggleTransactionPaid(tx, isPaid)
+                    },
+                    onRepeat = { tx ->
+                        val repeated = tx.copy(
+                            id = 0,
+                            timestamp = System.currentTimeMillis(),
+                            isPaid = tx.type != TransactionType.EXPENSE,
+                            installments = 1
+                        )
+                        viewModel.addTransactionWithInstallments(repeated, repeatUntilYearEnd = false)
+                        Toast.makeText(context, "\"${tx.title}\" bugüne tekrarlandı", Toast.LENGTH_SHORT).show()
                     }
                 )
             }
@@ -906,7 +939,7 @@ fun DashboardScreen(
             1 -> TransactionType.INCOME
             2 -> TransactionType.EXPENSE
             3 -> TransactionType.SAVING
-            else -> null
+            else -> initialQuickType
         }
         
         AddTransactionDialog(
@@ -920,6 +953,7 @@ fun DashboardScreen(
             onDismiss = {
                 showAddDialog = false
                 initialSavingCategory = null
+                initialQuickType = null
                 editingTransaction = null
             },
             onSave = { id, amount, title, type, category, person, timestamp, q, up, inst, isPaid, repeatUntilYearEnd ->
@@ -939,6 +973,7 @@ fun DashboardScreen(
                 viewModel.addTransactionWithInstallments(newTx, repeatUntilYearEnd)
                 showAddDialog = false
                 initialSavingCategory = null
+                initialQuickType = null
                 editingTransaction = null
             }
         )

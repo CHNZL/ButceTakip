@@ -112,31 +112,6 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        item {
-            Column(modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Settings,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Uygulama Ayarları",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "Kategorileri, temayı, bildirimleri ve yedekleri yönetin",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
 
         // --- GÖRÜNÜM VE TEMA SEÇENEKLERİ ---
         item {
@@ -347,7 +322,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Gelir Kategorileri", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("Gelir Kategorileri (${incomeCategories.size})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         }
                         Icon(if (isIncomeExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = null)
                     }
@@ -409,7 +384,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Gider Kategorileri", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("Gider Kategorileri (${expenseCategories.size})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         }
                         Icon(if (isExpenseExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = null)
                     }
@@ -471,7 +446,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Birikim Kategorileri", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("Birikim Kategorileri (${savingCategories.size})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         }
                         Icon(if (isSavingExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = null)
                     }
@@ -533,7 +508,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Kişiler", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("Kişiler (${persons.size})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         }
                         Icon(if (isPersonExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = null)
                     }

@@ -491,23 +491,26 @@ fun ModernPaymentCard(
     isDark: Boolean,
     onToggle: () -> Unit
 ) {
-    val format = remember { com.example.util.FormatUtil.getCurrencyFormat() }
-    val cardBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
+    val format = remember { com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 } }
+    val paidAccent = if (isDark) com.example.ui.theme.CyberNeonMint else Color(0xFF059669)
+    val overdueAccent = if (isDark) com.example.ui.theme.CyberNeonCoral else Color(0xFFE11D48)
+
+    val cardBg = if (isDark) com.example.ui.theme.CyberDarkSurface else Color.White
     val cardBorder = if (isPastDue) {
-        if (isDark) Color(0xFF7F1D1D) else Color(0xFFFECDD3)
+        overdueAccent.copy(alpha = 0.55f)
     } else if (isPaid) {
-        if (isDark) Color(0xFF065F46).copy(alpha = 0.5f) else Color(0xFFA7F3D0).copy(alpha = 0.6f)
+        paidAccent.copy(alpha = 0.40f)
     } else {
-        if (isDark) Color(0xFF334155).copy(alpha = 0.5f) else Color(0xFFE2E8F0)
+        if (isDark) com.example.ui.theme.CyberBorderStroke else Color(0xFFE2E8F0)
     }
 
     val icon = when {
-        tx.category?.lowercase()?.contains("kira") == true -> Icons.Rounded.Home
-        tx.category?.lowercase()?.contains("market") == true -> Icons.Rounded.ShoppingCart
-        tx.category?.lowercase()?.contains("fatura") == true -> Icons.Rounded.ReceiptLong
-        tx.category?.lowercase()?.contains("kredi") == true -> Icons.Rounded.CreditCard
-        tx.category?.lowercase()?.contains("ulaşım") == true || tx.category?.lowercase()?.contains("yakıt") == true -> Icons.Rounded.DirectionsCar
-        tx.category?.lowercase()?.contains("sağlık") == true -> Icons.Rounded.LocalHospital
+        tx.category.lowercase().contains("kira") -> Icons.Rounded.Home
+        tx.category.lowercase().contains("market") -> Icons.Rounded.ShoppingCart
+        tx.category.lowercase().contains("fatura") -> Icons.Rounded.ReceiptLong
+        tx.category.lowercase().contains("kredi") -> Icons.Rounded.CreditCard
+        tx.category.lowercase().contains("ulaşım") || tx.category.lowercase().contains("yakıt") -> Icons.Rounded.DirectionsCar
+        tx.category.lowercase().contains("sağlık") -> Icons.Rounded.LocalHospital
         else -> Icons.Rounded.Payments
     }
 
@@ -518,7 +521,7 @@ fun ModernPaymentCard(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = cardBg),
         border = BorderStroke(1.dp, cardBorder),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 1.dp)
     ) {
         Row(
             modifier = Modifier
@@ -526,16 +529,15 @@ fun ModernPaymentCard(
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon
             Box(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(
                         when {
-                            isPaid -> Color(0xFF10B981).copy(alpha = 0.12f)
-                            isPastDue -> Color(0xFFE11D48).copy(alpha = 0.12f)
-                            else -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                            isPaid -> paidAccent.copy(alpha = 0.14f)
+                            isPastDue -> overdueAccent.copy(alpha = 0.14f)
+                            else -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
                         }
                     ),
                 contentAlignment = Alignment.Center
@@ -544,31 +546,45 @@ fun ModernPaymentCard(
                     icon,
                     contentDescription = null,
                     tint = when {
-                        isPaid -> Color(0xFF10B981)
-                        isPastDue -> Color(0xFFE11D48)
+                        isPaid -> paidAccent
+                        isPastDue -> overdueAccent
                         else -> MaterialTheme.colorScheme.primary
                     },
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(23.dp)
                 )
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Details
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = tx.title,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
-                    color = if (isPaid) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface,
+                    color = if (isPaid) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f) else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (!tx.person.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    if (tx.category.isNotBlank()) {
                         Surface(
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = tx.category,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                maxLines = 1
+                            )
+                        }
+                    }
+                    if (!tx.person.isNullOrBlank()) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
@@ -576,27 +592,28 @@ fun ModernPaymentCard(
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                maxLines = 1
                             )
                         }
                     }
                     if (isPastDue) {
                         Surface(
-                            color = Color(0xFFE11D48).copy(alpha = 0.15f),
+                            color = overdueAccent.copy(alpha = 0.16f),
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = "Gecikti!",
+                                text = "Gecikti",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFE11D48),
+                                color = overdueAccent,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                     }
                     Text(
                         text = sdf.format(Date(tx.timestamp)),
-                        fontSize = 11.sp,
+                        fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -604,33 +621,31 @@ fun ModernPaymentCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Amount and Check Button
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = format.format(tx.amount),
                     fontWeight = FontWeight.Black,
                     fontSize = 15.sp,
                     color = when {
-                        isPaid -> Color(0xFF10B981)
-                        isPastDue -> Color(0xFFE11D48)
+                        isPaid -> paidAccent
+                        isPastDue -> overdueAccent
                         else -> MaterialTheme.colorScheme.onSurface
                     }
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                // Toggle Button
+                Spacer(modifier = Modifier.height(5.dp))
                 Surface(
-                    color = if (isPaid) Color(0xFF10B981) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    color = if (isPaid) paidAccent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.clickable { onToggle() }
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
                             if (isPaid) Icons.Rounded.Check else Icons.Rounded.RadioButtonUnchecked,
-                            contentDescription = null,
+                            contentDescription = if (isPaid) "Ödendi" else "Bekliyor",
                             tint = if (isPaid) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(12.dp)
                         )

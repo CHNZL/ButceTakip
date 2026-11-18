@@ -152,17 +152,24 @@ fun IncomesScreen(transactions: List<Transaction>) {
                     HorizontalDivider(color = Color.White.copy(alpha = 0.15f))
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    val avgIncome = if (thisMonthIncomes.isNotEmpty()) totalThisMonth / thisMonthIncomes.size else 0.0
+                    val maxIncomeTx = thisMonthIncomes.maxByOrNull { it.amount }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text("İşlem Sayısı", fontSize = 11.sp, color = Color.White.copy(alpha = 0.75f))
-                            Text("${thisMonthIncomes.size} adet", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text("Ortalama Kayıt", fontSize = 11.sp, color = Color.White.copy(alpha = 0.75f))
+                            Text("${thisMonthIncomes.size} işlem • ${format.format(avgIncome)}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("Gelir Kalemleri", fontSize = 11.sp, color = Color.White.copy(alpha = 0.75f))
-                            Text("${thisMonthIncomes.mapNotNull { it.category }.distinct().size} farklı kaynak", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text("En Büyük Kalem", fontSize = 11.sp, color = Color.White.copy(alpha = 0.75f))
+                            Text(
+                                text = if (maxIncomeTx != null) "${maxIncomeTx.category} (${format.format(maxIncomeTx.amount)})" else "Henüz yok",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF6EE7B7)
+                            )
                         }
                     }
                 }
@@ -307,16 +314,16 @@ fun IncomesScreen(transactions: List<Transaction>) {
             }
         } else {
             items(displayedIncomes, key = { it.id }) { tx ->
-                val cardBg = if (isDark) MaterialTheme.colorScheme.surface else Color.White
-                val cardBorder = if (isDark) Color(0xFF334155).copy(alpha = 0.4f) else Color(0xFFE2E8F0)
-                val iconTint = Color(0xFF10B981)
-                val iconBg = Color(0xFF10B981).copy(alpha = 0.12f)
+                val cardBg = if (isDark) com.example.ui.theme.CyberDarkSurface else Color.White
+                val cardBorder = if (isDark) com.example.ui.theme.CyberBorderStroke else Color(0xFFE2E8F0)
+                val iconTint = if (isDark) com.example.ui.theme.CyberNeonMint else Color(0xFF059669)
+                val iconBg = iconTint.copy(alpha = 0.14f)
 
                 Card(
                     colors = CardDefaults.cardColors(containerColor = cardBg),
                     border = BorderStroke(1.dp, cardBorder),
                     shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 1.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
