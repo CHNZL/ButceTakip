@@ -640,6 +640,7 @@ fun HistoryScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun HistoryTransactionRowCard(
     tx: Transaction,
@@ -710,12 +711,12 @@ private fun HistoryTransactionRowCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(3.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        if (tx.category.isNotBlank()) {
+                        if (tx.category.isNotBlank() && !tx.category.equals(tx.title, ignoreCase = true)) {
                             Surface(
                                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
                                 shape = RoundedCornerShape(6.dp)
@@ -725,8 +726,10 @@ private fun HistoryTransactionRowCard(
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    maxLines = 1
+                                    softWrap = false,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
                         }
@@ -740,14 +743,18 @@ private fun HistoryTransactionRowCard(
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    maxLines = 1
+                                    softWrap = false,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
                         }
                         Text(
                             text = dateText,
                             fontSize = 10.sp,
+                            softWrap = false,
+                            maxLines = 1,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -760,6 +767,8 @@ private fun HistoryTransactionRowCard(
                         text = "$typeSign${format.format(tx.amount)}",
                         fontWeight = FontWeight.Black,
                         fontSize = 15.sp,
+                        softWrap = false,
+                        maxLines = 1,
                         color = typeColor
                     )
                     if (tx.type == TransactionType.EXPENSE) {
@@ -775,6 +784,8 @@ private fun HistoryTransactionRowCard(
                                 text = if (tx.isPaid) "Ödendi ✓" else "Bekliyor",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.ExtraBold,
+                                softWrap = false,
+                                maxLines = 1,
                                 color = if (tx.isPaid) neonIncome else neonExpense,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )

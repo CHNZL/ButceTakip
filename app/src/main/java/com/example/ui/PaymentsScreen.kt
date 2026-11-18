@@ -321,11 +321,10 @@ fun PaymentsScreen(
 
         if (showPastDue && pastDueTx.isNotEmpty()) {
             item {
-                Text(
-                    text = "Geciken Ödemeler (${pastDueTx.size})",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFE11D48)
+                PaymentSectionHeader(
+                    title = "Geciken Ödemeler (${pastDueTx.size})",
+                    totalText = format.format(pastDueRemaining),
+                    accentColor = Color(0xFFE11D48)
                 )
             }
             items(pastDueTx, key = { it.id }) { tx ->
@@ -342,11 +341,10 @@ fun PaymentsScreen(
 
         if (showUnpaid && thisMonthUnpaidTx.isNotEmpty()) {
             item {
-                Text(
-                    text = "Bu Ay Ödenecekler (${thisMonthUnpaidTx.size})",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                PaymentSectionHeader(
+                    title = "Bu Ay Ödenecekler (${thisMonthUnpaidTx.size})",
+                    totalText = format.format(totalDebt),
+                    accentColor = MaterialTheme.colorScheme.onSurface
                 )
             }
             items(thisMonthUnpaidTx, key = { it.id }) { tx ->
@@ -364,11 +362,10 @@ fun PaymentsScreen(
 
         if (showPaid && thisMonthPaidTx.isNotEmpty()) {
             item {
-                Text(
-                    text = "Bu Ay Tamamlananlar (${thisMonthPaidTx.size})",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF10B981)
+                PaymentSectionHeader(
+                    title = "Bu Ay Tamamlananlar (${thisMonthPaidTx.size})",
+                    totalText = format.format(totalPaid),
+                    accentColor = Color(0xFF10B981)
                 )
             }
             items(thisMonthPaidTx, key = { it.id }) { tx ->
@@ -483,6 +480,47 @@ fun PaymentsScreen(
 }
 
 @Composable
+private fun PaymentSectionHeader(
+    title: String,
+    totalText: String,
+    accentColor: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = accentColor,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Surface(
+            color = accentColor.copy(alpha = 0.12f),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text(
+                text = totalText,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = accentColor,
+                softWrap = false,
+                maxLines = 1,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
 fun ModernPaymentCard(
     tx: Transaction,
     isPaid: Boolean,
@@ -562,12 +600,31 @@ fun ModernPaymentCard(
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                     color = if (isPaid) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f) else MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(3.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    if (tx.category.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    if (isPastDue) {
+                        Surface(
+                            color = overdueAccent.copy(alpha = 0.16f),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = "Gecikti",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = overdueAccent,
+                                softWrap = false,
+                                maxLines = 1,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    if (tx.category.isNotBlank() && !tx.category.equals(tx.title, ignoreCase = true)) {
                         Surface(
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                             shape = RoundedCornerShape(6.dp)
@@ -577,8 +634,10 @@ fun ModernPaymentCard(
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                maxLines = 1
+                                softWrap = false,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
                             )
                         }
                     }
@@ -592,54 +651,58 @@ fun ModernPaymentCard(
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                maxLines = 1
+                                softWrap = false,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
                             )
                         }
                     }
-                    if (isPastDue) {
-                        Surface(
-                            color = overdueAccent.copy(alpha = 0.16f),
-                            shape = RoundedCornerShape(6.dp)
-                        ) {
-                            Text(
-                                text = "Gecikti",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = overdueAccent,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.CalendarToday,
+                            contentDescription = null,
+                            tint = if (isPastDue) overdueAccent.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(11.dp)
+                        )
+                        Text(
+                            text = sdf.format(Date(tx.timestamp)),
+                            fontSize = 10.sp,
+                            fontWeight = if (isPastDue) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (isPastDue) overdueAccent else MaterialTheme.colorScheme.onSurfaceVariant,
+                            softWrap = false,
+                            maxLines = 1
+                        )
                     }
-                    Text(
-                        text = sdf.format(Date(tx.timestamp)),
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = format.format(tx.amount),
                     fontWeight = FontWeight.Black,
                     fontSize = 15.sp,
+                    softWrap = false,
+                    maxLines = 1,
                     color = when {
                         isPaid -> paidAccent
                         isPastDue -> overdueAccent
                         else -> MaterialTheme.colorScheme.onSurface
                     }
                 )
-                Spacer(modifier = Modifier.height(5.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Surface(
                     color = if (isPaid) paidAccent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.clickable { onToggle() }
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
@@ -653,6 +716,8 @@ fun ModernPaymentCard(
                             text = if (isPaid) "Ödendi" else "Bekliyor",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
+                            softWrap = false,
+                            maxLines = 1,
                             color = if (isPaid) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

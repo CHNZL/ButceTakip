@@ -424,6 +424,19 @@ fun MyApplicationTheme(
         }
     }
 
+    val view = androidx.compose.ui.platform.LocalView.current
+    if (!view.isInEditMode) {
+        androidx.compose.runtime.SideEffect {
+            val window = (view.context as? android.app.Activity)?.window
+            if (window != null) {
+                androidx.core.view.WindowCompat.getInsetsController(window, view).apply {
+                    isAppearanceLightStatusBars = !darkTheme
+                    isAppearanceLightNavigationBars = !darkTheme
+                }
+            }
+        }
+    }
+
     CompositionLocalProvider(LocalAppThemeColors provides appThemeColors) {
         MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
     }

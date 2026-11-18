@@ -861,45 +861,53 @@ fun ModernTransactionItem(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
-                    if (transaction.person != null) {
-                        Spacer(modifier = Modifier.width(4.dp))
+                    if (!transaction.person.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.width(6.dp))
                         Surface(
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                             shape = RoundedCornerShape(4.dp)
                         ) {
                             Text(
                                 text = transaction.person,
-                                fontSize = 8.sp,
+                                fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                softWrap = false,
+                                maxLines = 1,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
                         text = sdf.format(Date(transaction.timestamp)),
                         fontSize = 10.sp,
+                        softWrap = false,
+                        maxLines = 1,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Text("•", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-                    Text(
-                        text = transaction.category,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (transaction.category.isNotBlank() && !transaction.category.equals(transaction.title, ignoreCase = true)) {
+                        Text(
+                            text = "• ${transaction.category}",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            softWrap = false,
+                            maxLines = 1,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
                     if (transaction.type == TransactionType.EXPENSE) {
                         Surface(
@@ -914,12 +922,14 @@ fun ModernTransactionItem(
                                 text = if (transaction.isPaid) "ÖDENDİ" else "BEKLİYOR",
                                 fontSize = 8.sp,
                                 fontWeight = FontWeight.ExtraBold,
+                                softWrap = false,
+                                maxLines = 1,
                                 color = if (transaction.isPaid) {
                                     if (isDark) Color(0xFF00E5A3) else Color(0xFF065F46)
                                 } else {
                                     if (isDark) Color(0xFFFF5E5E) else Color(0xFF991B1B)
                                 },
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
                             )
                         }
                     }
@@ -934,6 +944,8 @@ fun ModernTransactionItem(
                     text = prefix + format.format(transaction.amount),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
+                    softWrap = false,
+                    maxLines = 1,
                     color = amountColor
                 )
 
@@ -953,6 +965,8 @@ fun ModernTransactionItem(
                                 text = if (transaction.isPaid) "Ödendi ✓" else "Öde ✓",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
+                                softWrap = false,
+                                maxLines = 1,
                                 color = if (transaction.isPaid) Color(0xFF10B981) else MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                             )

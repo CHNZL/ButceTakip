@@ -356,9 +356,13 @@ fun IncomesScreen(transactions: List<Transaction>) {
                                 maxLines = 1,
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                if (!tx.category.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            @OptIn(ExperimentalLayoutApi::class)
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                if (!tx.category.isNullOrBlank() && !tx.category.equals(tx.title, ignoreCase = true)) {
                                     Surface(
                                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                                         shape = RoundedCornerShape(6.dp)
@@ -368,6 +372,8 @@ fun IncomesScreen(transactions: List<Transaction>) {
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            softWrap = false,
+                                            maxLines = 1,
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                     }
@@ -382,6 +388,8 @@ fun IncomesScreen(transactions: List<Transaction>) {
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.primary,
+                                            softWrap = false,
+                                            maxLines = 1,
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                     }
@@ -389,6 +397,8 @@ fun IncomesScreen(transactions: List<Transaction>) {
                                 Text(
                                     text = sdf.format(Date(tx.timestamp)),
                                     fontSize = 11.sp,
+                                    softWrap = false,
+                                    maxLines = 1,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -398,6 +408,8 @@ fun IncomesScreen(transactions: List<Transaction>) {
                             text = "+${format.format(tx.amount)}",
                             fontWeight = FontWeight.Black,
                             fontSize = 15.sp,
+                            softWrap = false,
+                            maxLines = 1,
                             color = iconTint
                         )
                     }
