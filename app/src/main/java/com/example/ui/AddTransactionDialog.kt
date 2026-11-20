@@ -43,10 +43,16 @@ fun AddTransactionDialog(
     fixedType: TransactionType? = null,
     editingTransaction: com.example.data.Transaction? = null,
     initialCategoryName: String? = null,
+    initialAmount: Double? = null,
+    initialPersonName: String? = null,
     onDismiss: () -> Unit,
     onSave: (Int, Double, String, TransactionType, String, String?, Long, Double?, Double?, Int?, Boolean, Boolean) -> Unit
 ) {
-    var amountText by remember { mutableStateOf(editingTransaction?.amount?.let { com.example.util.formatDoubleForInput(it) } ?: "") }
+    var amountText by remember {
+        mutableStateOf(
+            (editingTransaction?.amount ?: initialAmount)?.let { com.example.util.formatDoubleForInput(it) } ?: ""
+        )
+    }
     var type by remember { mutableStateOf(editingTransaction?.type ?: (fixedType ?: TransactionType.EXPENSE)) }
 
     val categories = when (type) {
@@ -62,7 +68,12 @@ fun AddTransactionDialog(
                 ?: categories.firstOrNull()
         )
     }
-    var person by remember { mutableStateOf<Person?>(editingTransaction?.let { tx -> persons.firstOrNull { it.name == tx.person } }) }
+    var person by remember {
+        mutableStateOf<Person?>(
+            editingTransaction?.let { tx -> persons.firstOrNull { it.name == tx.person } }
+                ?: initialPersonName?.let { pName -> persons.firstOrNull { it.name.equals(pName, ignoreCase = true) } }
+        )
+    }
     var timestamp by remember { mutableLongStateOf(editingTransaction?.timestamp ?: System.currentTimeMillis()) }
 
     var showDatePicker by remember { mutableStateOf(false) }

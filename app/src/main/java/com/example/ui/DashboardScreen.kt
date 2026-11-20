@@ -77,10 +77,16 @@ fun DashboardScreen(
     val customPricesTrigger by viewModel.customPricesRefreshTrigger.collectAsStateWithLifecycle()
     val marketScheduleConfig by viewModel.marketScheduleConfig.collectAsStateWithLifecycle()
     val marketPriceAlarms by viewModel.marketPriceAlarms.collectAsStateWithLifecycle()
+    val monthlyPaymentRules by viewModel.monthlyPaymentRules.collectAsStateWithLifecycle()
+    val remindMissingMonthlyPayments by viewModel.remindMissingMonthlyPayments.collectAsStateWithLifecycle()
+    val expenseCategories by viewModel.expenseCategories.collectAsStateWithLifecycle()
+    val persons by viewModel.persons.collectAsStateWithLifecycle()
 
     var showAddDialog by remember { mutableStateOf(false) }
     var initialSavingCategory by remember { mutableStateOf<String?>(null) }
     var initialQuickType by remember { mutableStateOf<TransactionType?>(null) }
+    var initialQuickAmount by remember { mutableStateOf<Double?>(null) }
+    var initialQuickPerson by remember { mutableStateOf<String?>(null) }
     var editingTransaction by remember { mutableStateOf<Transaction?>(null) }
     var showAddGoalDialog by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -498,6 +504,21 @@ fun DashboardScreen(
                     )
                 }
 
+                // 3B. Missing Expected Monthly Payments Alert (only when missing items exist)
+                val missingMonthlyNow = com.example.data.MonthlyPaymentEvaluator.getMissingDueNow(
+                    rules = monthlyPaymentRules,
+                    transactions = uiState.transactions
+                )
+                if (missingMonthlyNow.isNotEmpty()) {
+                    item(key = "home_missing_monthly_banner") {
+                        HomeMissingPaymentsBanner(
+                            missingItems = missingMonthlyNow,
+                            onOpenPayments = { selectedTab = 2 },
+                            modifier = Modifier.padding(horizontal = 14.dp)
+                        )
+                    }
+                }
+
                 // 4. Unified Action Bills Ledger with 1-Tap Pay
                 item {
                     HomeActionBillsCard(
@@ -616,15 +637,54 @@ fun DashboardScreen(
                     onTogglePaid = { tx, isPaid -> viewModel.toggleTransactionPaid(tx, isPaid) },
                     onAddExpense = {
                         editingTransaction = null
+                        initialSavingCategory = null
+                        initialQuickAmount = null
+                        initialQuickPerson = null
                         initialQuickType = TransactionType.EXPENSE
                         showAddDialog = true
                     },
                     onEditExpense = { tx ->
                         editingTransaction = tx
+                        initialSavingCategory = null
+                        initialQuickAmount = null
+                        initialQuickPerson = null
                         showAddDialog = true
                     },
                     onDeleteExpense = { tx ->
                         viewModel.deleteTransaction(tx.id)
+                    },
+                    monthlyRules = monthlyPaymentRules,
+                    expenseCategories = expenseCategories,
+                    persons = persons,
+                    remindMissingEnabled = remindMissingMonthlyPayments,
+                    onQuickEnterMissing = { item ->
+                        editingTransaction = null
+                        initialQuickType = TransactionType.EXPENSE
+                        initialSavingCategory = item.categoryName
+                        initialQuickAmount = item.suggestedAmount
+                        initialQuickPerson = item.suggestedPerson
+                        showAddDialog = true
+                    },
+                    onToggleMasterMissingNotif = { enabled ->
+                        viewModel.setRemindMissingMonthlyPayments(enabled)
+                    },
+                    onToggleMonthlyRule = { cat, enabled, amt, person ->
+                        viewModel.toggleMonthlyPaymentRule(cat, enabled, amt, person)
+                    },
+                    onSaveMonthlyRule = { rule ->
+                        viewModel.saveMonthlyPaymentRule(rule)
+                    },
+                    onDeleteMonthlyRule = { ruleId ->
+                        viewModel.deleteMonthlyPaymentRule(ruleId)
+                    },
+                    onSkipMonthlyForMonth = { cat, skip ->
+                        viewModel.skipMonthlyPaymentForCurrentMonth(cat, skip)
+                        if (skip) {
+                            Toast.makeText(context, "\"$cat\" sadece bu ay için atlandı", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onSendTestMissingNotif = { cb ->
+                        viewModel.sendTestMissingPaymentNotification(cb)
                     }
                 )
             }
@@ -799,16 +859,20 @@ fun DashboardScreen(
         
         AddTransactionDialog(
             incomeCategories = viewModel.incomeCategories.collectAsStateWithLifecycle().value,
-            expenseCategories = viewModel.expenseCategories.collectAsStateWithLifecycle().value,
+            expenseCategories = expenseCategories,
             savingCategories = viewModel.savingCategories.collectAsStateWithLifecycle().value,
-            persons = viewModel.persons.collectAsStateWithLifecycle().value,
+            persons = persons,
             fixedType = fixedType,
             editingTransaction = editingTransaction,
             initialCategoryName = initialSavingCategory,
+            initialAmount = initialQuickAmount,
+            initialPersonName = initialQuickPerson,
             onDismiss = {
                 showAddDialog = false
                 initialSavingCategory = null
                 initialQuickType = null
+                initialQuickAmount = null
+                initialQuickPerson = null
                 editingTransaction = null
             },
             onSave = { id, amount, title, type, category, person, timestamp, q, up, inst, isPaid, repeatUntilYearEnd ->
@@ -829,6 +893,8 @@ fun DashboardScreen(
                 showAddDialog = false
                 initialSavingCategory = null
                 initialQuickType = null
+                initialQuickAmount = null
+                initialQuickPerson = null
                 editingTransaction = null
             }
         )

@@ -129,4 +129,16 @@ class PreferenceManager(context: Context) {
     var lastMarketSummarySentAt: Long
         get() = prefs.getLong("last_market_summary_sent_at", 0L)
         set(value) = prefs.edit().putLong("last_market_summary_sent_at", value).apply()
+
+    var monthlyPaymentRules: List<MonthlyExpectedPaymentRule>
+        get() = MonthlyExpectedPaymentRule.listFromJsonString(prefs.getString("monthly_expected_payment_rules", null))
+        set(value) = prefs.edit().putString("monthly_expected_payment_rules", MonthlyExpectedPaymentRule.listToJsonString(value)).apply()
+
+    var remindMissingMonthlyPayments: Boolean
+        get() = prefs.getBoolean("remind_missing_monthly_payments", true)
+        set(value) = prefs.edit().putBoolean("remind_missing_monthly_payments", value).apply()
+
+    var lastMissingReminderDate: String
+        get() = prefs.getString("last_missing_reminder_date", "") ?: ""
+        set(value) = prefs.edit().putString("last_missing_reminder_date", value).apply()
 }

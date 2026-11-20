@@ -60,6 +60,8 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
 
     val marketSchedule by viewModel.marketScheduleConfig.collectAsStateWithLifecycle()
     val marketAlarms by viewModel.marketPriceAlarms.collectAsStateWithLifecycle()
+    val monthlyPaymentRules by viewModel.monthlyPaymentRules.collectAsStateWithLifecycle()
+    val remindMissingMonthlyPayments by viewModel.remindMissingMonthlyPayments.collectAsStateWithLifecycle()
     val goldPrices by viewModel.goldPrices.collectAsStateWithLifecycle()
     val bankRates by viewModel.bankRates.collectAsStateWithLifecycle()
     val ziraatRates by viewModel.ziraatRates.collectAsStateWithLifecycle()
@@ -81,6 +83,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
     var showCategorySheet by remember { mutableStateOf(false) }
     var showPersonSheet by remember { mutableStateOf(false) }
     var showPaymentRemindersSheet by remember { mutableStateOf(false) }
+    var showMonthlyPaymentRulesSheet by remember { mutableStateOf(false) }
     var showMarketAlertsSheet by remember { mutableStateOf(false) }
     var showMarketMatchSheet by remember { mutableStateOf(false) }
     var showClearDialog by remember { mutableStateOf(false) }
@@ -156,6 +159,24 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
             if (activeAlarmCount > 0) {
                 append(" · $activeAlarmCount limit alarmı")
             }
+        }
+    }
+
+    val trackedMonthlyCount = remember(monthlyPaymentRules) {
+        monthlyPaymentRules.count { it.isEnabled }
+    }
+    val missingMonthlyCount = remember(monthlyPaymentRules, uiState.transactions) {
+        com.example.data.MonthlyPaymentEvaluator.getMissingDueNow(
+            rules = monthlyPaymentRules,
+            transactions = uiState.transactions
+        ).size
+    }
+    val monthlyMissingSubtitle = remember(trackedMonthlyCount, missingMonthlyCount, remindMissingMonthlyPayments) {
+        when {
+            trackedMonthlyCount == 0 -> "Hangi aylık kalemlerin hatırlatılacağını seçin"
+            missingMonthlyCount > 0 -> "$trackedMonthlyCount kalem takipte · $missingMonthlyCount bu ay eksik"
+            remindMissingMonthlyPayments -> "$trackedMonthlyCount kalem takipte · Bildirim açık"
+            else -> "$trackedMonthlyCount kalem takipte · Bildirim kapalı"
         }
     }
 
@@ -370,6 +391,21 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                         )
                         SettingsInsetDivider()
                         SettingsRowItem(
+                            icon = Icons.Rounded.EventRepeat,
+                            iconTint = if (missingMonthlyCount > 0) coral else sky,
+                            title = "Girilmemiş Aylık Ödemeler",
+                            subtitle = monthlyMissingSubtitle,
+                            badgeText = when {
+                                missingMonthlyCount > 0 -> "$missingMonthlyCount Eksik"
+                                trackedMonthlyCount > 0 -> "$trackedMonthlyCount"
+                                else -> null
+                            },
+                            badgeColor = if (missingMonthlyCount > 0) coral else sky,
+                            testTag = "settings_monthly_missing_rules_row",
+                            onClick = { showMonthlyPaymentRulesSheet = true }
+                        )
+                        SettingsInsetDivider()
+                        SettingsRowItem(
                             icon = Icons.Rounded.ShowChart,
                             iconTint = mint,
                             title = "Piyasa Bildirimleri & Alarmlar",
@@ -549,6 +585,29 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                 viewModel.preferenceManager.silentHoursEnd = it
             },
             onDismiss = { showPaymentRemindersSheet = false }
+        )
+    }
+
+    if (showMonthlyPaymentRulesSheet) {
+        MonthlyPaymentRemindersBottomSheet(
+            rules = monthlyPaymentRules,
+            expenseCategories = expenseCategories,
+            transactions = uiState.transactions,
+            persons = persons,
+            remindMissingEnabled = remindMissingMonthlyPayments,
+            onToggleMasterNotification = { viewModel.setRemindMissingMonthlyPayments(it) },
+            onToggleItem = { cat, enabled, amt, person ->
+                viewModel.toggleMonthlyPaymentRule(cat, enabled, amt, person)
+            },
+            onSaveRule = { viewModel.saveMonthlyPaymentRule(it) },
+            onDeleteRule = { viewModel.deleteMonthlyPaymentRule(it) },
+            onSkipForCurrentMonth = { cat, skip ->
+                viewModel.skipMonthlyPaymentForCurrentMonth(cat, skip)
+            },
+            onSendTestNotification = { cb ->
+                viewModel.sendTestMissingPaymentNotification(cb)
+            },
+            onDismiss = { showMonthlyPaymentRulesSheet = false }
         )
     }
 

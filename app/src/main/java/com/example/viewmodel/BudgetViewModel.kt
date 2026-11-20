@@ -97,6 +97,12 @@ class BudgetViewModel(
     private val _marketPriceAlarms = MutableStateFlow(preferenceManager.marketPriceAlarms)
     val marketPriceAlarms = _marketPriceAlarms.asStateFlow()
 
+    private val _monthlyPaymentRules = MutableStateFlow(preferenceManager.monthlyPaymentRules)
+    val monthlyPaymentRules = _monthlyPaymentRules.asStateFlow()
+
+    private val _remindMissingMonthlyPayments = MutableStateFlow(preferenceManager.remindMissingMonthlyPayments)
+    val remindMissingMonthlyPayments = _remindMissingMonthlyPayments.asStateFlow()
+
     fun toggleDarkTheme(enabled: Boolean) {
         preferenceManager.darkThemeEnabled = enabled
         _darkThemeEnabled.value = enabled
@@ -149,6 +155,123 @@ class BudgetViewModel(
         preferenceManager.marketPriceAlarms = updated
         _marketPriceAlarms.value = updated
         com.example.worker.MarketAlertScheduler.syncSchedule(getApplication())
+    }
+
+    fun setRemindMissingMonthlyPayments(enabled: Boolean) {
+        preferenceManager.remindMissingMonthlyPayments = enabled
+        _remindMissingMonthlyPayments.value = enabled
+    }
+
+    fun toggleMonthlyPaymentRule(
+        categoryName: String,
+        enabled: Boolean,
+        suggestedAmount: Double? = null,
+        suggestedPerson: String? = null
+    ) {
+        val normKey = com.example.data.MonthlyPaymentEvaluator.normalizeKey(categoryName)
+        if (normKey.isBlank()) return
+        val current = _monthlyPaymentRules.value.toMutableList()
+        val idx = current.indexOfFirst {
+            com.example.data.MonthlyPaymentEvaluator.normalizeKey(it.categoryName) == normKey
+        }
+        if (idx >= 0) {
+            val existing = current[idx]
+            current[idx] = existing.copy(
+                isEnabled = enabled,
+                skippedForYearMonth = if (enabled) null else existing.skippedForYearMonth
+            )
+        } else if (enabled) {
+            current.add(
+                com.example.data.MonthlyExpectedPaymentRule(
+                    categoryName = categoryName.trim(),
+                    label = categoryName.trim(),
+                    isEnabled = true,
+                    remindAfterDay = 1,
+                    defaultAmount = suggestedAmount?.takeIf { it > 0.0 },
+                    defaultPerson = suggestedPerson?.takeIf { it.isNotBlank() }
+                )
+            )
+        }
+        preferenceManager.monthlyPaymentRules = current
+        _monthlyPaymentRules.value = current
+    }
+
+    fun saveMonthlyPaymentRule(rule: com.example.data.MonthlyExpectedPaymentRule) {
+        val normKey = com.example.data.MonthlyPaymentEvaluator.normalizeKey(rule.categoryName)
+        if (normKey.isBlank()) return
+        val current = _monthlyPaymentRules.value.toMutableList()
+        val idx = current.indexOfFirst {
+            it.id == rule.id || com.example.data.MonthlyPaymentEvaluator.normalizeKey(it.categoryName) == normKey
+        }
+        val cleanRule = rule.copy(
+            categoryName = rule.categoryName.trim(),
+            label = rule.label.trim().ifBlank { rule.categoryName.trim() },
+            remindAfterDay = rule.remindAfterDay.coerceIn(1, 28),
+            defaultAmount = rule.defaultAmount?.takeIf { it > 0.0 },
+            defaultPerson = rule.defaultPerson?.trim()?.takeIf { it.isNotBlank() }
+        )
+        if (idx >= 0) {
+            current[idx] = cleanRule
+        } else {
+            current.add(cleanRule)
+        }
+        preferenceManager.monthlyPaymentRules = current
+        _monthlyPaymentRules.value = current
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val exists = expenseCategories.value.any {
+                com.example.data.MonthlyPaymentEvaluator.normalizeKey(it.name) == normKey
+            }
+            if (!exists) {
+                repository.insertCategory(AppCategory(name = cleanRule.categoryName, type = "EXPENSE"))
+            }
+        }
+    }
+
+    fun deleteMonthlyPaymentRule(ruleId: String) {
+        val updated = _monthlyPaymentRules.value.filterNot { it.id == ruleId }
+        preferenceManager.monthlyPaymentRules = updated
+        _monthlyPaymentRules.value = updated
+    }
+
+    fun skipMonthlyPaymentForCurrentMonth(categoryName: String, skip: Boolean) {
+        val normKey = com.example.data.MonthlyPaymentEvaluator.normalizeKey(categoryName)
+        val ymKey = com.example.data.MonthlyPaymentEvaluator.currentYearMonthKey()
+        val updated = _monthlyPaymentRules.value.map { rule ->
+            if (com.example.data.MonthlyPaymentEvaluator.normalizeKey(rule.categoryName) == normKey) {
+                rule.copy(skippedForYearMonth = if (skip) ymKey else null)
+            } else rule
+        }
+        preferenceManager.monthlyPaymentRules = updated
+        _monthlyPaymentRules.value = updated
+    }
+
+    fun sendTestMissingPaymentNotification(onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val rules = _monthlyPaymentRules.value
+            val txs = repository.allTransactions.first()
+            val missingNow = com.example.data.MonthlyPaymentEvaluator.getMissingDueNow(
+                rules = rules,
+                transactions = txs
+            )
+            val sent = com.example.worker.MissingPaymentNotificationHelper.sendMissingPaymentsNotification(
+                context = getApplication(),
+                missingItems = missingNow,
+                isTest = true
+            )
+            withContext(Dispatchers.Main) {
+                if (sent) {
+                    val msg = if (missingNow.isEmpty()) {
+                        "Test bildirimi gönderildi (bu ay eksik kalem yok)."
+                    } else {
+                        "${missingNow.size} eksik ödeme için test bildirimi gönderildi."
+                    }
+                    onResult(true, msg)
+                } else {
+                    onResult(false, "Bildirim izni verilmemiş. Sistem ayarlarından bildirimleri açın.")
+                }
+            }
+        }
     }
 
     fun sendTestMarketSummary(onResult: (Boolean, String) -> Unit) {

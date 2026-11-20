@@ -25,6 +25,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.AppCategory
+import com.example.data.MonthlyExpectedPaymentRule
+import com.example.data.MonthlyPaymentEvaluator
+import com.example.data.MonthlyRuleChecklistItem
+import com.example.data.Person
 import com.example.data.Transaction
 import com.example.data.TransactionType
 import com.example.ui.theme.*
@@ -39,7 +44,18 @@ fun PaymentsScreen(
     onTogglePaid: (Transaction, Boolean) -> Unit = { _, _ -> },
     onAddExpense: (() -> Unit)? = null,
     onEditExpense: ((Transaction) -> Unit)? = null,
-    onDeleteExpense: ((Transaction) -> Unit)? = null
+    onDeleteExpense: ((Transaction) -> Unit)? = null,
+    monthlyRules: List<MonthlyExpectedPaymentRule> = emptyList(),
+    expenseCategories: List<AppCategory> = emptyList(),
+    persons: List<Person> = emptyList(),
+    remindMissingEnabled: Boolean = true,
+    onQuickEnterMissing: ((MonthlyRuleChecklistItem) -> Unit)? = null,
+    onToggleMasterMissingNotif: ((Boolean) -> Unit)? = null,
+    onToggleMonthlyRule: ((String, Boolean, Double?, String?) -> Unit)? = null,
+    onSaveMonthlyRule: ((MonthlyExpectedPaymentRule) -> Unit)? = null,
+    onDeleteMonthlyRule: ((String) -> Unit)? = null,
+    onSkipMonthlyForMonth: ((String, Boolean) -> Unit)? = null,
+    onSendTestMissingNotif: (((Boolean, String) -> Unit) -> Unit)? = null
 ) {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val mint = if (isDark) CyberNeonMint else Color(0xFF059669)
@@ -115,6 +131,17 @@ fun PaymentsScreen(
     var selectedFilter by remember { mutableStateOf("Tümü") }
     var isHidden by remember { mutableStateOf(false) }
     var pendingDeleteTx by remember { mutableStateOf<Transaction?>(null) }
+    var showMonthlyRulesSheet by remember { mutableStateOf(false) }
+
+    val missingMonthlyItems = remember(monthlyRules, transactions) {
+        MonthlyPaymentEvaluator.getMissingDueNow(
+            rules = monthlyRules,
+            transactions = transactions
+        )
+    }
+    val trackedRulesCount = remember(monthlyRules) {
+        monthlyRules.count { it.isEnabled }
+    }
 
     val filterOptions = remember(
         thisMonthUnpaidTx.size,
@@ -296,7 +323,82 @@ fun PaymentsScreen(
                                 modifier = Modifier.weight(1f)
                             )
                         }
+
+                        if (onToggleMonthlyRule != null) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            HorizontalDivider(thickness = 0.7.dp, color = borderColor.copy(alpha = 0.8f))
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Surface(
+                                onClick = { showMonthlyRulesSheet = true },
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (missingMonthlyItems.isNotEmpty()) {
+                                    amber.copy(alpha = if (isDark) 0.14f else 0.09f)
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                                },
+                                border = BorderStroke(
+                                    0.7.dp,
+                                    if (missingMonthlyItems.isNotEmpty()) amber.copy(alpha = 0.35f) else borderColor
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("payments_manage_monthly_rules_btn")
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 9.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.EventRepeat,
+                                        contentDescription = null,
+                                        tint = if (missingMonthlyItems.isNotEmpty()) amber else sky,
+                                        modifier = Modifier.size(17.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = when {
+                                            trackedRulesCount == 0 -> "Girilmeyen aylık ödemeleri hatırlatmak için kalem seçin"
+                                            missingMonthlyItems.isNotEmpty() -> "$trackedRulesCount aylık kalem takipte · ${missingMonthlyItems.size} eksik"
+                                            else -> "$trackedRulesCount aylık ödeme kalemi takipte · Tümü tamam"
+                                        },
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (missingMonthlyItems.isNotEmpty()) amber else MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Rounded.ChevronRight,
+                                        contentDescription = "Aylık Hatırlatma Kurallarını Aç",
+                                        tint = if (missingMonthlyItems.isNotEmpty()) amber else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
+                }
+            }
+
+            // 1B. MISSING EXPECTED MONTHLY PAYMENTS CARD
+            if (missingMonthlyItems.isNotEmpty()) {
+                item(key = "missing_monthly_payments") {
+                    MissingMonthlyPaymentsCard(
+                        missingItems = missingMonthlyItems,
+                        trackedCount = trackedRulesCount,
+                        isHidden = isHidden,
+                        onQuickEnter = { item ->
+                            onQuickEnterMissing?.invoke(item) ?: onAddExpense?.invoke()
+                        },
+                        onSkipThisMonth = { item ->
+                            onSkipMonthlyForMonth?.invoke(item.categoryName, true)
+                        },
+                        onManageRules = { showMonthlyRulesSheet = true }
+                    )
                 }
             }
 
@@ -597,6 +699,24 @@ fun PaymentsScreen(
             dismissButton = {
                 TextButton(onClick = { pendingDeleteTx = null }) { Text("İptal") }
             }
+        )
+    }
+
+    if (showMonthlyRulesSheet && onToggleMonthlyRule != null && onSaveMonthlyRule != null && onDeleteMonthlyRule != null && onSkipMonthlyForMonth != null) {
+        MonthlyPaymentRemindersBottomSheet(
+            rules = monthlyRules,
+            expenseCategories = expenseCategories,
+            transactions = transactions,
+            persons = persons,
+            remindMissingEnabled = remindMissingEnabled,
+            onToggleMasterNotification = { onToggleMasterMissingNotif?.invoke(it) },
+            onToggleItem = onToggleMonthlyRule,
+            onSaveRule = onSaveMonthlyRule,
+            onDeleteRule = onDeleteMonthlyRule,
+            onSkipForCurrentMonth = onSkipMonthlyForMonth,
+            onQuickEnterItem = onQuickEnterMissing,
+            onSendTestNotification = onSendTestMissingNotif,
+            onDismiss = { showMonthlyRulesSheet = false }
         )
     }
 }
