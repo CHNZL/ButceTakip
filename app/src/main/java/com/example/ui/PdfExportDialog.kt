@@ -1,145 +1,255 @@
 package com.example.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.ui.theme.*
 import java.util.Calendar
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PdfExportDialog(
     onDismiss: () -> Unit,
-    onExport: (year: Int?, month: Int?) -> Unit // null means all time
+    onExport: (year: Int?, month: Int?) -> Unit
 ) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val borderColor = if (isDark) CyberBorderStroke else Color(0xFFE2E8F0)
+    val coral = if (isDark) CyberNeonCoral else Color(0xFFE11D48)
+
     var isAllTime by remember { mutableStateOf(true) }
-    
-    val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-    var selectedYear by remember { mutableStateOf(currentYear) }
-    var selectedMonth by remember { mutableStateOf(Calendar.getInstance().get(Calendar.MONTH)) } // 0-indexed
 
-    val years = (currentYear - 5..currentYear).toList()
-    val months = listOf("Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık")
+    val currentYear = remember { Calendar.getInstance().get(Calendar.YEAR) }
+    var selectedYear by remember { mutableIntStateOf(currentYear) }
+    var selectedMonth by remember { mutableIntStateOf(Calendar.getInstance().get(Calendar.MONTH)) }
 
-    var expandedYear by remember { mutableStateOf(false) }
-    var expandedMonth by remember { mutableStateOf(false) }
+    val years = remember(currentYear) { (currentYear - 4..currentYear).toList().reversed() }
+    val months = remember {
+        listOf("Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık")
+    }
 
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(24.dp),
-        title = {
-            Text("PDF Olarak İndir", fontWeight = FontWeight.Bold)
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Hangi döneme ait kayıtları indirmek istiyorsunuz?")
-                
-                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    RadioButton(
-                        selected = isAllTime,
-                        onClick = { isAllTime = true }
-                    )
-                    Text("Tüm Zamanlar")
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.background,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(13.dp))
+                            .background(coral.copy(alpha = if (isDark) 0.18f else 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.PictureAsPdf,
+                            contentDescription = null,
+                            tint = coral,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "PDF Raporu Oluştur",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = "Dönem seçip finansal özetinizi dışa aktarın",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-
-                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    RadioButton(
-                        selected = !isAllTime,
-                        onClick = { isAllTime = false }
-                    )
-                    Text("Belirli Bir Ay")
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Rounded.Close, contentDescription = "Kapat")
                 }
+            }
 
-                if (!isAllTime) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ExposedDropdownMenuBox(
-                            expanded = expandedMonth,
-                            onExpandedChange = { expandedMonth = !expandedMonth },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            OutlinedTextField(
-                                value = months[selectedMonth],
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Ay") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedMonth) },
-                                modifier = Modifier.menuAnchor(),
-                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                            )
-                            ExposedDropdownMenu(
-                                expanded = expandedMonth,
-                                onDismissRequest = { expandedMonth = false }
-                            ) {
-                                months.forEachIndexed { index, month ->
-                                    DropdownMenuItem(
-                                        text = { Text(month) },
-                                        onClick = {
-                                            selectedMonth = index
-                                            expandedMonth = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
+            Spacer(modifier = Modifier.height(14.dp))
 
-                        ExposedDropdownMenuBox(
-                            expanded = expandedYear,
-                            onExpandedChange = { expandedYear = !expandedYear },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            OutlinedTextField(
-                                value = selectedYear.toString(),
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Yıl") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedYear) },
-                                modifier = Modifier.menuAnchor(),
-                                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                            )
-                            ExposedDropdownMenu(
-                                expanded = expandedYear,
-                                onDismissRequest = { expandedYear = false }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Scope Segmented Capsule
+                Surface(
+                    shape = RoundedCornerShape(15.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(0.8.dp, borderColor),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        listOf(true to "Tüm Zamanlar", false to "Belirli Bir Ay").forEach { (allFlag, label) ->
+                            val selected = isAllTime == allFlag
+                            Surface(
+                                onClick = { isAllTime = allFlag },
+                                shape = RoundedCornerShape(11.dp),
+                                color = if (selected) {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = if (isDark) 0.22f else 0.14f)
+                                } else Color.Transparent,
+                                modifier = Modifier.weight(1f)
                             ) {
-                                years.forEach { year ->
-                                    DropdownMenuItem(
-                                        text = { Text(year.toString()) },
-                                        onClick = {
-                                            selectedYear = year
-                                            expandedYear = false
-                                        }
+                                Box(
+                                    modifier = Modifier.padding(vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
                         }
                     }
                 }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (isAllTime) {
-                        onExport(null, null)
-                    } else {
-                        onExport(selectedYear, selectedMonth)
+
+                AnimatedVisibility(visible = !isAllTime) {
+                    SettingsGroupCard {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "YIL",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    letterSpacing = 0.8.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                years.forEach { yr ->
+                                    val sel = selectedYear == yr
+                                    FilterChip(
+                                        selected = sel,
+                                        onClick = { selectedYear = yr },
+                                        label = {
+                                            Text(
+                                                text = yr.toString(),
+                                                style = MaterialTheme.typography.labelMedium.copy(
+                                                    fontFamily = JetBrainsMonoFamily,
+                                                    fontFeatureSettings = "tnum"
+                                                )
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+
+                            HorizontalDivider(thickness = 0.6.dp, color = borderColor.copy(alpha = 0.75f))
+
+                            Text(
+                                text = "AY",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    letterSpacing = 0.8.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                months.forEachIndexed { idx, mName ->
+                                    FilterChip(
+                                        selected = selectedMonth == idx,
+                                        onClick = { selectedMonth = idx },
+                                        label = { Text(mName, style = MaterialTheme.typography.labelMedium) }
+                                    )
+                                }
+                            }
+                        }
                     }
-                },
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("İndir", fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
             }
-        },
-        dismissButton = {
-            OutlinedButton(
-                onClick = onDismiss,
-                shape = RoundedCornerShape(12.dp)
+
+            HorizontalDivider(thickness = 0.8.dp, color = borderColor)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text("İptal", fontWeight = FontWeight.SemiBold)
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(0.8.dp, borderColor)
+                ) {
+                    Text("İptal", fontWeight = FontWeight.SemiBold)
+                }
+
+                Button(
+                    onClick = {
+                        if (isAllTime) onExport(null, null) else onExport(selectedYear, selectedMonth)
+                    },
+                    modifier = Modifier
+                        .weight(1.45f)
+                        .height(50.dp)
+                        .testTag("export_pdf_confirm_btn"),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("PDF İndir", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                }
             }
         }
-    )
+    }
 }
