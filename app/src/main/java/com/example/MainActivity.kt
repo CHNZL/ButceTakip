@@ -40,9 +40,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import android.widget.Toast
+import com.example.ui.AppUpdateDialog
+import com.example.ui.UpdateDialogState
 import com.example.updater.AppUpdater
 import com.example.updater.UpdateInfo
 
@@ -109,23 +109,14 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
 
                 updateInfo?.let { info ->
-                    AlertDialog(
-                        onDismissRequest = { updateInfo = null },
-                        title = { Text("Yeni Güncelleme Mevcut!") },
-                        text = { Text("Sürüm ${info.versionName} hazır.\n\n${info.releaseNotes}") },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                appUpdater.downloadAndInstallUpdate(info)
-                                updateInfo = null
-                            }) {
-                                Text("Şimdi Yükle")
-                            }
+                    AppUpdateDialog(
+                        state = UpdateDialogState.Available(info),
+                        onInstall = { selected ->
+                            appUpdater.downloadAndInstallUpdate(selected)
+                            Toast.makeText(this@MainActivity, "Güncelleme indiriliyor...", Toast.LENGTH_SHORT).show()
+                            updateInfo = null
                         },
-                        dismissButton = {
-                            TextButton(onClick = { updateInfo = null }) {
-                                Text("Daha Sonra")
-                            }
-                        }
+                        onDismiss = { updateInfo = null }
                     )
                 }
 

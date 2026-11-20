@@ -105,7 +105,7 @@ fun DashboardScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val appUpdater = remember { AppUpdater(context) }
-    var isCheckingUpdate by remember { mutableStateOf(false) }
+    var updateDialogState by remember { mutableStateOf<UpdateDialogState?>(null) }
 
     val isDark = viewModel.darkThemeEnabled.collectAsStateWithLifecycle().value
     val mainBgColor = MaterialTheme.colorScheme.background
@@ -122,140 +122,40 @@ fun DashboardScreen(
             TopAppBar(
                 title = { 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(secondaryContainerColor)
-                                    .clickable { showProfileMenu = true },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (authState is com.example.viewmodel.AuthState.Authenticated && (authState as com.example.viewmodel.AuthState.Authenticated).profilePictureUrl != null) {
-                                    val name = (authState as com.example.viewmodel.AuthState.Authenticated).userName
+                        Surface(
+                            onClick = { showProfileMenu = true },
+                            shape = CircleShape,
+                            color = secondaryContainerColor,
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = if (isDark) Color(0xFF28354D) else Color(0xFFCBD5E1)
+                            ),
+                            modifier = Modifier
+                                .size(40.dp)
+                                .testTag("profile_avatar_button")
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                val resolvedPicUrl = (authState as? com.example.viewmodel.AuthState.Authenticated)?.profilePictureUrl
+                                    ?: savedPicUrl.takeIf { it.isNotBlank() }
+                                if (resolvedPicUrl != null) {
                                     AsyncImage(
-                                        model = (authState as com.example.viewmodel.AuthState.Authenticated).profilePictureUrl,
-                                        contentDescription = "Profil",
+                                        model = resolvedPicUrl,
+                                        contentDescription = "Profil Menüsünü Aç",
                                         modifier = Modifier.fillMaxSize().clip(CircleShape),
                                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
                                     )
-                                } else if (savedPicUrl.isNotBlank()) {
-                                    AsyncImage(
-                                        model = savedPicUrl,
-                                        contentDescription = "Profil",
-                                        modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                                    )
-                                } else if (authState is com.example.viewmodel.AuthState.Authenticated) {
-                                    val name = (authState as com.example.viewmodel.AuthState.Authenticated).userName
-                                    Text(name.take(1).uppercase(), fontWeight = FontWeight.Bold, color = onSecondaryContainerColor)
-                                } else if (savedName != "Gizli Kullanici") {
-                                    Text(savedName.take(1).uppercase(), fontWeight = FontWeight.Bold, color = onSecondaryContainerColor)
-                                } else if (currentUserId.isNotBlank()) {
-                                    Text(currentUserId.take(1).uppercase(), fontWeight = FontWeight.Bold, color = onSecondaryContainerColor)
                                 } else {
-                                    Text("M", fontWeight = FontWeight.Bold, color = onSecondaryContainerColor)
-                                }
-                            }
-                            
-                            DropdownMenu(
-                                expanded = showProfileMenu,
-                                onDismissRequest = { showProfileMenu = false }
-                            ) {
-                                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth()) {
-                                    Column(modifier = Modifier.fillMaxWidth()) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text("Uygulama Bilgisi", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                                                Text("Sürüm: ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            }
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Button(
-                                                onClick = {
-                                                    coroutineScope.launch {
-                                                        isCheckingUpdate = true
-                                                        val updateInfo = appUpdater.checkForUpdate()
-                                                        isCheckingUpdate = false
-                                                        if (updateInfo != null) {
-                                                            Toast.makeText(context, "Yeni sürüm (${updateInfo.versionName}) bulunuyor, indiriliyor...", Toast.LENGTH_LONG).show()
-                                                            appUpdater.downloadAndInstallUpdate(updateInfo)
-                                                        } else {
-                                                            Toast.makeText(context, "Uygulamanız güncel.", Toast.LENGTH_SHORT).show()
-                                                        }
-                                                    }
-                                                },
-                                                enabled = !isCheckingUpdate,
-                                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                                modifier = Modifier.height(32.dp)
-                                            ) {
-                                                if (isCheckingUpdate) {
-                                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
-                                                } else {
-                                                    Text("Güncelle", fontSize = 12.sp)
-                                                }
-                                            }
-                                        }
-                                        Spacer(modifier = Modifier.height(12.dp))
-                                        HorizontalDivider()
-                                        Spacer(modifier = Modifier.height(12.dp))
-                                        if (authState is com.example.viewmodel.AuthState.Authenticated) {
-                                            val user = authState as com.example.viewmodel.AuthState.Authenticated
-                                            Text(user.userName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                                            Text(user.userEmail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        } else if (currentUserId.isNotBlank()) {
-                                            Text(savedName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                                            Text(currentUserId, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        } else {
-                                            Text(savedName, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                                        }
-                                    }
-                                }
-                                HorizontalDivider()
-                                DropdownMenuItem(
-                                    text = { Text("Tasarruf Finansmanı") },
-                                    onClick = {
-                                        selectedTab = 7
-                                        showProfileMenu = false
-                                    },
-                                    leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Konut Kredisi Hesaplama") },
-                                    onClick = {
-                                        selectedTab = 8
-                                        showProfileMenu = false
-                                    },
-                                    leadingIcon = { Icon(Icons.Default.Calculate, contentDescription = null) }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Ayarlar") },
-                                    onClick = {
-                                        selectedTab = 6
-                                        showProfileMenu = false
-                                    },
-                                    leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) }
-                                )
-                                if (authState is com.example.viewmodel.AuthState.Authenticated || currentUserId.isNotBlank()) {
-                                    DropdownMenuItem(
-                                        text = { Text("Çıkış Yap") },
-                                        onClick = {
-                                            showProfileMenu = false
-                                            onSignOut()
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Logout, contentDescription = null) }
-                                    )
-                                } else {
-                                    DropdownMenuItem(
-                                        text = { Text("Giriş Yap") },
-                                        onClick = {
-                                            showProfileMenu = false
-                                            onSignOut()
-                                        },
-                                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) }
+                                    val initialChar = when {
+                                        authState is com.example.viewmodel.AuthState.Authenticated ->
+                                            (authState as com.example.viewmodel.AuthState.Authenticated).userName
+                                        savedName != "Gizli Kullanici" -> savedName
+                                        currentUserId.isNotBlank() -> currentUserId
+                                        else -> "C"
+                                    }.trim().take(1).uppercase()
+                                    Text(
+                                        text = initialChar,
+                                        fontWeight = FontWeight.Bold,
+                                        color = onSecondaryContainerColor
                                     )
                                 }
                             }
@@ -805,6 +705,69 @@ fun DashboardScreen(
                 MortgageCalculatorScreen()
             }
         }
+    }
+
+    if (showProfileMenu) {
+        val authUser = authState as? com.example.viewmodel.AuthState.Authenticated
+        val profileDisplayName = authUser?.userName?.takeIf { it.isNotBlank() }
+            ?: savedName.takeIf { it != "Gizli Kullanici" && it.isNotBlank() }
+            ?: "Aile Bütçesi"
+        val profileSubtitle = authUser?.userEmail?.takeIf { it.isNotBlank() }
+            ?: currentUserId.takeIf { it.isNotBlank() && it != "offline_user" }
+            ?: "Çevrimdışı Çalışma Alanı"
+        val profilePhoto = authUser?.profilePictureUrl ?: savedPicUrl.takeIf { it.isNotBlank() }
+        val isSignedIn = authUser != null || currentUserId.isNotBlank()
+
+        ProfileMenuBottomSheet(
+            displayName = profileDisplayName,
+            accountSubtitle = profileSubtitle,
+            profilePictureUrl = profilePhoto,
+            isSignedIn = isSignedIn,
+            isCloudAuthenticated = authUser != null,
+            isDarkTheme = isDark,
+            onToggleTheme = { viewModel.toggleDarkTheme(it) },
+            onCheckUpdate = {
+                showProfileMenu = false
+                updateDialogState = UpdateDialogState.Checking
+                coroutineScope.launch {
+                    val info = appUpdater.checkForUpdate()
+                    updateDialogState = if (info != null) {
+                        UpdateDialogState.Available(info)
+                    } else {
+                        UpdateDialogState.UpToDate(BuildConfig.VERSION_NAME)
+                    }
+                }
+            },
+            onOpenSavingsCalculator = {
+                selectedTab = 7
+                showProfileMenu = false
+            },
+            onOpenMortgageCalculator = {
+                selectedTab = 8
+                showProfileMenu = false
+            },
+            onOpenSettings = {
+                selectedTab = 6
+                showProfileMenu = false
+            },
+            onAuthAction = {
+                showProfileMenu = false
+                onSignOut()
+            },
+            onDismiss = { showProfileMenu = false }
+        )
+    }
+
+    updateDialogState?.let { dialogState ->
+        AppUpdateDialog(
+            state = dialogState,
+            onInstall = { info ->
+                appUpdater.downloadAndInstallUpdate(info)
+                Toast.makeText(context, "Güncelleme indiriliyor...", Toast.LENGTH_SHORT).show()
+                updateDialogState = null
+            },
+            onDismiss = { updateDialogState = null }
+        )
     }
 
     if (showAddDialog) {

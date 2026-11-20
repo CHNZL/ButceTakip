@@ -36,7 +36,6 @@ import com.example.data.Person
 import com.example.data.TransactionType
 import com.example.ui.theme.*
 import com.example.updater.AppUpdater
-import com.example.updater.UpdateInfo
 import com.example.viewmodel.BudgetViewModel
 import com.example.worker.PaymentReminderWorker
 import kotlinx.coroutines.launch
@@ -85,8 +84,7 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
     var showMarketAlertsSheet by remember { mutableStateOf(false) }
     var showMarketMatchSheet by remember { mutableStateOf(false) }
     var showClearDialog by remember { mutableStateOf(false) }
-    var isCheckingUpdate by remember { mutableStateOf(false) }
-    var availableUpdate by remember { mutableStateOf<UpdateInfo?>(null) }
+    var updateDialogState by remember { mutableStateOf<UpdateDialogState?>(null) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/vnd.ms-excel")
@@ -452,33 +450,17 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                             title = "Güncellemeleri Denetle",
                             subtitle = "Mevcut sürüm: v${BuildConfig.VERSION_NAME}",
                             testTag = "settings_check_update_row",
-                            trailing = if (isCheckingUpdate) {
-                                {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                }
-                            } else null,
-                            showChevron = !isCheckingUpdate,
-                            onClick = if (!isCheckingUpdate) {
-                                {
-                                    coroutineScope.launch {
-                                        isCheckingUpdate = true
-                                        val info = appUpdater.checkForUpdate()
-                                        isCheckingUpdate = false
-                                        if (info != null) {
-                                            availableUpdate = info
-                                        } else {
-                                            Toast.makeText(
-                                                context,
-                                                "Uygulamanız güncel (v${BuildConfig.VERSION_NAME})",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
+                            onClick = {
+                                updateDialogState = UpdateDialogState.Checking
+                                coroutineScope.launch {
+                                    val info = appUpdater.checkForUpdate()
+                                    updateDialogState = if (info != null) {
+                                        UpdateDialogState.Available(info)
+                                    } else {
+                                        UpdateDialogState.UpToDate(BuildConfig.VERSION_NAME)
                                     }
                                 }
-                            } else null
+                            }
                         )
                         SettingsInsetDivider()
                         SettingsRowItem(
@@ -599,36 +581,15 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
         )
     }
 
-    if (availableUpdate != null) {
-        val info = availableUpdate!!
-        AlertDialog(
-            onDismissRequest = { availableUpdate = null },
-            icon = {
-                Icon(
-                    imageVector = Icons.Rounded.SystemUpdate,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
+    updateDialogState?.let { dialogState ->
+        AppUpdateDialog(
+            state = dialogState,
+            onInstall = { info ->
+                appUpdater.downloadAndInstallUpdate(info)
+                Toast.makeText(context, "Güncelleme indiriliyor...", Toast.LENGTH_SHORT).show()
+                updateDialogState = null
             },
-            title = { Text("Yeni Sürüm Mevcut (v${info.versionName})", fontWeight = FontWeight.Bold) },
-            text = {
-                Text(
-                    text = info.releaseNotes.ifBlank { "Yeni iyileştirmeler ve hata düzeltmeleri içeren güncel sürümü indirebilirsiniz." },
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        appUpdater.downloadAndInstallUpdate(info)
-                        Toast.makeText(context, "Güncelleme indiriliyor...", Toast.LENGTH_SHORT).show()
-                        availableUpdate = null
-                    }
-                ) { Text("İndir ve Yükle") }
-            },
-            dismissButton = {
-                TextButton(onClick = { availableUpdate = null }) { Text("Daha Sonra") }
-            }
+            onDismiss = { updateDialogState = null }
         )
     }
 
