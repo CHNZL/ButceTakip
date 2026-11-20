@@ -1,7 +1,5 @@
 package com.example.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,12 +19,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.Transaction
 import com.example.data.TransactionType
-import com.example.ui.theme.LocalAppThemeColors
+import com.example.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -35,512 +36,702 @@ import java.util.Locale
 @Composable
 fun PaymentsScreen(
     transactions: List<Transaction>,
-    onTogglePaid: (Transaction, Boolean) -> Unit = { _, _ -> }
+    onTogglePaid: (Transaction, Boolean) -> Unit = { _, _ -> },
+    onAddExpense: (() -> Unit)? = null,
+    onEditExpense: ((Transaction) -> Unit)? = null,
+    onDeleteExpense: ((Transaction) -> Unit)? = null
 ) {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val appThemeColors = LocalAppThemeColors.current
+    val mint = if (isDark) CyberNeonMint else Color(0xFF059669)
+    val coral = if (isDark) CyberNeonCoral else Color(0xFFE11D48)
+    val amber = if (isDark) CyberNeonOrange else Color(0xFFD97706)
+    val sky = if (isDark) CyberNeonCyan else Color(0xFF0284C7)
+    val borderColor = if (isDark) CyberBorderStroke else Color(0xFFE2E8F0)
 
-    val currentMonthSdf = remember { SimpleDateFormat("MMMM yyyy", Locale("tr")) }
-    val currentMonthName = remember { currentMonthSdf.format(Date()).uppercase() }
+    val currentMonthSdf = remember { SimpleDateFormat("MMMM yyyy", Locale("tr", "TR")) }
+    val currentMonthName = remember { currentMonthSdf.format(Date()).uppercase(Locale("tr", "TR")) }
 
-    val cal = Calendar.getInstance()
-    cal.set(Calendar.DAY_OF_MONTH, 1)
-    cal.set(Calendar.HOUR_OF_DAY, 0)
-    cal.set(Calendar.MINUTE, 0)
-    cal.set(Calendar.SECOND, 0)
-    val startOfMonth = cal.timeInMillis
+    val timeAnchors = remember {
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val start = cal.timeInMillis
+        val end = (cal.clone() as Calendar).apply { add(Calendar.MONTH, 1) }.timeInMillis
+        val todayMs = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        Triple(start, end, todayMs)
+    }
+    val startOfMonth = timeAnchors.first
+    val endOfMonth = timeAnchors.second
+    val today = timeAnchors.third
 
-    cal.add(Calendar.MONTH, 1)
-    val endOfMonth = cal.timeInMillis
+    val expenseTx = remember(transactions) {
+        transactions.filter { it.type == TransactionType.EXPENSE }
+    }
 
-    val today = Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }.timeInMillis
+    val pastDueTx = remember(expenseTx, startOfMonth) {
+        expenseTx.filter { !it.isPaid && it.timestamp < startOfMonth }.sortedBy { it.timestamp }
+    }
+    val thisMonthUnpaidTx = remember(expenseTx, startOfMonth, endOfMonth) {
+        expenseTx.filter { !it.isPaid && it.timestamp in startOfMonth until endOfMonth }.sortedBy { it.timestamp }
+    }
+    val futureUnpaidTx = remember(expenseTx, endOfMonth) {
+        expenseTx.filter { !it.isPaid && it.timestamp >= endOfMonth }.sortedBy { it.timestamp }
+    }
+    val thisMonthPaidTx = remember(expenseTx, startOfMonth, endOfMonth) {
+        expenseTx.filter { it.isPaid && it.timestamp in startOfMonth until endOfMonth }.sortedByDescending { it.timestamp }
+    }
 
-    val expenseTx = transactions.filter { it.type == TransactionType.EXPENSE }
-
-    val pastDueTx = expenseTx.filter { !it.isPaid && it.timestamp < startOfMonth }.sortedBy { it.timestamp }
-    val thisMonthUnpaidTx = expenseTx.filter { !it.isPaid && it.timestamp in startOfMonth until endOfMonth }.sortedBy { it.timestamp }
-    val futureUnpaidTx = expenseTx.filter { !it.isPaid && it.timestamp >= endOfMonth }.sortedBy { it.timestamp }
-    val thisMonthPaidTx = expenseTx.filter { it.isPaid && it.timestamp in startOfMonth until endOfMonth }.sortedByDescending { it.timestamp }
-
-    val totalDebt = thisMonthUnpaidTx.sumOf { it.amount }
-    val totalPaid = thisMonthPaidTx.sumOf { it.amount }
-    val pastDueRemaining = pastDueTx.sumOf { it.amount }
+    val totalDebt = remember(thisMonthUnpaidTx) { thisMonthUnpaidTx.sumOf { it.amount } }
+    val totalPaid = remember(thisMonthPaidTx) { thisMonthPaidTx.sumOf { it.amount } }
+    val pastDueRemaining = remember(pastDueTx) { pastDueTx.sumOf { it.amount } }
     val totalCombinedMonth = totalDebt + totalPaid
 
-    val progressPct = if (totalCombinedMonth > 0) ((totalPaid / totalCombinedMonth) * 100).toInt() else if (totalDebt == 0.0 && totalPaid > 0.0) 100 else 0
-    val progressFloat = if (totalCombinedMonth > 0) (totalPaid / totalCombinedMonth).toFloat().coerceIn(0f, 1f) else 0f
+    val progressPct = if (totalCombinedMonth > 0) {
+        ((totalPaid / totalCombinedMonth) * 100).toInt().coerceIn(0, 100)
+    } else if (totalDebt == 0.0 && totalPaid > 0.0) {
+        100
+    } else {
+        0
+    }
+    val progressFloat = if (totalCombinedMonth > 0) {
+        (totalPaid / totalCombinedMonth).toFloat().coerceIn(0f, 1f)
+    } else 0f
 
-    val format = remember { com.example.util.FormatUtil.getCurrencyFormat() }
-    val sdf = remember { SimpleDateFormat("dd MMM yyyy", Locale("tr")) }
+    val format = remember {
+        com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 }
+    }
+    val sdf = remember { SimpleDateFormat("dd MMM", Locale("tr", "TR")) }
+    val groupSdf = remember { SimpleDateFormat("MMMM yyyy", Locale("tr", "TR")) }
 
-    var selectedFilter by remember { mutableStateOf("Tümü") } // "Tümü", "Bekleyenler", "Ödenenler", "Gecikenler", "Gelecek"
+    var selectedFilter by remember { mutableStateOf("Tümü") }
+    var isHidden by remember { mutableStateOf(false) }
+    var pendingDeleteTx by remember { mutableStateOf<Transaction?>(null) }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 10.dp, bottom = 80.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+    val filterOptions = remember(
+        thisMonthUnpaidTx.size,
+        thisMonthPaidTx.size,
+        pastDueTx.size,
+        futureUnpaidTx.size
     ) {
-        // --- 1. HERO PROGRESS CARD ---
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = appThemeColors.heroGradient
-                        )
-                    )
-                    .padding(20.dp)
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.2f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Rounded.CreditCard,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Text(
-                                text = "ÖDEME TAKİP MERKEZİ",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White.copy(alpha = 0.85f),
-                                letterSpacing = 1.sp
-                            )
-                        }
-
-                        Surface(
-                            color = Color.White.copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(
-                                text = currentMonthName,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Bottom
-                    ) {
-                        Column {
-                            Text(
-                                text = "Kalan Ödeme Tutarı",
-                                fontSize = 12.sp,
-                                color = Color.White.copy(alpha = 0.8f)
-                            )
-                            Text(
-                                text = format.format(totalDebt),
-                                fontSize = 30.sp,
-                                fontWeight = FontWeight.Black,
-                                color = Color.White
-                            )
-                        }
-
-                        Surface(
-                            color = if (progressPct >= 100) Color(0xFF10B981) else Color.White.copy(alpha = 0.25f),
-                            shape = CircleShape
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    if (progressPct >= 100) Icons.Rounded.CheckCircle else Icons.Rounded.PieChart,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Text(
-                                    text = "%$progressPct Ödendi",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Progress Bar
-                    LinearProgressIndicator(
-                        progress = { progressFloat },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(CircleShape),
-                        color = Color(0xFF34D399),
-                        trackColor = Color.White.copy(alpha = 0.25f)
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text("Bu Ay Ödenen", fontSize = 11.sp, color = Color.White.copy(alpha = 0.75f))
-                            Text(format.format(totalPaid), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF6EE7B7))
-                        }
-                        if (pastDueRemaining > 0) {
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text("Gecikmiş Borç", fontSize = 11.sp, color = Color.White.copy(alpha = 0.75f))
-                                Text(format.format(pastDueRemaining), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFCA5A5))
-                            }
-                        } else {
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text("Durum", fontSize = 11.sp, color = Color.White.copy(alpha = 0.75f))
-                                Text(if (totalDebt == 0.0) "Tüm Borçlar Ödendi ✨" else "${thisMonthUnpaidTx.size} Bekleyen", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            }
-                        }
-                    }
-                }
-            }
+        buildList {
+            add("Tümü" to (thisMonthUnpaidTx.size + thisMonthPaidTx.size + pastDueTx.size))
+            add("Bekleyenler" to thisMonthUnpaidTx.size)
+            add("Ödenenler" to thisMonthPaidTx.size)
+            if (pastDueTx.isNotEmpty()) add("Gecikenler" to pastDueTx.size)
+            if (futureUnpaidTx.isNotEmpty()) add("Gelecek" to futureUnpaidTx.size)
         }
+    }
 
-        // --- 2. PAST DUE ALERT BANNER (IF ANY) ---
-        if (pastDueRemaining > 0) {
-            item {
-                Card(
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .widthIn(max = 600.dp)
+                .padding(horizontal = 14.dp)
+                .testTag("payments_screen_list"),
+            contentPadding = PaddingValues(top = 6.dp, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // 1. EXECUTIVE PAYMENT COCKPIT CARD
+            item(key = "payments_hero") {
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = if (isDark) Color(0xFF450A0A) else Color(0xFFFFF1F2)),
-                    border = BorderStroke(1.dp, if (isDark) Color(0xFF991B1B) else Color(0xFFFECDD3))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(if (isDark) Color(0xFF7F1D1D) else Color(0xFFFEE2E2)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Rounded.Warning,
-                                contentDescription = null,
-                                tint = Color(0xFFE11D48),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "Geçmiş Aylardan Kalan Borçlar!",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                color = if (isDark) Color(0xFFFCA5A5) else Color(0xFF9F1239)
-                            )
-                            Text(
-                                "${pastDueTx.size} adet gecikmiş ödemeniz bulunuyor.",
-                                fontSize = 11.sp,
-                                color = if (isDark) Color(0xFFFECDD3) else Color(0xFFBE123C)
-                            )
-                        }
-                        Text(
-                            format.format(pastDueRemaining),
-                            fontWeight = FontWeight.Black,
-                            fontSize = 14.sp,
-                            color = if (isDark) Color(0xFFF87171) else Color(0xFFE11D48)
-                        )
-                    }
-                }
-            }
-        }
-
-        // --- 3. FILTER PILLS ---
-        item {
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                val filters = listOf(
-                    "Tümü",
-                    "Bekleyenler (${thisMonthUnpaidTx.size})",
-                    "Ödenenler (${thisMonthPaidTx.size})",
-                    if (pastDueTx.isNotEmpty()) "Gecikenler (${pastDueTx.size})" else null,
-                    if (futureUnpaidTx.isNotEmpty()) "Gelecek Aylar (${futureUnpaidTx.size})" else null
-                ).filterNotNull()
-
-                items(filters) { f ->
-                    val isSelected = selectedFilter.startsWith(f.substringBefore(" ("))
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { selectedFilter = f.substringBefore(" (") },
-                        label = { Text(f, fontSize = 12.sp, fontWeight = FontWeight.Bold) },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    )
-                }
-            }
-        }
-
-        // --- 4. LIST SECTIONS ---
-        val showPastDue = selectedFilter == "Tümü" || selectedFilter == "Gecikenler"
-        val showUnpaid = selectedFilter == "Tümü" || selectedFilter == "Bekleyenler"
-        val showPaid = selectedFilter == "Tümü" || selectedFilter == "Ödenenler"
-        val showFuture = selectedFilter == "Tümü" || selectedFilter == "Gelecek Aylar"
-
-        if (showPastDue && pastDueTx.isNotEmpty()) {
-            item {
-                PaymentSectionHeader(
-                    title = "Geciken Ödemeler (${pastDueTx.size})",
-                    totalText = format.format(pastDueRemaining),
-                    accentColor = Color(0xFFE11D48)
-                )
-            }
-            items(pastDueTx, key = { it.id }) { tx ->
-                ModernPaymentCard(
-                    tx = tx,
-                    isPaid = false,
-                    isPastDue = true,
-                    sdf = sdf,
-                    isDark = isDark,
-                    onToggle = { onTogglePaid(tx, !tx.isPaid) }
-                )
-            }
-        }
-
-        if (showUnpaid && thisMonthUnpaidTx.isNotEmpty()) {
-            item {
-                PaymentSectionHeader(
-                    title = "Bu Ay Ödenecekler (${thisMonthUnpaidTx.size})",
-                    totalText = format.format(totalDebt),
-                    accentColor = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            items(thisMonthUnpaidTx, key = { it.id }) { tx ->
-                val isPastDueDay = tx.timestamp < today
-                ModernPaymentCard(
-                    tx = tx,
-                    isPaid = false,
-                    isPastDue = isPastDueDay,
-                    sdf = sdf,
-                    isDark = isDark,
-                    onToggle = { onTogglePaid(tx, !tx.isPaid) }
-                )
-            }
-        }
-
-        if (showPaid && thisMonthPaidTx.isNotEmpty()) {
-            item {
-                PaymentSectionHeader(
-                    title = "Bu Ay Tamamlananlar (${thisMonthPaidTx.size})",
-                    totalText = format.format(totalPaid),
-                    accentColor = Color(0xFF10B981)
-                )
-            }
-            items(thisMonthPaidTx, key = { it.id }) { tx ->
-                ModernPaymentCard(
-                    tx = tx,
-                    isPaid = true,
-                    isPastDue = false,
-                    sdf = sdf,
-                    isDark = isDark,
-                    onToggle = { onTogglePaid(tx, !tx.isPaid) }
-                )
-            }
-        }
-
-        if (showFuture && futureUnpaidTx.isNotEmpty()) {
-            val groupSdf = SimpleDateFormat("MMMM yyyy", Locale("tr", "TR"))
-            val groupedFuture = futureUnpaidTx.groupBy {
-                val c = Calendar.getInstance()
-                c.timeInMillis = it.timestamp
-                c.set(Calendar.DAY_OF_MONTH, 1)
-                c.set(Calendar.HOUR_OF_DAY, 0)
-                c.set(Calendar.MINUTE, 0)
-                c.set(Calendar.SECOND, 0)
-                c.set(Calendar.MILLISECOND, 0)
-                c.timeInMillis
-            }.toSortedMap()
-
-            groupedFuture.forEach { (monthMs, txs) ->
-                val monthName = groupSdf.format(Date(monthMs))
-                val monthTotal = txs.sumOf { it.amount }
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            monthName.uppercase(),
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 12.sp
-                        )
-                        Text(
-                            format.format(monthTotal),
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-                items(txs, key = { it.id }) { tx ->
-                    ModernPaymentCard(
-                        tx = tx,
-                        isPaid = false,
-                        isPastDue = false,
-                        sdf = sdf,
-                        isDark = isDark,
-                        onToggle = { onTogglePaid(tx, !tx.isPaid) }
-                    )
-                }
-            }
-        }
-
-        if (expenseTx.isEmpty()) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = if (isDark) MaterialTheme.colorScheme.surface else Color.White),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    shape = RoundedCornerShape(22.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(0.8.dp, borderColor),
+                    shadowElevation = if (isDark) 0.dp else 1.5.dp
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(54.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF10B981).copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Rounded.CheckCircle,
-                                contentDescription = null,
-                                tint = Color(0xFF10B981),
-                                modifier = Modifier.size(28.dp)
+                            .background(
+                                Brush.linearGradient(
+                                    colors = if (isDark) {
+                                        listOf(Color(0xFF141B2B), MaterialTheme.colorScheme.surface)
+                                    } else {
+                                        listOf(
+                                            (if (totalDebt == 0.0 && pastDueRemaining == 0.0) mint else coral).copy(alpha = 0.05f),
+                                            Color.White
+                                        )
+                                    }
+                                )
                             )
+                            .padding(18.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "ÖDEME PLANI · $currentMonthName",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        letterSpacing = 0.8.sp,
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                IconButton(
+                                    onClick = { isHidden = !isHidden },
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .testTag("payments_visibility_toggle")
+                                ) {
+                                    Icon(
+                                        imageVector = if (isHidden) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                                        contentDescription = "Tutarları Gizle veya Göster",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+
+                            val badgeAccent = if (progressPct >= 100 || (totalDebt == 0.0 && pastDueRemaining == 0.0)) mint else amber
+                            Surface(
+                                shape = RoundedCornerShape(9.dp),
+                                color = badgeAccent.copy(alpha = if (isDark) 0.16f else 0.11f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (progressPct >= 100) Icons.Rounded.CheckCircle else Icons.Rounded.DonutLarge,
+                                        contentDescription = null,
+                                        tint = badgeAccent,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Text(
+                                        text = "%$progressPct Ödendi",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontFamily = JetBrainsMonoFamily,
+                                            fontFeatureSettings = "tnum"
+                                        ),
+                                        fontWeight = FontWeight.Bold,
+                                        color = badgeAccent
+                                    )
+                                }
+                            }
                         }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
                         Text(
-                            "Harika! Ödeme bulunmuyor.",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
+                            text = "Bu Ay Kalan Ödeme",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (isHidden) "•••••• ₺" else format.format(totalDebt),
+                            style = TabularHeroStyle,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Text(
-                            "Bekleyen veya geçmiş ödemeniz bulunmuyor. Yeni bir gider eklemek için '+' butonuna basabilirsiniz.",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        LinearProgressIndicator(
+                            progress = { progressFloat },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(CircleShape),
+                            color = mint,
+                            trackColor = if (isDark) Color(0xFF1D273B) else Color(0xFFE2E8F0)
                         )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+                        HorizontalDivider(thickness = 0.7.dp, color = borderColor.copy(alpha = 0.8f))
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            PaymentHeroStatColumn(
+                                label = "Ödenen",
+                                value = if (isHidden) "••••" else format.format(totalPaid),
+                                accent = mint,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .height(28.dp)
+                                    .width(0.8.dp)
+                                    .background(borderColor)
+                            )
+                            PaymentHeroStatColumn(
+                                label = "Bekleyen",
+                                value = "${thisMonthUnpaidTx.size} kalem",
+                                accent = if (thisMonthUnpaidTx.isEmpty()) mint else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .height(28.dp)
+                                    .width(0.8.dp)
+                                    .background(borderColor)
+                            )
+                            PaymentHeroStatColumn(
+                                label = "Geciken",
+                                value = if (isHidden) "••••" else if (pastDueRemaining > 0) format.format(pastDueRemaining) else "Yok",
+                                accent = if (pastDueRemaining > 0) coral else mint,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 2. ACTIONABLE PAST-DUE BANNER (TAPPING FILTERS TO GECIKENLER)
+            if (pastDueRemaining > 0) {
+                item(key = "past_due_banner") {
+                    Surface(
+                        onClick = { selectedFilter = "Gecikenler" },
+                        shape = RoundedCornerShape(18.dp),
+                        color = coral.copy(alpha = if (isDark) 0.13f else 0.08f),
+                        border = BorderStroke(0.9.dp, coral.copy(alpha = 0.38f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("past_due_alert_banner")
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(11.dp))
+                                    .background(coral.copy(alpha = if (isDark) 0.22f else 0.14f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.PriorityHigh,
+                                    contentDescription = null,
+                                    tint = coral,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Geçmiş Aylardan Kalan Borç",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = coral
+                                )
+                                Text(
+                                    text = "${pastDueTx.size} gecikmiş ödeme · Görmek için dokunun",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = if (isHidden) "••••" else format.format(pastDueRemaining),
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontFamily = JetBrainsMonoFamily,
+                                    fontFeatureSettings = "tnum"
+                                ),
+                                fontWeight = FontWeight.ExtraBold,
+                                color = coral
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 3. FILTER PILL STRIP
+            item(key = "payments_filters") {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filterOptions, key = { it.first }) { (key, count) ->
+                        val isSelected = selectedFilter == key
+                        Surface(
+                            onClick = { selectedFilter = key },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(
+                                0.8.dp,
+                                if (isSelected) MaterialTheme.colorScheme.primary else borderColor
+                            ),
+                            modifier = Modifier.testTag("payment_filter_$key")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = key,
+                                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (isSelected) {
+                                        MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.22f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                                    }
+                                ) {
+                                    Text(
+                                        text = count.toString(),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontFamily = JetBrainsMonoFamily,
+                                            fontFeatureSettings = "tnum"
+                                        ),
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 4. GROUPED PAYMENT SECTIONS
+            val showPastDue = selectedFilter == "Tümü" || selectedFilter == "Gecikenler"
+            val showUnpaid = selectedFilter == "Tümü" || selectedFilter == "Bekleyenler"
+            val showPaid = selectedFilter == "Tümü" || selectedFilter == "Ödenenler"
+            val showFuture = selectedFilter == "Tümü" || selectedFilter == "Gelecek"
+
+            if (showPastDue && pastDueTx.isNotEmpty()) {
+                item(key = "section_past_due") {
+                    PaymentSectionBlock(
+                        title = "Geciken Ödemeler (${pastDueTx.size})",
+                        totalText = if (isHidden) "••••" else format.format(pastDueRemaining),
+                        accentColor = coral,
+                        transactions = pastDueTx,
+                        isPaidSection = false,
+                        forcePastDue = true,
+                        todayStart = today,
+                        sdf = sdf,
+                        format = format,
+                        isHidden = isHidden,
+                        onTogglePaid = onTogglePaid,
+                        onEdit = onEditExpense,
+                        onRequestDelete = { pendingDeleteTx = it }
+                    )
+                }
+            }
+
+            if (showUnpaid && thisMonthUnpaidTx.isNotEmpty()) {
+                item(key = "section_this_month_unpaid") {
+                    PaymentSectionBlock(
+                        title = "Bu Ay Ödenecekler (${thisMonthUnpaidTx.size})",
+                        totalText = if (isHidden) "••••" else format.format(totalDebt),
+                        accentColor = amber,
+                        transactions = thisMonthUnpaidTx,
+                        isPaidSection = false,
+                        forcePastDue = false,
+                        todayStart = today,
+                        sdf = sdf,
+                        format = format,
+                        isHidden = isHidden,
+                        onTogglePaid = onTogglePaid,
+                        onEdit = onEditExpense,
+                        onRequestDelete = { pendingDeleteTx = it }
+                    )
+                }
+            }
+
+            if (showPaid && thisMonthPaidTx.isNotEmpty()) {
+                item(key = "section_this_month_paid") {
+                    PaymentSectionBlock(
+                        title = "Bu Ay Tamamlananlar (${thisMonthPaidTx.size})",
+                        totalText = if (isHidden) "••••" else format.format(totalPaid),
+                        accentColor = mint,
+                        transactions = thisMonthPaidTx,
+                        isPaidSection = true,
+                        forcePastDue = false,
+                        todayStart = today,
+                        sdf = sdf,
+                        format = format,
+                        isHidden = isHidden,
+                        onTogglePaid = onTogglePaid,
+                        onEdit = onEditExpense,
+                        onRequestDelete = { pendingDeleteTx = it }
+                    )
+                }
+            }
+
+            if (showFuture && futureUnpaidTx.isNotEmpty()) {
+                val groupedFuture = futureUnpaidTx.groupBy {
+                    Calendar.getInstance().apply {
+                        timeInMillis = it.timestamp
+                        set(Calendar.DAY_OF_MONTH, 1)
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }.timeInMillis
+                }.toSortedMap()
+
+                groupedFuture.forEach { (monthMs, txs) ->
+                    val monthTitle = groupSdf.format(Date(monthMs)).replaceFirstChar { it.titlecase(Locale("tr", "TR")) }
+                    val monthTotal = txs.sumOf { it.amount }
+                    item(key = "section_future_$monthMs") {
+                        PaymentSectionBlock(
+                            title = "$monthTitle (${txs.size})",
+                            totalText = if (isHidden) "••••" else format.format(monthTotal),
+                            accentColor = sky,
+                            transactions = txs,
+                            isPaidSection = false,
+                            forcePastDue = false,
+                            todayStart = today,
+                            sdf = sdf,
+                            format = format,
+                            isHidden = isHidden,
+                            onTogglePaid = onTogglePaid,
+                            onEdit = onEditExpense,
+                            onRequestDelete = { pendingDeleteTx = it }
+                        )
+                    }
+                }
+            }
+
+            val hasVisibleItems = (showPastDue && pastDueTx.isNotEmpty()) ||
+                (showUnpaid && thisMonthUnpaidTx.isNotEmpty()) ||
+                (showPaid && thisMonthPaidTx.isNotEmpty()) ||
+                (showFuture && futureUnpaidTx.isNotEmpty())
+
+            if (!hasVisibleItems) {
+                item(key = "payments_empty") {
+                    SettingsGroupCard {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(52.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(mint.copy(alpha = if (isDark) 0.16f else 0.11f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.CheckCircle,
+                                    contentDescription = null,
+                                    tint = mint,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            Text(
+                                text = if (expenseTx.isEmpty()) "Henüz ödeme kaydı yok" else "Bu filtrede ödeme bulunmuyor",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (expenseTx.isEmpty()) {
+                                    "Kira, fatura, taksit ve düzenli giderlerinizi ekleyerek tek ekrandan takip edebilirsiniz."
+                                } else {
+                                    "Tüm ödemeler temiz görünüyor veya farklı bir filtre seçebilirsiniz."
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                            if (onAddExpense != null) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Button(
+                                    onClick = onAddExpense,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.testTag("empty_add_payment_button")
+                                ) {
+                                    Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Yeni Ödeme Ekle", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
+
+    if (pendingDeleteTx != null && onDeleteExpense != null) {
+        val txToDelete = pendingDeleteTx!!
+        AlertDialog(
+            onDismissRequest = { pendingDeleteTx = null },
+            title = { Text("Ödeme Silinsin Mi?", fontWeight = FontWeight.Bold) },
+            text = { Text("\"${txToDelete.title}\" (${format.format(txToDelete.amount)}) kaydı kalıcı olarak silinecek.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteExpense(txToDelete)
+                        pendingDeleteTx = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Sil") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteTx = null }) { Text("İptal") }
+            }
+        )
+    }
 }
 
 @Composable
-private fun PaymentSectionHeader(
-    title: String,
-    totalText: String,
-    accentColor: Color
+private fun PaymentHeroStatColumn(
+    label: String,
+    value: String,
+    accent: Color,
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = modifier.padding(horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
+            text = value,
+            style = MaterialTheme.typography.titleSmall.copy(
+                fontFamily = JetBrainsMonoFamily,
+                fontFeatureSettings = "tnum"
+            ),
             fontWeight = FontWeight.Bold,
-            color = accentColor,
+            color = accent,
             maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
+            overflow = TextOverflow.Ellipsis
         )
-        Spacer(modifier = Modifier.width(8.dp))
-        Surface(
-            color = accentColor.copy(alpha = 0.12f),
-            shape = RoundedCornerShape(8.dp)
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun PaymentSectionBlock(
+    title: String,
+    totalText: String,
+    accentColor: Color,
+    transactions: List<Transaction>,
+    isPaidSection: Boolean,
+    forcePastDue: Boolean,
+    todayStart: Long,
+    sdf: SimpleDateFormat,
+    format: java.text.NumberFormat,
+    isHidden: Boolean,
+    onTogglePaid: (Transaction, Boolean) -> Unit,
+    onEdit: ((Transaction) -> Unit)?,
+    onRequestDelete: (Transaction) -> Unit
+) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 6.dp, end = 4.dp, bottom = 6.dp, top = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = totalText,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = accentColor,
-                softWrap = false,
+                text = title.uppercase(Locale("tr", "TR")),
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.8.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
+            Spacer(modifier = Modifier.width(8.dp))
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = accentColor.copy(alpha = if (isDark) 0.16f else 0.11f)
+            ) {
+                Text(
+                    text = totalText,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontFamily = JetBrainsMonoFamily,
+                        fontFeatureSettings = "tnum"
+                    ),
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor,
+                    maxLines = 1,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+            }
+        }
+
+        SettingsGroupCard {
+            transactions.forEachIndexed { index, tx ->
+                val isPastDue = !isPaidSection && (forcePastDue || tx.timestamp < todayStart)
+                PaymentInsetRow(
+                    tx = tx,
+                    isPaid = isPaidSection || tx.isPaid,
+                    isPastDue = isPastDue,
+                    sdf = sdf,
+                    format = format,
+                    isHidden = isHidden,
+                    onToggle = { onTogglePaid(tx, !tx.isPaid) },
+                    onEdit = onEdit?.let { cb -> { cb(tx) } },
+                    onDelete = { onRequestDelete(tx) }
+                )
+                if (index != transactions.lastIndex) {
+                    SettingsInsetDivider()
+                }
+            }
         }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ModernPaymentCard(
+private fun PaymentInsetRow(
     tx: Transaction,
     isPaid: Boolean,
     isPastDue: Boolean,
     sdf: SimpleDateFormat,
-    isDark: Boolean,
-    onToggle: () -> Unit
+    format: java.text.NumberFormat,
+    isHidden: Boolean,
+    onToggle: () -> Unit,
+    onEdit: (() -> Unit)?,
+    onDelete: (() -> Unit)?
 ) {
-    val format = remember { com.example.util.FormatUtil.getCurrencyFormat().apply { maximumFractionDigits = 0 } }
-    val paidAccent = if (isDark) com.example.ui.theme.CyberNeonMint else Color(0xFF059669)
-    val overdueAccent = if (isDark) com.example.ui.theme.CyberNeonCoral else Color(0xFFE11D48)
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val mint = if (isDark) CyberNeonMint else Color(0xFF059669)
+    val coral = if (isDark) CyberNeonCoral else Color(0xFFE11D48)
+    val amber = if (isDark) CyberNeonOrange else Color(0xFFD97706)
+    val borderColor = if (isDark) CyberBorderStroke else Color(0xFFE2E8F0)
 
-    val cardBg = if (isDark) com.example.ui.theme.CyberDarkSurface else Color.White
-    val cardBorder = if (isPastDue) {
-        overdueAccent.copy(alpha = 0.55f)
-    } else if (isPaid) {
-        paidAccent.copy(alpha = 0.40f)
-    } else {
-        if (isDark) com.example.ui.theme.CyberBorderStroke else Color(0xFFE2E8F0)
-    }
+    var showMenu by remember { mutableStateOf(false) }
 
     val icon = when {
         tx.category.lowercase().contains("kira") -> Icons.Rounded.Home
@@ -549,46 +740,39 @@ fun ModernPaymentCard(
         tx.category.lowercase().contains("kredi") -> Icons.Rounded.CreditCard
         tx.category.lowercase().contains("ulaşım") || tx.category.lowercase().contains("yakıt") -> Icons.Rounded.DirectionsCar
         tx.category.lowercase().contains("sağlık") -> Icons.Rounded.LocalHospital
+        tx.category.lowercase().contains("kurs") || tx.category.lowercase().contains("eğitim") -> Icons.Rounded.School
         else -> Icons.Rounded.Payments
     }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onToggle() },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = cardBg),
-        border = BorderStroke(1.dp, cardBorder),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isDark) 0.dp else 1.dp)
-    ) {
+    val iconTint = when {
+        isPaid -> mint
+        isPastDue -> coral
+        else -> amber
+    }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .clickable {
+                    if (onEdit != null) showMenu = true else onToggle()
+                }
+                .padding(horizontal = 14.dp, vertical = 12.dp)
+                .testTag("payment_row_${tx.id}"),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(40.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        when {
-                            isPaid -> paidAccent.copy(alpha = 0.14f)
-                            isPastDue -> overdueAccent.copy(alpha = 0.14f)
-                            else -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
-                        }
-                    ),
+                    .background(iconTint.copy(alpha = if (isDark) 0.16f else 0.11f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    icon,
+                    imageVector = icon,
                     contentDescription = null,
-                    tint = when {
-                        isPaid -> paidAccent
-                        isPastDue -> overdueAccent
-                        else -> MaterialTheme.colorScheme.primary
-                    },
-                    modifier = Modifier.size(23.dp)
+                    tint = iconTint,
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
@@ -597,86 +781,59 @@ fun ModernPaymentCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = tx.title,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp),
+                    fontWeight = FontWeight.SemiBold,
                     color = if (isPaid) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f) else MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     if (isPastDue) {
                         Surface(
-                            color = overdueAccent.copy(alpha = 0.16f),
+                            color = coral.copy(alpha = if (isDark) 0.18f else 0.12f),
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
                                 text = "Gecikti",
-                                fontSize = 10.sp,
+                                style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = overdueAccent,
+                                color = coral,
                                 softWrap = false,
                                 maxLines = 1,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                     }
                     if (tx.category.isNotBlank() && !tx.category.equals(tx.title, ignoreCase = true)) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                            shape = RoundedCornerShape(6.dp)
-                        ) {
-                            Text(
-                                text = tx.category,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                softWrap = false,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                            )
-                        }
+                        Text(
+                            text = tx.category,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                     if (!tx.person.isNullOrBlank()) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                            shape = RoundedCornerShape(6.dp)
-                        ) {
-                            Text(
-                                text = tx.person,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary,
-                                softWrap = false,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
-                        Icon(
-                            Icons.Rounded.CalendarToday,
-                            contentDescription = null,
-                            tint = if (isPastDue) overdueAccent.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(11.dp)
-                        )
                         Text(
-                            text = sdf.format(Date(tx.timestamp)),
-                            fontSize = 10.sp,
-                            fontWeight = if (isPastDue) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (isPastDue) overdueAccent else MaterialTheme.colorScheme.onSurfaceVariant,
-                            softWrap = false,
-                            maxLines = 1
+                            text = "· ${tx.person}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
+                    Text(
+                        text = "· ${sdf.format(Date(tx.timestamp))}",
+                        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+                        color = if (isPastDue) coral else MaterialTheme.colorScheme.onSurfaceVariant,
+                        softWrap = false,
+                        maxLines = 1
+                    )
                 }
             }
 
@@ -684,44 +841,100 @@ fun ModernPaymentCard(
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = format.format(tx.amount),
-                    fontWeight = FontWeight.Black,
-                    fontSize = 15.sp,
-                    softWrap = false,
-                    maxLines = 1,
+                    text = if (isHidden) "••••" else format.format(tx.amount),
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontFamily = JetBrainsMonoFamily,
+                        fontFeatureSettings = "tnum"
+                    ),
+                    fontWeight = FontWeight.Bold,
                     color = when {
-                        isPaid -> paidAccent
-                        isPastDue -> overdueAccent
+                        isPaid -> mint
+                        isPastDue -> coral
                         else -> MaterialTheme.colorScheme.onSurface
-                    }
+                    },
+                    softWrap = false,
+                    maxLines = 1
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(5.dp))
                 Surface(
-                    color = if (isPaid) paidAccent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                    onClick = onToggle,
                     shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.clickable { onToggle() }
+                    color = if (isPaid) mint.copy(alpha = if (isDark) 0.20f else 0.13f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                    border = BorderStroke(
+                        0.7.dp,
+                        if (isPaid) mint.copy(alpha = 0.45f) else borderColor
+                    ),
+                    modifier = Modifier.testTag("payment_toggle_${tx.id}")
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
-                            if (isPaid) Icons.Rounded.Check else Icons.Rounded.RadioButtonUnchecked,
-                            contentDescription = if (isPaid) "Ödendi" else "Bekliyor",
-                            tint = if (isPaid) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                            imageVector = if (isPaid) Icons.Rounded.Check else Icons.Rounded.RadioButtonUnchecked,
+                            contentDescription = if (isPaid) "Ödendi" else "Öde",
+                            tint = if (isPaid) mint else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(12.dp)
                         )
                         Text(
                             text = if (isPaid) "Ödendi" else "Bekliyor",
-                            fontSize = 10.sp,
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             softWrap = false,
                             maxLines = 1,
-                            color = if (isPaid) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (isPaid) mint else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
+            }
+        }
+
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false }
+        ) {
+            DropdownMenuItem(
+                leadingIcon = {
+                    Icon(
+                        imageVector = if (isPaid) Icons.Rounded.RadioButtonUnchecked else Icons.Rounded.CheckCircle,
+                        contentDescription = null,
+                        tint = mint,
+                        modifier = Modifier.size(18.dp)
+                    )
+                },
+                text = { Text(if (isPaid) "Ödenmedi İşaretle" else "Ödendi İşaretle") },
+                onClick = {
+                    showMenu = false
+                    onToggle()
+                }
+            )
+            if (onEdit != null) {
+                DropdownMenuItem(
+                    leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    text = { Text("Düzenle") },
+                    onClick = {
+                        showMenu = false
+                        onEdit()
+                    }
+                )
+            }
+            if (onDelete != null) {
+                DropdownMenuItem(
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.DeleteOutline,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    text = { Text("Sil", color = MaterialTheme.colorScheme.error) },
+                    onClick = {
+                        showMenu = false
+                        onDelete()
+                    }
+                )
             }
         }
     }

@@ -164,7 +164,7 @@ fun DashboardScreen(
                         Column {
                             val greetingName = if (savedName != "Gizli Kullanici" && savedName.isNotBlank()) savedName.split(" ").first() else "Cihan"
                             Text(
-                                text = if (selectedTab == 0) "Merhaba, $greetingName" else when(selectedTab) { 1 -> "Gelirler"; 2 -> "Ödeme Takibi"; 3 -> "Birikim & Portföy"; 4 -> "Geçmiş"; 5 -> "Gelir & Gider"; 7 -> "Hesaplayıcı"; 8 -> "Konut Kredisi"; else -> "Ayarlar" },
+                                text = if (selectedTab == 0) "Merhaba, $greetingName" else when(selectedTab) { 1 -> "Gelirler"; 2 -> "Ödeme Takibi"; 3 -> "Birikim & Portföy"; 4 -> "Geçmiş"; 5 -> "Analiz"; 7 -> "Hesaplayıcı"; 8 -> "Konut Kredisi"; else -> "Ayarlar" },
                                 style = MaterialTheme.typography.titleLarge,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -229,7 +229,7 @@ fun DashboardScreen(
                     )
 
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Anasayfa") },
+                    icon = { Icon(Icons.Rounded.Home, contentDescription = "Anasayfa") },
                     label = { Text("Anasayfa", maxLines = 1, softWrap = false, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold) },
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
@@ -253,7 +253,7 @@ fun DashboardScreen(
                     colors = navColors
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = "Birikim") },
+                    icon = { Icon(Icons.Rounded.AccountBalanceWallet, contentDescription = "Birikim") },
                     label = { Text("Birikim", maxLines = 1, softWrap = false, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold) },
                     selected = selectedTab == 3,
                     onClick = { selectedTab = 3 },
@@ -269,7 +269,7 @@ fun DashboardScreen(
                     colors = navColors
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.PieChart, contentDescription = "Analiz") },
+                    icon = { Icon(Icons.Rounded.PieChart, contentDescription = "Analiz") },
                     label = { Text("Analiz", maxLines = 1, softWrap = false, fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold) },
                     selected = selectedTab == 5,
                     onClick = { selectedTab = 5 },
@@ -289,9 +289,9 @@ fun DashboardScreen(
                     modifier = Modifier.testTag("add_transaction_fab"),
                     containerColor = primaryBtnColor,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = RoundedCornerShape(24.dp)
+                    shape = RoundedCornerShape(18.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Ekle", modifier = Modifier.size(32.dp))
+                    Icon(Icons.Rounded.Add, contentDescription = "Ekle", modifier = Modifier.size(28.dp))
                 }
             }
         }
@@ -429,10 +429,16 @@ fun DashboardScreen(
             }
             val investRatio = if (cmIncome > 0) ((cmSaving / cmIncome) * 100).toInt().coerceIn(0, 100) else 0
 
-            LazyColumn(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
+                contentAlignment = Alignment.TopCenter
+            ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 600.dp),
                 contentPadding = PaddingValues(top = 6.dp, bottom = 92.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -541,6 +547,7 @@ fun DashboardScreen(
                     }
                 }
             }
+            }
 
             if (showMarketSheet) {
                 HomeMarketBottomSheet(
@@ -606,7 +613,19 @@ fun DashboardScreen(
             ) {
                 PaymentsScreen(
                     transactions = uiState.transactions,
-                    onTogglePaid = { tx, isPaid -> viewModel.toggleTransactionPaid(tx, isPaid) }
+                    onTogglePaid = { tx, isPaid -> viewModel.toggleTransactionPaid(tx, isPaid) },
+                    onAddExpense = {
+                        editingTransaction = null
+                        initialQuickType = TransactionType.EXPENSE
+                        showAddDialog = true
+                    },
+                    onEditExpense = { tx ->
+                        editingTransaction = tx
+                        showAddDialog = true
+                    },
+                    onDeleteExpense = { tx ->
+                        viewModel.deleteTransaction(tx.id)
+                    }
                 )
             }
         } else if (selectedTab == 3) {

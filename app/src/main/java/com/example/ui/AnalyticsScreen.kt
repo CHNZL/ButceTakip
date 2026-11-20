@@ -10,21 +10,24 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.BankRate
+import com.example.data.GoldPrice
+import com.example.data.PreferenceManager
 import com.example.data.Transaction
 import com.example.data.TransactionType
 import com.example.ui.theme.*
@@ -44,13 +47,14 @@ fun getCurrencyFormat(): NumberFormat {
 @Composable
 fun AnalyticsScreen(
     transactions: List<Transaction>,
-    goldPrices: List<com.example.data.GoldPrice> = emptyList(),
-    bankRates: List<com.example.data.BankRate> = emptyList(),
-    preferenceManager: com.example.data.PreferenceManager? = null,
-    ziraatRates: List<com.example.data.BankRate> = emptyList()
+    goldPrices: List<GoldPrice> = emptyList(),
+    bankRates: List<BankRate> = emptyList(),
+    preferenceManager: PreferenceManager? = null,
+    ziraatRates: List<BankRate> = emptyList()
 ) {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Genel Bakış, 1: Kişi & Kategori, 2: Aylık Kıyas
+    val borderColor = if (isDark) CyberBorderStroke else Color(0xFFE2E8F0)
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: Genel Bakış, 1: Kişi, 2: Aylık Kıyas
 
     val currentMonthEnd = remember {
         Calendar.getInstance().apply {
@@ -67,60 +71,79 @@ fun AnalyticsScreen(
         transactions.filter { it.timestamp < currentMonthEnd }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Sleek Segmented Switcher (TopAppBar already displays "Gelir & Gider")
-        Row(
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(if (isDark) CyberDarkSurface else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
-                .padding(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                .fillMaxSize()
+                .widthIn(max = 600.dp)
         ) {
-            val tabs = listOf(
-                Triple(0, "Genel Bakış", Icons.Default.PieChart),
-                Triple(1, "Kişi", Icons.Default.Person),
-                Triple(2, "Aylık Kıyas", Icons.Rounded.TrendingUp)
-            )
-            tabs.forEach { (index, title, icon) ->
-                val isSelected = selectedTab == index
-                Box(
+            // Flagship Segmented Tab Bar
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(0.8.dp, borderColor)
+            ) {
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
-                        .clickable { selectedTab = index }
-                        .padding(vertical = 10.dp),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Icon(
-                            icon,
-                            contentDescription = null,
-                            tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Text(
-                            title,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    val tabs = listOf(
+                        Triple(0, "Genel Bakış", Icons.Rounded.PieChart),
+                        Triple(1, "Kişi", Icons.Rounded.Groups),
+                        Triple(2, "Aylık Kıyas", Icons.Rounded.TrendingUp)
+                    )
+                    tabs.forEach { (index, title, icon) ->
+                        val isSelected = selectedTab == index
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 42.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = if (isDark) 0.20f else 0.13f)
+                                    else Color.Transparent
+                                )
+                                .clickable { selectedTab = index }
+                                .testTag("analytics_tab_$index"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
             }
-        }
 
-        when (selectedTab) {
-            0 -> GeneralAnalysisScreen(validTransactions, goldPrices, bankRates, preferenceManager, ziraatRates)
-            1 -> PersonAnalysisScreen(validTransactions)
-            else -> TrendAnalysisScreen(validTransactions, isDark = isDark)
+            when (selectedTab) {
+                0 -> GeneralAnalysisScreen(validTransactions, goldPrices, bankRates, preferenceManager, ziraatRates)
+                1 -> PersonAnalysisScreen(validTransactions)
+                else -> TrendAnalysisScreen(validTransactions, isDark = isDark)
+            }
         }
     }
 }
@@ -128,12 +151,18 @@ fun AnalyticsScreen(
 @Composable
 fun GeneralAnalysisScreen(
     transactions: List<Transaction>,
-    goldPrices: List<com.example.data.GoldPrice>,
-    bankRates: List<com.example.data.BankRate>,
-    preferenceManager: com.example.data.PreferenceManager?,
-    ziraatRates: List<com.example.data.BankRate> = emptyList()
+    goldPrices: List<GoldPrice>,
+    bankRates: List<BankRate>,
+    preferenceManager: PreferenceManager?,
+    ziraatRates: List<BankRate> = emptyList()
 ) {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val mint = if (isDark) CyberNeonMint else Color(0xFF059669)
+    val coral = if (isDark) CyberNeonCoral else Color(0xFFE11D48)
+    val sky = if (isDark) CyberNeonCyan else Color(0xFF0284C7)
+    val amber = if (isDark) CyberNeonOrange else Color(0xFFD97706)
+    val borderColor = if (isDark) CyberBorderStroke else Color(0xFFE2E8F0)
+
     var selectedTime by remember { mutableStateOf("Bu Ay") }
     val timeFilters = listOf("Bu Ay", "Önceki Ay", "Son 3 Ay", "Son 6 Ay", "Bu Yıl", "Tümü")
     val format = remember { getCurrencyFormat() }
@@ -150,10 +179,8 @@ fun GeneralAnalysisScreen(
     val sav = remember(filteredTx) { filteredTx.filter { it.type == TransactionType.SAVING }.sumOf { it.amount } }
     val bal = inc - exp - sav
 
-    // Interactive Donut Chart Category Switcher: 0 = Gider, 1 = Gelir, 2 = Birikim
-    var selectedChartMode by remember { mutableIntStateOf(0) }
+    var selectedChartMode by remember { mutableIntStateOf(0) } // 0: Gider, 1: Gelir, 2: Birikim
 
-    // 6-Month Balance Data
     val monthSdf = remember { SimpleDateFormat("MMM", Locale("tr", "TR")) }
     val (sixLabels, sixIncomes, sixExpenses) = remember(transactions) {
         val lbls = mutableListOf<String>()
@@ -163,16 +190,11 @@ fun GeneralAnalysisScreen(
             val cal = Calendar.getInstance().apply { add(Calendar.MONTH, -i) }
             val start = cal.apply {
                 set(Calendar.DAY_OF_MONTH, 1)
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
+                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
             }.timeInMillis
             val end = cal.apply {
                 set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
-                set(Calendar.HOUR_OF_DAY, 23)
-                set(Calendar.MINUTE, 59)
-                set(Calendar.SECOND, 59)
+                set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 59)
             }.timeInMillis
             val mTxs = transactions.filter { it.timestamp in start..end }
             lbls.add(monthSdf.format(Date(start)))
@@ -182,47 +204,41 @@ fun GeneralAnalysisScreen(
         Triple(lbls, incs, exps)
     }
 
-    val neonIncome = if (isDark) CyberNeonMint else Color(0xFF059669)
-    val neonExpense = if (isDark) CyberNeonCoral else Color(0xFFDC2626)
-    val neonSaving = if (isDark) CyberNeonCyan else Color(0xFF0284C7)
-
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 14.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
-        contentPadding = PaddingValues(top = 4.dp, bottom = 84.dp)
+        contentPadding = PaddingValues(top = 6.dp, bottom = 96.dp)
     ) {
-        // --- 1. 1-TAP HORIZONTAL PERIOD FILTER STRIP ---
-        item {
+        // 1. PERIOD FILTER PILLS
+        item(key = "analytics_periods") {
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(timeFilters) { tf ->
                     val selected = selectedTime == tf
-                    FilterChip(
-                        selected = selected,
+                    Surface(
                         onClick = { selectedTime = tf },
-                        label = {
-                            Text(
-                                text = tf,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        },
                         shape = RoundedCornerShape(12.dp),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(0.8.dp, if (selected) MaterialTheme.colorScheme.primary else borderColor)
+                    ) {
+                        Text(
+                            text = tf,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                         )
-                    )
+                    }
                 }
             }
         }
 
-        // --- 2. UNIFIED CASHFLOW & HEALTH SCORE CARD ---
-        item {
+        // 2. EXECUTIVE CASHFLOW & HEALTH SCORE HERO
+        item(key = "analytics_cashflow_hero") {
             val savingRate = if (inc > 0) ((sav / inc) * 100).toInt().coerceIn(0, 999) else 0
             val healthScore = if (inc > 0) {
                 val expRatio = exp / inc
@@ -236,118 +252,123 @@ fun GeneralAnalysisScreen(
                 }
             } else 0
             val healthColor = when {
-                healthScore >= 80 -> neonIncome
-                healthScore >= 60 -> CyberNeonOrange
-                healthScore > 0 -> neonExpense
+                healthScore >= 80 -> mint
+                healthScore >= 60 -> amber
+                healthScore > 0 -> coral
                 else -> MaterialTheme.colorScheme.onSurfaceVariant
             }
             val healthLabel = when (healthScore) {
-                100 -> "Sağlık: $healthScore • Mükemmel"
-                80 -> "Sağlık: $healthScore • İyi"
-                60 -> "Sağlık: $healthScore • Orta"
-                40 -> "Sağlık: $healthScore • Dikkat"
-                20 -> "Sağlık: $healthScore • Riskli"
+                100 -> "Skor $healthScore · Mükemmel"
+                80 -> "Skor $healthScore · İyi"
+                60 -> "Skor $healthScore · Dengeli"
+                40 -> "Skor $healthScore · Dikkat"
+                20 -> "Skor $healthScore · Riskli"
                 else -> "Veri Bekleniyor"
             }
 
             val totalOutflowAndSav = maxOf(inc, exp + sav).coerceAtLeast(1.0)
             val expRatioBar = (exp / totalOutflowAndSav).toFloat().coerceIn(0f, 1f)
             val savRatioBar = (sav / totalOutflowAndSav).toFloat().coerceIn(0f, 1f - expRatioBar)
-            val trackColor = if (isDark) Color(0xFF1B2338) else Color(0xFFE2E8F0)
+            val trackColor = if (isDark) Color(0xFF1B2436) else Color(0xFFE2E8F0)
 
-            CyberCard(
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                borderColor = if (isDark) CyberBorderGlow else MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(0.8.dp, borderColor),
+                shadowElevation = if (isDark) 0.dp else 1.5.dp
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "NET NAKİT AKIŞI ($selectedTime)",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            letterSpacing = 0.8.sp
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = format.format(bal),
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Black,
-                            color = if (bal >= 0) neonIncome else neonExpense
-                        )
-                    }
-
-                    Surface(
-                        color = healthColor.copy(alpha = 0.14f),
-                        shape = RoundedCornerShape(10.dp),
-                        border = BorderStroke(1.dp, healthColor.copy(alpha = 0.35f))
-                    ) {
-                        Text(
-                            text = healthLabel,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = healthColor,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Stacked Cashflow Bar
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(trackColor)
+                        .background(
+                            Brush.linearGradient(
+                                colors = if (isDark) {
+                                    listOf(Color(0xFF131B2A), MaterialTheme.colorScheme.surface)
+                                } else {
+                                    listOf((if (bal >= 0) mint else coral).copy(alpha = 0.05f), Color.White)
+                                }
+                            )
+                        )
+                        .padding(18.dp)
                 ) {
-                    if (expRatioBar > 0f) {
-                        Box(
-                            modifier = Modifier
-                                .weight(expRatioBar)
-                                .fillMaxHeight()
-                                .background(neonExpense)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "NET NAKİT AKIŞI · ${selectedTime.uppercase(Locale("tr", "TR"))}",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                letterSpacing = 0.8.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Surface(
+                            color = healthColor.copy(alpha = if (isDark) 0.16f else 0.11f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = healthLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = healthColor,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
                     }
-                    if (savRatioBar > 0f) {
-                        Box(
-                            modifier = Modifier
-                                .weight(savRatioBar)
-                                .fillMaxHeight()
-                                .background(neonSaving)
-                        )
-                    }
-                    val rem = (1f - expRatioBar - savRatioBar).coerceAtLeast(0f)
-                    if (rem > 0f && inc > 0) {
-                        Box(
-                            modifier = Modifier
-                                .weight(rem)
-                                .fillMaxHeight()
-                                .background(neonIncome)
-                        )
-                    }
-                }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    CyberMiniMetricTile("GELİR", format.format(inc), neonIncome, Modifier.weight(1f))
-                    CyberMiniMetricTile("GİDER", format.format(exp), neonExpense, Modifier.weight(1f))
-                    CyberMiniMetricTile("BİRİKİM (%$savingRate)", format.format(sav), neonSaving, Modifier.weight(1f))
+                    Text(
+                        text = format.format(bal),
+                        style = TabularHeroStyle,
+                        color = if (bal >= 0) mint else coral
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(7.dp)
+                            .clip(CircleShape)
+                            .background(trackColor),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        if (expRatioBar > 0f) {
+                            Box(modifier = Modifier.weight(expRatioBar).fillMaxHeight().clip(CircleShape).background(coral))
+                        }
+                        if (savRatioBar > 0f) {
+                            Box(modifier = Modifier.weight(savRatioBar).fillMaxHeight().clip(CircleShape).background(sky))
+                        }
+                        val rem = (1f - expRatioBar - savRatioBar).coerceAtLeast(0f)
+                        if (rem > 0f && inc > 0) {
+                            Box(modifier = Modifier.weight(rem).fillMaxHeight().clip(CircleShape).background(mint))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    HorizontalDivider(thickness = 0.7.dp, color = borderColor.copy(alpha = 0.8f))
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AnalyticsStatCell("Gelir", format.format(inc), mint, Modifier.weight(1f))
+                        Box(modifier = Modifier.height(26.dp).width(0.8.dp).background(borderColor))
+                        AnalyticsStatCell("Gider", format.format(exp), coral, Modifier.weight(1f))
+                        Box(modifier = Modifier.height(26.dp).width(0.8.dp).background(borderColor))
+                        AnalyticsStatCell("Birikim (%$savingRate)", format.format(sav), sky, Modifier.weight(1f))
+                    }
                 }
             }
         }
 
-        // --- 3. AKILLI FİNANSAL İÇGÖRÜLER (SMART PRACTICAL TOOLS) ---
-        item {
+        // 3. SMART INSIGHTS CARD (GROUPED INSET STYLE)
+        item(key = "analytics_insights") {
             SmartInsightsCard(
                 transactions = transactions,
                 filteredTx = filteredTx,
@@ -359,19 +380,18 @@ fun GeneralAnalysisScreen(
             )
         }
 
-        // --- 4. SINGLE INTERACTIVE GLOW DONUT CHART ([GİDER | GELİR | BİRİKİM]) ---
-        item {
+        // 4. INTERACTIVE CATEGORY BREAKDOWN CARD
+        item(key = "analytics_category_donut") {
             val palette = listOf(
-                CyberNeonMagenta,
-                CyberNeonCyan,
-                CyberNeonOrange,
-                CyberNeonPurple,
-                CyberNeonMint,
-                Color(0xFF3B82F6),
-                CyberNeonCoral
+                if (isDark) CyberNeonMint else Color(0xFF059669),
+                if (isDark) CyberNeonCyan else Color(0xFF0284C7),
+                if (isDark) CyberNeonOrange else Color(0xFFD97706),
+                if (isDark) CyberNeonPurple else Color(0xFF6366F1),
+                if (isDark) CyberNeonCoral else Color(0xFFE11D48),
+                Color(0xFF0D9488)
             )
 
-            val expenseSegments = remember(filteredTx) {
+            val expenseSegments = remember(filteredTx, isDark) {
                 filteredTx.filter { it.type == TransactionType.EXPENSE }
                     .groupBy { it.category.ifBlank { "Diğer" } }
                     .mapValues { it.value.sumOf { tx -> tx.amount } }
@@ -381,7 +401,7 @@ fun GeneralAnalysisScreen(
                     .mapIndexed { idx, (cat, amt) -> CyberDonutSegment(cat, amt, palette[idx % palette.size]) }
             }
 
-            val incomeSegments = remember(filteredTx) {
+            val incomeSegments = remember(filteredTx, isDark) {
                 filteredTx.filter { it.type == TransactionType.INCOME }
                     .groupBy { it.category.ifBlank { "Diğer" } }
                     .mapValues { it.value.sumOf { tx -> tx.amount } }
@@ -405,110 +425,109 @@ fun GeneralAnalysisScreen(
                     }
                     .sortedByDescending { it.second }
             }
-            val savingSegments = remember(savingValuationList) {
+            val savingSegments = remember(savingValuationList, isDark) {
                 savingValuationList.take(6).mapIndexed { idx, (cat, valAmt, _) ->
                     CyberDonutSegment(cat, valAmt, palette[idx % palette.size])
                 }
             }
 
-            CyberCard(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Kategori Dağılımı",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+            Column {
+                SettingsSectionHeader("Kategori Dağılımı")
+                SettingsGroupCard {
+                    Column(modifier = Modifier.padding(16.dp)) {
                         Text(
                             text = if (selectedChartMode == 2) "Güncel piyasa değerine göre (Tüm Zamanlar)" else "$selectedTime içindeki dağılım",
-                            fontSize = 11.sp,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
-                }
+                        Spacer(modifier = Modifier.height(10.dp))
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // In-card 3-way Segmented Pill
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (isDark) Color(0xFF1A2338) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-                        .padding(3.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    listOf(0 to "Gider", 1 to "Gelir", 2 to "Birikim").forEach { (idx, title) ->
-                        val active = selectedChartMode == idx
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (active) MaterialTheme.colorScheme.primary else Color.Transparent)
-                                .clickable { selectedChartMode = idx }
-                                .padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center
+                        // Segmented switcher
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                            border = BorderStroke(0.7.dp, borderColor),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(
-                                text = title,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                when (selectedChartMode) {
-                    0 -> CyberGlowDonutContent(
-                        segments = expenseSegments,
-                        totalLabel = "TOPLAM GİDER",
-                        emptyMessage = "$selectedTime döneminde gider kaydı bulunmuyor."
-                    )
-                    1 -> CyberGlowDonutContent(
-                        segments = incomeSegments,
-                        totalLabel = "TOPLAM GELİR",
-                        emptyMessage = "$selectedTime döneminde gelir kaydı bulunmuyor."
-                    )
-                    else -> {
-                        CyberGlowDonutContent(
-                            segments = savingSegments,
-                            totalLabel = "PORTFÖY",
-                            emptyMessage = "Henüz kayıtlı birikim varlığı bulunmuyor."
-                        )
-                        if (savingValuationList.isNotEmpty()) {
-                            val totalCurrent = savingValuationList.sumOf { it.second }
-                            val totalCost = savingValuationList.sumOf { it.third }
-                            val pnl = totalCurrent - totalCost
-                            val pnlPct = if (totalCost > 0) (pnl / totalCost) * 100.0 else 0.0
-                            Spacer(modifier = Modifier.height(14.dp))
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                            Spacer(modifier = Modifier.height(10.dp))
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(3.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Column {
-                                    Text("Maliyet", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(format.format(totalCost), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                listOf(0 to "Gider", 1 to "Gelir", 2 to "Birikim").forEach { (idx, title) ->
+                                    val active = selectedChartMode == idx
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(9.dp))
+                                            .background(if (active) MaterialTheme.colorScheme.surface else Color.Transparent)
+                                            .clickable { selectedChartMode = idx }
+                                            .padding(vertical = 8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = title,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text("Net Getiri", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    val c = if (pnl >= 0) neonIncome else neonExpense
-                                    Text(
-                                        text = "${if (pnl >= 0) "+" else ""}${format.format(pnl)} (%${String.format(Locale.US, "%.1f", pnlPct)})",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = c
-                                    )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        when (selectedChartMode) {
+                            0 -> CyberGlowDonutContent(
+                                segments = expenseSegments,
+                                totalLabel = "TOPLAM GİDER",
+                                emptyMessage = "$selectedTime döneminde gider kaydı bulunmuyor."
+                            )
+                            1 -> CyberGlowDonutContent(
+                                segments = incomeSegments,
+                                totalLabel = "TOPLAM GELİR",
+                                emptyMessage = "$selectedTime döneminde gelir kaydı bulunmuyor."
+                            )
+                            else -> {
+                                CyberGlowDonutContent(
+                                    segments = savingSegments,
+                                    totalLabel = "PORTFÖY",
+                                    emptyMessage = "Henüz kayıtlı birikim varlığı bulunmuyor."
+                                )
+                                if (savingValuationList.isNotEmpty()) {
+                                    val totalCurrent = savingValuationList.sumOf { it.second }
+                                    val totalCost = savingValuationList.sumOf { it.third }
+                                    val pnl = totalCurrent - totalCost
+                                    val pnlPct = if (totalCost > 0) (pnl / totalCost) * 100.0 else 0.0
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                    HorizontalDivider(thickness = 0.7.dp, color = borderColor.copy(alpha = 0.75f))
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text("Maliyet", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text(
+                                                text = format.format(totalCost),
+                                                style = MaterialTheme.typography.titleSmall.copy(fontFamily = JetBrainsMonoFamily, fontFeatureSettings = "tnum"),
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text("Net Getiri", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            val c = if (pnl >= 0) mint else coral
+                                            Text(
+                                                text = "${if (pnl >= 0) "+" else ""}${format.format(pnl)} (%${String.format(Locale.US, "%.1f", pnlPct)})",
+                                                style = MaterialTheme.typography.titleSmall.copy(fontFamily = JetBrainsMonoFamily, fontFeatureSettings = "tnum"),
+                                                fontWeight = FontWeight.Bold,
+                                                color = c
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -517,8 +536,8 @@ fun GeneralAnalysisScreen(
             }
         }
 
-        // --- 5. 6 AYLIK GELİR & GİDER DENGESİ ---
-        item {
+        // 5. 6-MONTH BALANCE CHART
+        item(key = "analytics_six_month") {
             CyberIncomeExpenseBalanceCard(
                 incomes = sixIncomes,
                 expenses = sixExpenses,
@@ -526,6 +545,39 @@ fun GeneralAnalysisScreen(
                 title = "Son 6 Ay Gelir & Gider Dengesi"
             )
         }
+    }
+}
+
+@Composable
+private fun AnalyticsStatCell(
+    label: String,
+    value: String,
+    accent: Color,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleSmall.copy(
+                fontFamily = JetBrainsMonoFamily,
+                fontFeatureSettings = "tnum"
+            ),
+            fontWeight = FontWeight.Bold,
+            color = accent,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -539,11 +591,15 @@ private fun SmartInsightsCard(
     format: NumberFormat,
     isDark: Boolean
 ) {
+    val mint = if (isDark) CyberNeonMint else Color(0xFF059669)
+    val coral = if (isDark) CyberNeonCoral else Color(0xFFE11D48)
+    val sky = if (isDark) CyberNeonCyan else Color(0xFF0284C7)
+    val amber = if (isDark) CyberNeonOrange else Color(0xFFD97706)
+
     val cal = remember { Calendar.getInstance() }
     val dayOfMonth = cal.get(Calendar.DAY_OF_MONTH).coerceAtLeast(1)
     val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH).coerceAtLeast(28)
 
-    // 1. Daily burn rate & month-end projection (meaningful especially for "Bu Ay")
     val dailyAvg = if (selectedTime == "Bu Ay") exp / dayOfMonth else {
         val approxDays = when (selectedTime) {
             "Önceki Ay" -> 30
@@ -556,7 +612,6 @@ private fun SmartInsightsCard(
     }
     val projectedMonthEnd = if (selectedTime == "Bu Ay") dailyAvg * daysInMonth else 0.0
 
-    // 2. Top expense category in filtered period
     val topExpenseCat = remember(filteredTx) {
         filteredTx.filter { it.type == TransactionType.EXPENSE }
             .groupBy { it.category.ifBlank { "Diğer" } }
@@ -564,148 +619,115 @@ private fun SmartInsightsCard(
             .maxByOrNull { it.value }
     }
 
-    // 3. Unpaid bills in filtered period
     val unpaidList = remember(filteredTx) {
         filteredTx.filter { it.type == TransactionType.EXPENSE && !it.isPaid }
     }
     val unpaidSum = remember(unpaidList) { unpaidList.sumOf { it.amount } }
 
-    // 4. Month-over-Month comparison for "Bu Ay"
     val prevMonthExpense = remember(transactions) {
         val prevBounds = getTimeBounds("Önceki Ay")
         transactions.filter { it.type == TransactionType.EXPENSE && it.timestamp in prevBounds.first until prevBounds.second }
             .sumOf { it.amount }
     }
 
-    CyberCard(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(30.dp)
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(CyberNeonCyan.copy(alpha = 0.16f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Lightbulb,
-                    contentDescription = null,
-                    tint = if (isDark) CyberNeonCyan else Color(0xFF0284C7),
-                    modifier = Modifier.size(17.dp)
-                )
-            }
-            Column {
-                Text(
-                    text = "Akıllı Finansal Özet",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Kayıtlarınıza dayalı pratik hesaplamalar",
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column {
+        SettingsSectionHeader("Akıllı Finansal Özet")
+        SettingsGroupCard {
             if (exp <= 0.0 && inc <= 0.0) {
                 Text(
                     text = "Bu dönemde henüz işlem yok. Gelir ve gider ekledikçe harcama hızı, ay sonu tahmini ve kategori payları burada otomatik hesaplanır.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp)
                 )
             } else {
-                // Insight 1: Daily Burn Rate & Projection
-                if (exp > 0.0) {
-                    val subtitle = if (selectedTime == "Bu Ay") {
-                        val fitText = if (inc > 0 && projectedMonthEnd > inc) " • Geliri aşabilir" else if (inc > 0) " • Bütçe içinde" else ""
-                        "Ay sonu tahmini: ${format.format(projectedMonthEnd)}$fitText"
-                    } else {
-                        "Seçili dönem ortalama günlük gider"
+                val insights = buildList {
+                    if (exp > 0.0) {
+                        val subtitle = if (selectedTime == "Bu Ay") {
+                            val fitText = if (inc > 0 && projectedMonthEnd > inc) " · Geliri aşabilir" else if (inc > 0) " · Bütçe içinde" else ""
+                            "Ay sonu tahmini: ${format.format(projectedMonthEnd)}$fitText"
+                        } else {
+                            "Seçili dönem ortalama günlük harcama"
+                        }
+                        add(Triple(Icons.Rounded.Speed to sky, "Günlük Hız: ${format.format(dailyAvg)} / gün", subtitle))
                     }
-                    SmartInsightRow(
-                        icon = Icons.Rounded.Speed,
-                        tint = CyberNeonCyan,
-                        title = "Günlük Harcama Hızı: ${format.format(dailyAvg)} / gün",
+                    if (topExpenseCat != null && exp > 0.0) {
+                        val sharePct = ((topExpenseCat.value / exp) * 100).toInt()
+                        add(Triple(Icons.Rounded.LocalFireDepartment to amber, "En Yüksek Gider: ${topExpenseCat.key} (%$sharePct)", "Toplam ${format.format(topExpenseCat.value)} harcama bu kalemde"))
+                    }
+                    if (selectedTime == "Bu Ay" && prevMonthExpense > 0.0 && exp > 0.0) {
+                        val diffPct = (((exp - prevMonthExpense) / prevMonthExpense) * 100).toInt()
+                        val isLower = diffPct <= 0
+                        add(
+                            Triple(
+                                (if (isLower) Icons.Rounded.TrendingDown else Icons.Rounded.TrendingUp) to (if (isLower) mint else coral),
+                                if (isLower) "Geçen Aya Göre %${abs(diffPct)} Tasarruf" else "Geçen Aya Göre %$diffPct Artış",
+                                "Önceki ay toplam gideri: ${format.format(prevMonthExpense)}"
+                            )
+                        )
+                    }
+                    add(
+                        Triple(
+                            (if (unpaidList.isEmpty()) Icons.Rounded.CheckCircle else Icons.Rounded.Schedule) to (if (unpaidList.isEmpty()) mint else amber),
+                            if (unpaidList.isEmpty()) "Bekleyen Ödeme Yok" else "${unpaidList.size} Bekleyen Ödeme (${format.format(unpaidSum)})",
+                            if (unpaidList.isEmpty()) "Bu dönemdeki tüm gider kayıtları ödendi işaretli" else "Ödemeler sekmesinden tek dokunuşla kapatabilirsiniz"
+                        )
+                    )
+                }
+
+                insights.forEachIndexed { idx, (iconPair, title, subtitle) ->
+                    InsightInsetRow(
+                        icon = iconPair.first,
+                        tint = iconPair.second,
+                        title = title,
                         subtitle = subtitle
                     )
+                    if (idx != insights.lastIndex) {
+                        SettingsInsetDivider()
+                    }
                 }
-
-                // Insight 2: Top Category Share
-                if (topExpenseCat != null && exp > 0.0) {
-                    val sharePct = ((topExpenseCat.value / exp) * 100).toInt()
-                    SmartInsightRow(
-                        icon = Icons.Rounded.LocalFireDepartment,
-                        tint = CyberNeonOrange,
-                        title = "En Yüksek Gider: ${topExpenseCat.key} (%$sharePct)",
-                        subtitle = "Toplam ${format.format(topExpenseCat.value)} harcama bu kalemde yoğunlaştı"
-                    )
-                }
-
-                // Insight 3: Month-over-month diff
-                if (selectedTime == "Bu Ay" && prevMonthExpense > 0.0 && exp > 0.0) {
-                    val diffPct = (((exp - prevMonthExpense) / prevMonthExpense) * 100).toInt()
-                    val isLower = diffPct <= 0
-                    SmartInsightRow(
-                        icon = if (isLower) Icons.Rounded.TrendingDown else Icons.Rounded.TrendingUp,
-                        tint = if (isLower) CyberNeonMint else CyberNeonCoral,
-                        title = if (isLower) "Geçen Aya Göre %${abs(diffPct)} Daha Az Harcama" else "Geçen Aya Göre %$diffPct Artış",
-                        subtitle = "Önceki ay toplam gideri: ${format.format(prevMonthExpense)}"
-                    )
-                }
-
-                // Insight 4: Unpaid bills
-                SmartInsightRow(
-                    icon = if (unpaidList.isEmpty()) Icons.Rounded.CheckCircle else Icons.Rounded.Schedule,
-                    tint = if (unpaidList.isEmpty()) CyberNeonMint else CyberNeonMagenta,
-                    title = if (unpaidList.isEmpty()) "Bekleyen Ödeme Yok" else "${unpaidList.size} Bekleyen Ödeme (${format.format(unpaidSum)})",
-                    subtitle = if (unpaidList.isEmpty()) "Bu dönemdeki tüm gider kayıtları ödendi işaretli" else "Ödemeler sekmesinden tek dokunuşla kapatabilirsiniz"
-                )
             }
         }
     }
 }
 
 @Composable
-private fun SmartInsightRow(
+private fun InsightInsetRow(
     icon: ImageVector,
     tint: Color,
     title: String,
     subtitle: String
 ) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(34.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(tint.copy(alpha = 0.14f)),
+                .size(40.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(tint.copy(alpha = if (isDark) 0.16f else 0.11f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
         }
+        Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp),
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -715,44 +737,15 @@ private fun SmartInsightRow(
 }
 
 @Composable
-private fun CyberMiniMetricTile(
-    label: String,
-    value: String,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(color.copy(alpha = if (isDark) 0.12f else 0.08f))
-            .padding(horizontal = 10.dp, vertical = 9.dp)
-    ) {
-        Column {
-            Text(
-                text = label,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold,
-                color = color,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = value,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-@Composable
 fun PersonAnalysisScreen(transactions: List<Transaction>) {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val mint = if (isDark) CyberNeonMint else Color(0xFF059669)
+    val coral = if (isDark) CyberNeonCoral else Color(0xFFE11D48)
+    val sky = if (isDark) CyberNeonCyan else Color(0xFF0284C7)
+    val amber = if (isDark) CyberNeonOrange else Color(0xFFD97706)
+    val indigo = if (isDark) CyberNeonPurple else Color(0xFF6366F1)
+    val borderColor = if (isDark) CyberBorderStroke else Color(0xFFE2E8F0)
+
     val persons = remember(transactions) {
         listOf("Tümü") + transactions.mapNotNull { it.person }.filter { it.isNotBlank() }.distinct().sorted()
     }
@@ -774,8 +767,8 @@ fun PersonAnalysisScreen(transactions: List<Transaction>) {
     val totalAmount = remember(filteredTxs) { filteredTxs.sumOf { it.amount } }
     val avgAmount = if (filteredTxs.isNotEmpty()) totalAmount / filteredTxs.size else 0.0
 
-    val palette = listOf(CyberNeonMagenta, CyberNeonCyan, CyberNeonOrange, CyberNeonPurple, CyberNeonMint)
-    val categorySegments = remember(filteredTxs) {
+    val palette = listOf(coral, sky, amber, indigo, mint)
+    val categorySegments = remember(filteredTxs, isDark) {
         filteredTxs.groupBy { it.category.ifBlank { "Diğer" } }
             .mapValues { it.value.sumOf { tx -> tx.amount } }
             .toList()
@@ -784,180 +777,239 @@ fun PersonAnalysisScreen(transactions: List<Transaction>) {
             .mapIndexed { idx, (cat, amt) -> CyberDonutSegment(cat, amt, palette[idx % palette.size]) }
     }
 
+    val activeAccent = when (selectedType) {
+        TransactionType.INCOME -> mint
+        TransactionType.EXPENSE -> coral
+        TransactionType.SAVING -> sky
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(top = 4.dp, bottom = 84.dp)
+            .padding(horizontal = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(top = 6.dp, bottom = 96.dp)
     ) {
-        // 1. 1-Tap Person Chips
-        item {
+        // 1. PERSON CHIPS
+        item(key = "person_chips") {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(persons) { person ->
-                    FilterChip(
-                        selected = selectedPerson == person,
+                    val selected = selectedPerson == person
+                    Surface(
                         onClick = { selectedPerson = person },
-                        label = { Text(person, fontSize = 12.sp, fontWeight = FontWeight.Bold) },
                         shape = RoundedCornerShape(12.dp),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(0.8.dp, if (selected) MaterialTheme.colorScheme.primary else borderColor)
+                    ) {
+                        Text(
+                            text = person,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                         )
-                    )
+                    }
                 }
             }
         }
 
-        // 2. Time + Type Filter Strip
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                listOf(
-                    TransactionType.EXPENSE to "Gider",
-                    TransactionType.INCOME to "Gelir",
-                    TransactionType.SAVING to "Birikim"
-                ).forEach { (type, label) ->
-                    val active = selectedType == type
-                    Surface(
+        // 2. TYPE SEGMENTED CONTROL + PERIOD PILLS
+        item(key = "person_type_and_time") {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(0.8.dp, borderColor),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
                         modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { selectedType = type },
-                        color = if (active) MaterialTheme.colorScheme.primaryContainer else if (isDark) CyberDarkSurface else Color.White,
-                        border = BorderStroke(
-                            1.dp,
-                            if (active) MaterialTheme.colorScheme.primary else if (isDark) CyberBorderStroke else Color(0xFFE2E8F0)
-                        ),
-                        shape = RoundedCornerShape(12.dp)
+                            .fillMaxWidth()
+                            .padding(3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Box(
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center
+                        listOf(
+                            TransactionType.EXPENSE to "Gider",
+                            TransactionType.INCOME to "Gelir",
+                            TransactionType.SAVING to "Birikim"
+                        ).forEach { (type, label) ->
+                            val active = selectedType == type
+                            val tabColor = when (type) {
+                                TransactionType.INCOME -> mint
+                                TransactionType.EXPENSE -> coral
+                                TransactionType.SAVING -> sky
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(9.dp))
+                                    .background(if (active) tabColor.copy(alpha = if (isDark) 0.20f else 0.12f) else Color.Transparent)
+                                    .clickable { selectedType = type }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (active) tabColor else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(timeFilters) { tf ->
+                        val selected = selectedTime == tf
+                        Surface(
+                            onClick = { selectedTime = tf },
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (selected) activeAccent.copy(alpha = if (isDark) 0.20f else 0.12f) else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(0.7.dp, if (selected) activeAccent else borderColor)
                         ) {
                             Text(
-                                text = label,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                text = tf,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selected) activeAccent else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                             )
                         }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(timeFilters) { tf ->
-                    FilterChip(
-                        selected = selectedTime == tf,
-                        onClick = { selectedTime = tf },
-                        label = { Text(tf, fontSize = 11.sp, fontWeight = FontWeight.SemiBold) },
-                        shape = RoundedCornerShape(10.dp)
-                    )
-                }
-            }
         }
 
-        // 3. KPI Hero Card
-        item {
+        // 3. EXECUTIVE KPI HERO CARD
+        item(key = "person_kpi") {
             val typeLabel = when (selectedType) {
                 TransactionType.INCOME -> "TOPLAM GELİR"
                 TransactionType.EXPENSE -> "TOPLAM HARCAMA"
                 TransactionType.SAVING -> "TOPLAM BİRİKİM"
             }
-            CyberCard(modifier = Modifier.fillMaxWidth()) {
+            SettingsGroupCard {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "${selectedPerson.uppercase(Locale("tr"))} • $typeLabel",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            letterSpacing = 0.8.sp
+                            text = "${selectedPerson.uppercase(Locale("tr", "TR"))} · $typeLabel",
+                            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.8.sp, fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = format.format(totalAmount),
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.onSurface
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontFamily = JetBrainsMonoFamily,
+                                fontFeatureSettings = "tnum"
+                            ),
+                            fontWeight = FontWeight.ExtraBold,
+                            color = activeAccent
                         )
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("${filteredTxs.size} işlem", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        Text("Ort: ${format.format(avgAmount)}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            text = "${filteredTxs.size} işlem",
+                            style = MaterialTheme.typography.titleSmall.copy(fontFamily = JetBrainsMonoFamily, fontFeatureSettings = "tnum"),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Ort. ${format.format(avgAmount)}",
+                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = JetBrainsMonoFamily, fontFeatureSettings = "tnum"),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
         }
 
-        // 4. Category Glow Donut Breakdown
-        item {
-            CyberCard(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "Kategori Dağılımı",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                CyberGlowDonutContent(
-                    segments = categorySegments,
-                    totalLabel = "SEÇİLİ DÖNEM",
-                    emptyMessage = "Seçilen kişi ve dönemde kayıt bulunamadı."
-                )
+        // 4. CATEGORY BREAKDOWN
+        item(key = "person_donut") {
+            Column {
+                SettingsSectionHeader("Kategori Dağılımı")
+                SettingsGroupCard {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        CyberGlowDonutContent(
+                            segments = categorySegments,
+                            totalLabel = "SEÇİLİ DÖNEM",
+                            emptyMessage = "Seçilen kişi ve dönemde kayıt bulunamadı."
+                        )
+                    }
+                }
             }
         }
 
-        // 5. Top Transactions
+        // 5. TOP TRANSACTIONS IN SINGLE GROUPED CARD
         val topTxs = filteredTxs.sortedByDescending { it.amount }.take(6)
         if (topTxs.isNotEmpty()) {
-            item {
-                Text(
-                    text = "En Büyük İşlemler",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            val sdf = SimpleDateFormat("dd MMM yyyy", Locale("tr"))
-            items(topTxs, key = { it.id }) { tx ->
-                CyberCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(14.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = tx.title,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = "${tx.category} • ${sdf.format(Date(tx.timestamp))}",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+            item(key = "person_top_txs") {
+                val sdf = remember { SimpleDateFormat("dd MMM yyyy", Locale("tr", "TR")) }
+                Column {
+                    SettingsSectionHeader("En Büyük İşlemler")
+                    SettingsGroupCard {
+                        topTxs.forEachIndexed { idx, tx ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(activeAccent.copy(alpha = if (isDark) 0.16f else 0.11f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "${idx + 1}",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontFamily = JetBrainsMonoFamily),
+                                        fontWeight = FontWeight.Bold,
+                                        color = activeAccent
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = tx.title,
+                                        style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp),
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "${tx.category} · ${sdf.format(Date(tx.timestamp))}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = format.format(tx.amount),
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontFamily = JetBrainsMonoFamily,
+                                        fontFeatureSettings = "tnum"
+                                    ),
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            if (idx != topTxs.lastIndex) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = 60.dp, end = 14.dp),
+                                    thickness = 0.6.dp,
+                                    color = borderColor.copy(alpha = 0.7f)
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = format.format(tx.amount),
-                            fontWeight = FontWeight.Black,
-                            fontSize = 15.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
                     }
                 }
             }

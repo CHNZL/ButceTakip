@@ -211,9 +211,14 @@ fun IncomesScreen(
     val avgDisplayed = if (displayedIncomes.isNotEmpty()) displayedTotal / displayedIncomes.size else 0.0
     val maxDisplayedTx = remember(displayedIncomes) { displayedIncomes.maxByOrNull { it.amount } }
 
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
+            .widthIn(max = 600.dp)
             .padding(horizontal = 14.dp),
         contentPadding = PaddingValues(top = 6.dp, bottom = 92.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -877,6 +882,7 @@ fun IncomesScreen(
             }
         }
     }
+    }
 }
 
 @Composable
@@ -1138,6 +1144,7 @@ private fun IncomeLedgerRow(
     onRepeat: ((Transaction) -> Unit)?
 ) {
     var expandedMenu by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
     val hasMenuActions = onEdit != null || onDelete != null || onRepeat != null
 
     val icon = when {
@@ -1265,11 +1272,33 @@ private fun IncomeLedgerRow(
                         text = { Text("Sil", color = MaterialTheme.colorScheme.error) },
                         onClick = {
                             expandedMenu = false
-                            onDelete(tx)
+                            showDeleteConfirm = true
                         }
                     )
                 }
             }
         }
+    }
+
+    if (showDeleteConfirm && onDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            shape = RoundedCornerShape(22.dp),
+            title = { Text("Gelir Kaydını Sil", fontWeight = FontWeight.Bold) },
+            text = { Text("\"${tx.title}\" kaydını silmek istediğinize emin misiniz?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirm = false
+                        onDelete(tx)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    shape = RoundedCornerShape(12.dp)
+                ) { Text("Sil", fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("İptal") }
+            }
+        )
     }
 }

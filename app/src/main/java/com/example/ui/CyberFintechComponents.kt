@@ -655,11 +655,13 @@ fun CyberGlowDonutContent(
 
                     if (nonZeroSegments.size == 1) {
                         val seg = nonZeroSegments.first()
-                        drawCircle(
-                            color = seg.color.copy(alpha = if (isDark) 0.30f else 0.18f),
-                            radius = (size.minDimension - strokeW) / 2f,
-                            style = Stroke(width = strokeW + 8.dp.toPx())
-                        )
+                        if (isDark) {
+                            drawCircle(
+                                color = seg.color.copy(alpha = 0.15f),
+                                radius = (size.minDimension - strokeW) / 2f,
+                                style = Stroke(width = strokeW + 5.dp.toPx())
+                            )
+                        }
                         drawCircle(
                             color = seg.color,
                             radius = (size.minDimension - strokeW) / 2f,
@@ -670,13 +672,15 @@ fun CyberGlowDonutContent(
                             val ratio = (seg.amount / total).toFloat()
                             val sweep = (ratio * 360f - gapAngle).coerceAtLeast(2f)
 
-                            drawArc(
-                                color = seg.color.copy(alpha = if (isDark) 0.30f else 0.18f),
-                                startAngle = curAngle,
-                                sweepAngle = sweep,
-                                useCenter = false,
-                                style = Stroke(width = strokeW + 7.dp.toPx(), cap = StrokeCap.Round)
-                            )
+                            if (isDark) {
+                                drawArc(
+                                    color = seg.color.copy(alpha = 0.14f),
+                                    startAngle = curAngle,
+                                    sweepAngle = sweep,
+                                    useCenter = false,
+                                    style = Stroke(width = strokeW + 4.dp.toPx(), cap = StrokeCap.Round)
+                                )
+                            }
                             drawArc(
                                 color = seg.color,
                                 startAngle = curAngle,
@@ -699,8 +703,9 @@ fun CyberGlowDonutContent(
                     )
                     Text(
                         text = format.format(total),
+                        fontFamily = JetBrainsMonoFamily,
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.Black,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1
                     )
@@ -769,15 +774,21 @@ fun CyberCategoryBarRow(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     text = "%$percentage",
+                    fontFamily = JetBrainsMonoFamily,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = dotColor
+                    color = dotColor,
+                    softWrap = false,
+                    maxLines = 1
                 )
                 Text(
                     text = amountFormatted,
+                    fontFamily = JetBrainsMonoFamily,
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    softWrap = false,
+                    maxLines = 1
                 )
             }
         }
