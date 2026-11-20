@@ -75,6 +75,8 @@ fun DashboardScreen(
     val isFetchingZiraat by viewModel.isFetchingZiraatRates.collectAsStateWithLifecycle()
     val lastZiraatUpdate by viewModel.lastZiraatRateUpdate.collectAsStateWithLifecycle()
     val customPricesTrigger by viewModel.customPricesRefreshTrigger.collectAsStateWithLifecycle()
+    val marketScheduleConfig by viewModel.marketScheduleConfig.collectAsStateWithLifecycle()
+    val marketPriceAlarms by viewModel.marketPriceAlarms.collectAsStateWithLifecycle()
 
     var showAddDialog by remember { mutableStateOf(false) }
     var initialSavingCategory by remember { mutableStateOf<String?>(null) }
@@ -536,11 +538,13 @@ fun DashboardScreen(
             ) {
                 // 1. Compact Live Market Ticker Strip (tap to open full Market Sheet)
                 item {
+                    val activeMarketAlerts = marketPriceAlarms.count { it.isEnabled } + if (marketScheduleConfig.enabled) 1 else 0
                     HomeLiveTickerStrip(
                         goldPrices = goldPrices,
                         bankRates = bankRates,
                         ziraatRates = ziraatRates,
                         isFetching = isFetchingGold || isFetchingBank || isFetchingZiraat,
+                        activeAlertsCount = activeMarketAlerts,
                         onOpenMarketSheet = { showMarketSheet = true },
                         modifier = Modifier.padding(horizontal = 14.dp)
                     )
@@ -652,6 +656,13 @@ fun DashboardScreen(
                     isFetchingZiraat = isFetchingZiraat,
                     lastZiraatUpdate = lastZiraatUpdate,
                     onRefreshZiraat = { viewModel.fetchZiraatRates() },
+                    scheduleConfig = marketScheduleConfig,
+                    priceAlarms = marketPriceAlarms,
+                    onUpdateSchedule = { viewModel.updateMarketScheduleConfig(it) },
+                    onSaveAlarm = { viewModel.addOrUpdateMarketAlarm(it) },
+                    onToggleAlarm = { id, enabled -> viewModel.toggleMarketAlarm(id, enabled) },
+                    onDeleteAlarm = { id -> viewModel.deleteMarketAlarm(id) },
+                    onSendTestSummary = { cb -> viewModel.sendTestMarketSummary(cb) },
                     onDismiss = { showMarketSheet = false }
                 )
             }

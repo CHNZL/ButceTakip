@@ -13,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -48,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.BankRate
 import com.example.data.GoldPrice
+import com.example.data.MarketPriceAlarm
+import com.example.data.MarketScheduleConfig
 import com.example.data.Transaction
 import com.example.data.TransactionType
 import com.example.ui.theme.*
@@ -66,6 +69,7 @@ fun HomeLiveTickerStrip(
     bankRates: List<BankRate>,
     ziraatRates: List<BankRate>,
     isFetching: Boolean,
+    activeAlertsCount: Int = 0,
     onOpenMarketSheet: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -179,7 +183,35 @@ fun HomeLiveTickerStrip(
                 }
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+            if (activeAlertsCount > 0) {
+                Surface(
+                    color = amber.copy(alpha = 0.16f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.NotificationsActive,
+                            contentDescription = "Aktif Piyasa Alarmları",
+                            tint = amber,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            text = "$activeAlertsCount",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = amber,
+                            softWrap = false,
+                            maxLines = 1
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+            }
             Icon(
                 imageVector = Icons.Rounded.ChevronRight,
                 contentDescription = "Tüm Piyasaları Aç",
@@ -192,6 +224,7 @@ fun HomeLiveTickerStrip(
 
 /**
  * Full Live Market Drawer / Sheet opened on tapping the Home Ticker Strip.
+ * Includes live rates with 1-tap price alarm buttons and a dedicated Notifications & Alarms tab.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -208,10 +241,20 @@ fun HomeMarketBottomSheet(
     isFetchingZiraat: Boolean,
     lastZiraatUpdate: String?,
     onRefreshZiraat: () -> Unit,
+    scheduleConfig: MarketScheduleConfig = MarketScheduleConfig(),
+    priceAlarms: List<MarketPriceAlarm> = emptyList(),
+    onUpdateSchedule: (MarketScheduleConfig) -> Unit = {},
+    onSaveAlarm: (MarketPriceAlarm) -> Unit = {},
+    onToggleAlarm: (String, Boolean) -> Unit = { _, _ -> },
+    onDeleteAlarm: (String) -> Unit = {},
+    onSendTestSummary: ((Boolean, String) -> Unit) -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    var activeSection by remember { mutableIntStateOf(0) } // 0 = Kurlar, 1 = Bildirim & Alarm
     var selectedSource by remember { mutableIntStateOf(0) }
+    var quickAlarmAssetKey by remember { mutableStateOf<String?>(null) }
+
     val currentFetching = when (selectedSource) {
         0 -> isFetchingGold
         1 -> isFetchingBank
@@ -222,6 +265,7 @@ fun HomeMarketBottomSheet(
         1 -> lastBankUpdate
         else -> lastZiraatUpdate
     }
+    val activeCount = priceAlarms.count { it.isEnabled } + if (scheduleConfig.enabled) 1 else 0
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -231,8 +275,9 @@ fun HomeMarketBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 18.dp)
-                .padding(bottom = 28.dp),
+                .padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Row(
@@ -240,42 +285,51 @@ fun HomeMarketBottomSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Canlı Piyasa Masası",
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    if (!currentLastUpdate.isNullOrBlank()) {
+                    if (!currentLastUpdate.isNullOrBlank() && activeSection == 0) {
                         Text(
                             text = "Son güncelleme: $currentLastUpdate",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    } else if (activeSection == 1) {
+                        Text(
+                            text = "Saatlik özetler ve hedef fiyat alarmları",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
-                IconButton(
-                    onClick = {
-                        when (selectedSource) {
-                            0 -> onRefreshGold()
-                            1 -> onRefreshBank()
-                            else -> onRefreshZiraat()
+                if (activeSection == 0) {
+                    IconButton(
+                        onClick = {
+                            when (selectedSource) {
+                                0 -> onRefreshGold()
+                                1 -> onRefreshBank()
+                                else -> onRefreshZiraat()
+                            }
+                        },
+                        modifier = Modifier.minimumInteractiveComponentSize()
+                    ) {
+                        if (currentFetching) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Yenile",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                         }
-                    },
-                    modifier = Modifier.minimumInteractiveComponentSize()
-                ) {
-                    if (currentFetching) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Yenile",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
                     }
                 }
             }
 
+            // Top Segmented Switch: Canlı Kurlar vs Bildirim & Alarm
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -284,93 +338,148 @@ fun HomeMarketBottomSheet(
                     .padding(4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                MarketTabPill("Altın (Sivas)", selectedSource == 0, Modifier.weight(1f)) { selectedSource = 0 }
-                MarketTabPill("Yapı Kredi", selectedSource == 1, Modifier.weight(1f)) { selectedSource = 1 }
-                MarketTabPill("Ziraat", selectedSource == 2, Modifier.weight(1f)) { selectedSource = 2 }
+                MarketTabPill(
+                    title = "Canlı Kurlar",
+                    isSelected = activeSection == 0,
+                    modifier = Modifier.weight(1f)
+                ) { activeSection = 0 }
+                MarketTabPill(
+                    title = if (activeCount > 0) "Bildirim & Alarm ($activeCount)" else "Bildirim & Alarm",
+                    isSelected = activeSection == 1,
+                    modifier = Modifier.weight(1f)
+                ) { activeSection = 1 }
             }
 
-            val items = when (selectedSource) {
-                0 -> goldPrices.map { Triple(it.name, "Altın", it.buy to it.sell) }
-                1 -> bankRates.map { Triple(it.code, it.name, it.buy to it.sell) }
-                else -> ziraatRates.map { Triple(it.code, it.name, it.buy to it.sell) }
-            }
-
-            if (items.isEmpty()) {
-                Box(
+            if (activeSection == 0) {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 28.dp),
-                    contentAlignment = Alignment.Center
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isDark) CyberDarkSurfaceVariant else CyberLightSurfaceVariant)
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text(
-                        text = if (currentFetching) "Piyasa kurları alınıyor..." else "Veri alınamadı, yenilemeyi deneyin.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    MarketTabPill("Altın (Sivas)", selectedSource == 0, Modifier.weight(1f)) { selectedSource = 0 }
+                    MarketTabPill("Yapı Kredi", selectedSource == 1, Modifier.weight(1f)) { selectedSource = 1 }
+                    MarketTabPill("Ziraat", selectedSource == 2, Modifier.weight(1f)) { selectedSource = 2 }
                 }
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(if (isDark) CyberDarkSurfaceVariant.copy(alpha = 0.55f) else Color(0xFFF8FAFC))
-                ) {
-                    items.forEachIndexed { idx, (title, sub, prices) ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 11.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = title,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = sub,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text("Alış", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                val items = when (selectedSource) {
+                    0 -> goldPrices.map { Triple("gp_${it.name}", it.name to "Altın", it.buy to it.sell) }
+                    1 -> bankRates.map { Triple("yk_${it.code}", it.code to it.name, it.buy to it.sell) }
+                    else -> ziraatRates.map { Triple("zr_${it.code}", it.code to it.name, it.buy to it.sell) }
+                }
+
+                if (items.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 28.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (currentFetching) "Piyasa kurları alınıyor..." else "Veri alınamadı, yenilemeyi deneyin.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(if (isDark) CyberDarkSurfaceVariant.copy(alpha = 0.55f) else Color(0xFFF8FAFC))
+                    ) {
+                        items.forEachIndexed { idx, (assetKey, titlePair, prices) ->
+                            val hasAlarm = priceAlarms.any { it.assetKey == assetKey && it.isEnabled }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = prices.first,
-                                        fontFamily = JetBrainsMonoFamily,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        text = titlePair.first,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = titlePair.second,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text("Satış", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(
-                                        text = prices.second,
-                                        fontFamily = JetBrainsMonoFamily,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text("Alış", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(
+                                            text = prices.first,
+                                            fontFamily = JetBrainsMonoFamily,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text("Satış", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(
+                                            text = prices.second,
+                                            fontFamily = JetBrainsMonoFamily,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            quickAlarmAssetKey = assetKey
+                                            activeSection = 1
+                                        },
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (hasAlarm) Icons.Rounded.NotificationsActive else Icons.Rounded.AddAlert,
+                                            contentDescription = "${titlePair.first} için fiyat alarmı kur",
+                                            tint = if (hasAlarm) CyberNeonOrange else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
                                 }
                             }
-                        }
-                        if (idx < items.lastIndex) {
-                            HorizontalDivider(
-                                thickness = 0.6.dp,
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                modifier = Modifier.padding(horizontal = 14.dp)
-                            )
+                            if (idx < items.lastIndex) {
+                                HorizontalDivider(
+                                    thickness = 0.6.dp,
+                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                    modifier = Modifier.padding(horizontal = 14.dp)
+                                )
+                            }
                         }
                     }
                 }
+            } else {
+                MarketAlertsControlPanel(
+                    scheduleConfig = scheduleConfig,
+                    priceAlarms = priceAlarms,
+                    goldPrices = goldPrices,
+                    bankRates = bankRates,
+                    ziraatRates = ziraatRates,
+                    onUpdateSchedule = onUpdateSchedule,
+                    onSaveAlarm = onSaveAlarm,
+                    onToggleAlarm = onToggleAlarm,
+                    onDeleteAlarm = onDeleteAlarm,
+                    onSendTestSummary = onSendTestSummary,
+                    preselectedAssetKeyForNewAlarm = quickAlarmAssetKey,
+                    onConsumePreselectedAsset = { quickAlarmAssetKey = null }
+                )
             }
         }
     }

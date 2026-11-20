@@ -117,4 +117,16 @@ class PreferenceManager(context: Context) {
             prefs.edit().putString(key, marketSourceCode).apply()
         }
     }
+
+    var marketScheduleConfig: MarketScheduleConfig
+        get() = MarketScheduleConfig.fromJsonString(prefs.getString("market_schedule_config", null))
+        set(value) = prefs.edit().putString("market_schedule_config", value.toJsonString()).apply()
+
+    var marketPriceAlarms: List<MarketPriceAlarm>
+        get() = MarketPriceAlarm.listFromJsonString(prefs.getString("market_price_alarms", null))
+        set(value) = prefs.edit().putString("market_price_alarms", MarketPriceAlarm.listToJsonString(value)).apply()
+
+    var lastMarketSummarySentAt: Long
+        get() = prefs.getLong("last_market_summary_sent_at", 0L)
+        set(value) = prefs.edit().putLong("last_market_summary_sent_at", value).apply()
 }

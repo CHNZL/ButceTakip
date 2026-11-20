@@ -600,6 +600,92 @@ fun SettingsScreen(viewModel: BudgetViewModel) {
                 }
             }
         }
+
+        item {
+            val marketSchedule by viewModel.marketScheduleConfig.collectAsStateWithLifecycle()
+            val marketAlarms by viewModel.marketPriceAlarms.collectAsStateWithLifecycle()
+            val goldPrices by viewModel.goldPrices.collectAsStateWithLifecycle()
+            val bankRates by viewModel.bankRates.collectAsStateWithLifecycle()
+            val ziraatRates by viewModel.ziraatRates.collectAsStateWithLifecycle()
+            var showMarketAlertsSheet by remember { mutableStateOf(false) }
+
+            val activeAlarmCount = marketAlarms.count { it.isEnabled }
+            val statusSummary = buildString {
+                if (marketSchedule.enabled) {
+                    val freq = if (marketSchedule.intervalMinutes < 60) "${marketSchedule.intervalMinutes} dk" else "${marketSchedule.intervalMinutes / 60} sa"
+                    append("Özet: ${marketSchedule.startTime}–${marketSchedule.endTime} ($freq)")
+                } else {
+                    append("Zamanlı özet kapalı")
+                }
+                if (activeAlarmCount > 0) {
+                    append(" • $activeAlarmCount aktif limit alarmı")
+                }
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showMarketAlertsSheet = true },
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            Icons.Default.Notifications,
+                            contentDescription = null,
+                            tint = Color(0xFF059669),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Piyasa Bildirimleri & Alarmlar",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = statusSummary,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Piyasa Alarmlarını Aç",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (showMarketAlertsSheet) {
+                MarketAlertsBottomSheet(
+                    scheduleConfig = marketSchedule,
+                    priceAlarms = marketAlarms,
+                    goldPrices = goldPrices,
+                    bankRates = bankRates,
+                    ziraatRates = ziraatRates,
+                    onUpdateSchedule = { viewModel.updateMarketScheduleConfig(it) },
+                    onSaveAlarm = { viewModel.addOrUpdateMarketAlarm(it) },
+                    onToggleAlarm = { id, enabled -> viewModel.toggleMarketAlarm(id, enabled) },
+                    onDeleteAlarm = { id -> viewModel.deleteMarketAlarm(id) },
+                    onSendTestSummary = { cb -> viewModel.sendTestMarketSummary(cb) },
+                    onDismiss = { showMarketAlertsSheet = false }
+                )
+            }
+        }
         
         item {
             var isMarketMatchExpanded by remember { mutableStateOf(false) }

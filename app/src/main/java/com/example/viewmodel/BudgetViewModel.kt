@@ -91,6 +91,12 @@ class BudgetViewModel(
     private val _layoutStyle = MutableStateFlow(preferenceManager.layoutStyle)
     val layoutStyle = _layoutStyle.asStateFlow()
 
+    private val _marketScheduleConfig = MutableStateFlow(preferenceManager.marketScheduleConfig)
+    val marketScheduleConfig = _marketScheduleConfig.asStateFlow()
+
+    private val _marketPriceAlarms = MutableStateFlow(preferenceManager.marketPriceAlarms)
+    val marketPriceAlarms = _marketPriceAlarms.asStateFlow()
+
     fun toggleDarkTheme(enabled: Boolean) {
         preferenceManager.darkThemeEnabled = enabled
         _darkThemeEnabled.value = enabled
@@ -104,6 +110,97 @@ class BudgetViewModel(
     fun setLayoutStyle(style: String) {
         preferenceManager.layoutStyle = style
         _layoutStyle.value = style
+    }
+
+    fun updateMarketScheduleConfig(config: com.example.data.MarketScheduleConfig) {
+        preferenceManager.marketScheduleConfig = config
+        _marketScheduleConfig.value = config
+        com.example.worker.MarketAlertScheduler.syncSchedule(getApplication())
+    }
+
+    fun addOrUpdateMarketAlarm(alarm: com.example.data.MarketPriceAlarm) {
+        val current = _marketPriceAlarms.value.toMutableList()
+        val idx = current.indexOfFirst { it.id == alarm.id }
+        if (idx >= 0) {
+            current[idx] = alarm
+        } else {
+            current.add(0, alarm)
+        }
+        preferenceManager.marketPriceAlarms = current
+        _marketPriceAlarms.value = current
+        com.example.worker.MarketAlertScheduler.syncSchedule(getApplication())
+        evaluateLiveAlarmsInBackground()
+    }
+
+    fun toggleMarketAlarm(alarmId: String, enabled: Boolean) {
+        val updated = _marketPriceAlarms.value.map {
+            if (it.id == alarmId) {
+                it.copy(isEnabled = enabled, lastTriggeredAt = if (enabled) 0L else it.lastTriggeredAt)
+            } else it
+        }
+        preferenceManager.marketPriceAlarms = updated
+        _marketPriceAlarms.value = updated
+        com.example.worker.MarketAlertScheduler.syncSchedule(getApplication())
+        if (enabled) evaluateLiveAlarmsInBackground()
+    }
+
+    fun deleteMarketAlarm(alarmId: String) {
+        val updated = _marketPriceAlarms.value.filterNot { it.id == alarmId }
+        preferenceManager.marketPriceAlarms = updated
+        _marketPriceAlarms.value = updated
+        com.example.worker.MarketAlertScheduler.syncSchedule(getApplication())
+    }
+
+    fun sendTestMarketSummary(onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val selected = _marketScheduleConfig.value.selectedAssetKeys
+            if (selected.isEmpty()) {
+                withContext(Dispatchers.Main) {
+                    onResult(false, "Önce en az bir piyasa kuru seçin.")
+                }
+                return@launch
+            }
+            var snapshot = com.example.data.LiveMarketSnapshot(
+                goldPrices = _goldPrices.value,
+                yapiKrediRates = _bankRates.value,
+                ziraatRates = _ziraatRates.value
+            )
+            val catalogHasValues = com.example.data.MarketPriceParser
+                .buildCatalog(snapshot.goldPrices, snapshot.yapiKrediRates, snapshot.ziraatRates)
+                .any { it.key in selected && (it.buyValue != null || it.sellValue != null) }
+
+            if (!catalogHasValues) {
+                snapshot = com.example.data.MarketDataFetcher.fetchRequiredSources(selected)
+            }
+            val sent = com.example.worker.MarketNotificationHelper.sendMarketSummaryNotification(
+                context = getApplication(),
+                selectedKeys = selected,
+                snapshot = snapshot
+            )
+            withContext(Dispatchers.Main) {
+                if (sent) {
+                    onResult(true, "Canlı piyasa test bildirimi gönderildi.")
+                } else {
+                    onResult(false, "Bildirim gönderilemedi. Bildirim iznini ve internet bağlantısını kontrol edin.")
+                }
+            }
+        }
+    }
+
+    private fun evaluateLiveAlarmsInBackground() {
+        val alarms = _marketPriceAlarms.value
+        if (alarms.none { it.isEnabled }) return
+        val snapshot = com.example.data.LiveMarketSnapshot(
+            goldPrices = _goldPrices.value,
+            yapiKrediRates = _bankRates.value,
+            ziraatRates = _ziraatRates.value
+        )
+        val updated = com.example.worker.MarketNotificationHelper.evaluatePriceAlarms(
+            context = getApplication(),
+            prefs = preferenceManager,
+            snapshot = snapshot
+        )
+        _marketPriceAlarms.value = updated
     }
 
     init {
@@ -239,6 +336,7 @@ class BudgetViewModel(
                 _bankRates.value = rates
                 val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale("tr"))
                 _lastBankRateUpdate.value = sdf.format(java.util.Date())
+                evaluateLiveAlarmsInBackground()
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -308,6 +406,7 @@ class BudgetViewModel(
                 _ziraatRates.value = rates
                 val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale("tr"))
                 _lastZiraatRateUpdate.value = sdf.format(java.util.Date())
+                evaluateLiveAlarmsInBackground()
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -364,6 +463,7 @@ class BudgetViewModel(
                 // REMOVED updateXauInBankRates(r24.buy, r24.sell) so that Sivas local market prices matching 24 AYAR never overwrite the live bank XAU rate.
                 val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale("tr"))
                 _lastGoldUpdate.value = sdf.format(java.util.Date())
+                evaluateLiveAlarmsInBackground()
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {

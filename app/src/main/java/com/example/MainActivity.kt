@@ -193,5 +193,8 @@ class MainActivity : ComponentActivity() {
             ExistingPeriodicWorkPolicy.KEEP,
             backupWorkRequest
         )
+
+        // Canlı piyasa bildirim ve fiyat alarmı zamanlayıcısı
+        com.example.worker.MarketAlertScheduler.syncSchedule(applicationContext)
     }
 }
