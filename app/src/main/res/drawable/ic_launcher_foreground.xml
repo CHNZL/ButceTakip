@@ -3,6 +3,6 @@
     <item
         android:width="66dp"
         android:height="66dp"
-        android:drawable="@drawable/finance_app_icon_1784663493287"
+        android:drawable="@drawable/wealth_vault_logo_1795210078872"
         android:gravity="center" />
 </layer-list>
